@@ -1,9 +1,9 @@
 %include	/usr/lib/rpm/macros.perl
-Summary:	high-performance mail store with imap and pop3
+Summary:	High-performance mail store with imap and pop3
 Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Name:		cyrus-imapd
 Version:	2.0.16
-Release:	5
+Release:	6
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -27,19 +27,22 @@ Patch5:		%{name}-et.patch
 Patch6:		%{name}-ac250.patch
 Patch7:		%{name}-db3.patch
 Patch8:		%{name}-ipv6.m4.patch
+Patch9:		%{name}-ac25x.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 #Icon:		cyrus.gif
-BuildRequires:	e2fsprogs-devel >= 1.21
+BuildRequires:	autoconf
+BuildRequires:	automake
 BuildRequires:	cyrus-sasl-devel >= 1.5.27
 BuildRequires:	db3-devel >= 3.1.17
+BuildRequires:	e2fsprogs-devel >= 1.21
 BuildRequires:	flex
 BuildRequires:	openssl-devel >= 0.9.6a
 BuildRequires:	perl-devel >= 5.6.1
-BuildRequires:	ucd-snmp-devel >= 4.2.5
-BuildRequires:	autoconf
-BuildRequires:	automake
+BuildRequires:	ucd-snmp-devel >= 4.2.5-10
 Prereq:		rc-scripts
-Prereq:		/sbin/chkconfig
+Requires(pre):	/usr/sbin/useradd
+Requires(post,preun):	/sbin/chkconfig
+Requires(postun):	/usr/sbin/userdel
 Provides:	imapdaemon
 Provides:	pop3daemon
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
@@ -95,6 +98,7 @@ oraz KPOP.
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
+%patch9 -p1
 
 %build
 cd makedepend
@@ -117,7 +121,7 @@ autoheader
 %{__make}
 
 %{__cc} %{rpmcflags} \
-	-DLIBEXECDIR=\"%{_libexecdir}\" %{rpmldflags} -Wall -o deliver-wrapper %{SOURCE3}
+	-DLIBEXECDIR="\"%{_libexecdir}\"" %{rpmldflags} -Wall -o deliver-wrapper %{SOURCE3}
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -153,9 +157,6 @@ rm -rf $RPM_BUILD_ROOT%{_libexecdir}/bin
 touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop}
 
 find $RPM_BUILD_ROOT%{perl_sitearch} -name .packlist -exec rm {} \;
-
-gzip -9nf cyrus-README cyrus-procmailrc	cyrus-user-procmailrc.template \
-	cyrus-imapd-procmail+cyrus.mc COPYRIGHT
 
 # make hashed dirs
 oldpwd=`pwd`
@@ -208,11 +209,12 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(644,root,root,755)
-%doc *.gz doc/*.html
-%config %{_sysconfdir}/*.conf
+%doc cyrus-README cyrus-procmailrc cyrus-user-procmailrc.template
+%doc cyrus-imapd-procmail+cyrus.mc COPYRIGHT doc/*.html
+%config(noreplace) %verify(not size mtime md5) %{_sysconfdir}/*.conf
 %attr(640,root,root) /etc/logrotate.d/cyrus-imapd
-%attr(440,cyrus,root) %config(noreplace) %verify(not size md5 mtime) /etc/pam.d/*
-%attr(640,root,root) %config(noreplace) %verify(not md5 size mtime) /etc/security/blacklist.*
+%attr(440,cyrus,root) %config(noreplace) %verify(not size mtime md5) /etc/pam.d/*
+%attr(640,root,root) %config(noreplace) %verify(not size mtime md5) /etc/security/blacklist.*
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-imapd
 %attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
 %attr(755,root,root) %{_bindir}/*
