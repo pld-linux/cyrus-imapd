@@ -59,6 +59,7 @@ Conflicts:	qpopper6
 Conflicts:	solid-pop3d
 Conflicts:	tpop3d
 Obsoletes:	imapd
+Obsoletes:	imap
 Obsoletes:	pop3daemon
 Obsoletes:	imapdaemon
 
