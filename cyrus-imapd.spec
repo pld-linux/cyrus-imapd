@@ -33,7 +33,7 @@ BuildRequires:	db-devel >= 4.1.25
 BuildRequires:	flex
 BuildRequires:	libcom_err-devel >= 1.21
 BuildRequires:	libtool
-BuildRequires:	openssl-devel >= 0.9.7c
+BuildRequires:	openssl-devel >= 0.9.7d
 BuildRequires:	perl-devel >= 1:5.8.0
 #BuildRequires:	ucd-snmp-devel >= 4.2.6
 PreReq:		rc-scripts
