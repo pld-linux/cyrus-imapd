@@ -4,7 +4,7 @@ Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.0.16
-Release:	0.9
+Release:	9
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -131,6 +131,18 @@ Static cyrus-imapd libraries
 
 %description static -l pl
 Biblioteki statyczne cyrus-imapd
+
+%package -n perl-%{name}
+Summary:	Perl interface to cyrus-imapd library
+Summary(pl):	Perlowy interfejs do biblioteki cyrus-imapd
+Group:		Development/Languages/Perl
+Requires:	%{name} = %{version}
+
+%description -n perl-%{name}
+Perl interface to cyrus-imapd library.
+
+%description -n perl-%{name} -l pl
+Perlowy interfejs do biblioteki cyrus-imapd.
 
 %prep
 %setup -q
@@ -281,9 +293,6 @@ rm -rf $RPM_BUILD_ROOT
 %attr(755,root,root) %{_libexecdir}/reconstruct
 %attr(755,root,root) %{_libexecdir}/timsieved
 
-%{perl_sitearch}/Cyrus
-%{perl_sitearch}/auto/Cyrus
-
 %attr(750,cyrus,mail) /var/spool/imap
 %attr(750,cyrus,mail) %dir /var/lib/imap
 %attr(750,cyrus,mail) %dir /var/lib/imap/deliverdb
@@ -307,3 +316,8 @@ rm -rf $RPM_BUILD_ROOT
 %files static
 %defattr(644,root,root,755)
 %{_libdir}/lib*.a
+
+%files -n perl-%{name}
+%defattr(644,root,root,755)
+%{perl_sitearch}/Cyrus
+%{perl_sitearch}/auto/Cyrus
