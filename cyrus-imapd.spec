@@ -3,7 +3,7 @@ Summary:	high-performance mail store with imap and pop3
 Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Name:		cyrus-imapd
 Version:	2.0.16
-Release:	2
+Release:	3
 License:	academic/research
 Group:		Networking/Daemons
 Group(de):	Netzwerkwesen/Server
@@ -37,7 +37,7 @@ BuildRequires:	db3-devel >= 3.1.17
 BuildRequires:	flex
 BuildRequires:	openssl-devel >= 0.9.6a
 BuildRequires:	perl >= 5.6.1
-BuildRequires:	ucd-snmp-devel >= 4.2.2
+BuildRequires:	ucd-snmp-devel >= 4.2.3
 BuildRequires:	autoconf
 BuildRequires:	automake
 Prereq:		rc-scripts
