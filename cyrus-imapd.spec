@@ -1,8 +1,8 @@
 %include	/usr/lib/rpm/macros.perl
 Summary:	high-performance mail store with imap and pop3
 Name:		cyrus-imapd
-Version:	2.0.13
-Release:	2
+Version:	2.0.14
+Release:	1.1
 License:	academic/research
 Group:		Networking/Daemons
 Group(de):	Netzwerkwesen/Server
@@ -23,13 +23,13 @@ Patch0:		%{name}-snmp.patch
 Patch1:		%{name}-mandir.patch
 Patch2:		%{name}-paths.patch
 Patch3:		%{name}-overquota.patch
-#		http://www.imasy.or.jp/~ume/ipv6/cyrus-imapd-2.0.12-ipv6-20010321.diff.gz
-Patch4:		%{name}-ipv6.patch
+Patch4:		http://www.imasy.or.jp/~ume/ipv6/cyrus-imapd-2.0.14-ipv6-20010531.diff.gz
+Patch5:		%{name}-et.patch
+Patch6:		%{name}-checkfd.patch
+Patch7:		%{name}-ac250.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 #Icon:		cyrus.gif
-# make et_compile from e2progs-devel work and change this buildconflicts 
-# to buildrequires
-BuildConflicts:	e2fsprogs-devel 
+BuildRequires:	e2fsprogs-devel >= 1.21
 BuildRequires:	cyrus-sasl-devel >= 1.5.27
 BuildRequires:	openssl-devel >= 0.9.6a
 BuildRequires:	perl >= 5.6.1
@@ -89,7 +89,10 @@ komercyjnego produktu.
 %patch1 -p1
 %patch2 -p0
 %patch3 -p1
-%patch4 -p1
+%patch4 -p0
+%patch5 -p1
+%patch6 -p1
+%patch7 -p1
 
 %build
 cd makedepend
@@ -103,7 +106,8 @@ autoconf
 %configure \
 	--with-auth=unix \
 	--without-libwrap \
-	--with-cyrus-prefix=%{_libexecdir}
+	--with-cyrus-prefix=%{_libexecdir} \
+	--with-com_err=/usr
 %{__make}
 
 %{__cc} %{rpmcflags} \
@@ -141,6 +145,8 @@ mv -f $RPM_BUILD_ROOT%{_mandir}/man8/master.8	$RPM_BUILD_ROOT%{_mandir}/man8/cyr
 rm -rf $RPM_BUILD_ROOT%{_libexecdir}/bin
 
 touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop}
+
+find $RPM_BUILD_ROOT%{perl_sitearch} -name .packlist -exec rm {} \;
 
 gzip -9nf cyrus-README cyrus-procmailrc	cyrus-user-procmailrc.template \
 	cyrus-imapd-procmail+cyrus.mc
@@ -208,6 +214,7 @@ rm -rf $RPM_BUILD_ROOT
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
 %attr(755,root,root) %{_libexecdir}/ctl_deliver
 %attr(755,root,root) %{_libexecdir}/ctl_mboxlist
+%attr(755,root,root) %{_libexecdir}/cyrdump
 %attr(755,root,root) %{_libexecdir}/feedcyrus
 %attr(755,root,root) %{_libexecdir}/fud
 %attr(755,root,root) %{_libexecdir}/imapd
@@ -220,23 +227,8 @@ rm -rf $RPM_BUILD_ROOT
 %attr(755,root,root) %{_libexecdir}/reconstruct
 %attr(755,root,root) %{_libexecdir}/timsieved
 
-%dir %{perl_sitearch}/Cyrus
-%{perl_sitearch}/Cyrus/*.pm
-%dir %{perl_sitearch}/Cyrus/IMAP
-%{perl_sitearch}/Cyrus/IMAP/*.pm
-%dir %{perl_sitearch}/Cyrus/SIEVE
-%{perl_sitearch}/Cyrus/SIEVE/*.pm
-%dir %{perl_sitearch}/auto/Cyrus
-%dir %{perl_sitearch}/auto/Cyrus/IMAP
-%{perl_sitearch}/auto/Cyrus/IMAP/*.so
-%{perl_sitearch}/auto/Cyrus/IMAP/*.bs
-%dir %{perl_sitearch}/auto/Cyrus/SIEVE
-%dir %{perl_sitearch}/auto/Cyrus/SIEVE/acap
-%{perl_sitearch}/auto/Cyrus/SIEVE/acap/*.so
-%{perl_sitearch}/auto/Cyrus/SIEVE/acap/*.bs
-%dir %{perl_sitearch}/auto/Cyrus/SIEVE/managesieve
-%{perl_sitearch}/auto/Cyrus/SIEVE/managesieve/*.so
-%{perl_sitearch}/auto/Cyrus/SIEVE/managesieve/*.bs
+%{perl_sitearch}/Cyrus
+%{perl_sitearch}/auto/Cyrus
 
 %attr(750,cyrus,mail) /var/spool/imap
 %attr(750,cyrus,mail) %dir /var/lib/imap
