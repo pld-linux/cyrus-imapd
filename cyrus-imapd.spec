@@ -15,11 +15,21 @@ Source7:	cyrus-imapd.conf
 Source8:	cyrus-imapd.cron
 Source9:	cyrus-imapd.inetd
 Source10:	cyrus-imapd-pop3.inetd
+Source11:	cyrus-imapd.pamd
+Source12:	cyrus-imapd-pop.pamd
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 #Icon:		cyrus.gif
 BuildRequires:	cyrus-sasl-devel
 BuildRequires:	tcl-devel >= 8.0
 BuildRequires:	openssl-devel
+Obsoletes:	imapd
+Obsoletes:	pop3daemon
+Obsoletes:	imapdaemon
+Conflicts:	qpopper
+Conflicts:	solid-pop3d
+Conflicts:	qpopper6
+Provides:	imapdaemon
+Provides:	pop3daemon
 Buildroot:	/tmp/%{name}-%{version}-root
 
 %define		_libexecdir	%{_prefix}/lib/cyrus
@@ -90,6 +100,8 @@ install %{SOURCE7} $RPM_BUILD_ROOT/etc/imapd.conf
 install %{SOURCE8} $RPM_BUILD_ROOT/etc/cron.daily/cyrus-imapd
 install %{SOURCE9} $RPM_BUILD_ROOT/etc/sysconfig/rc-inetd/imapd
 install %{SOURCE10} $RPM_BUILD_ROOT/etc/sysconfig/rc-inetd/pop3d
+install %{SOURCE11} $RPM_BUILD_ROOT/etc/pam.d/imap
+install %{SOURCE12} $RPM_BUILD_ROOT/etc/pam.d/pop
 
 mv $RPM_BUILD_ROOT/usr/cyrus/bin/* 	$RPM_BUILD_ROOT%{_libexecdir}
 mv $RPM_BUILD_ROOT/usr/man/*		$RPM_BUILD_ROOT%{_mandir}
@@ -154,6 +166,7 @@ rm -rf $RPM_BUILD_ROOT
 %config /etc/procmailrc.cyrus
 %config(noreplace) %verify(not size md5 mtime) /etc/logrotate.d/cyrus-imapd
 %attr( 640, root,root) %config(noreplace) %verify(not size md5 mtime) /etc/sysconfig/rc-inetd/*
+%attr( 440, cyrus,root) %config(noreplace) %verify(not size md5 mtime) /etc/pam.d/*
 %attr( 755, root,root) /etc/cron.daily/cyrus-imapd
 %attr( 755, root,root) %{_bindir}/*
 %attr(4750,cyrus,mail) %{_libexecdir}/deliver
