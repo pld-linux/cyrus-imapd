@@ -6,8 +6,6 @@ Version:	2.0.16
 Release:	3
 License:	academic/research
 Group:		Networking/Daemons
-Group(de):	Netzwerkwesen/Server
-Group(pl):	Sieciowe/Serwery
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
