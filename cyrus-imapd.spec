@@ -34,15 +34,16 @@ BuildRequires:	cyrus-sasl-devel >= 1.5.27
 BuildRequires:	openssl-devel >= 0.9.6
 BuildRequires:	perl >= 5.6.1
 BuildRequires:	db3-devel >= 3.1.17
-Obsoletes:	imapd
-Obsoletes:	pop3daemon
-Obsoletes:	imapdaemon
-Conflicts:	qpopper
-Conflicts:	solid-pop3d
-Conflicts:	qpopper6
+Prereq:		rc-scripts
 Provides:	imapdaemon
 Provides:	pop3daemon
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
+Conflicts:	qpopper
+Conflicts:	solid-pop3d
+Conflicts:	qpopper6
+Obsoletes:	imapd
+Obsoletes:	pop3daemon
+Obsoletes:	imapdaemon
 
 %define		_libexecdir	%{_prefix}/lib/cyrus
 
@@ -105,12 +106,11 @@ autoconf
 	--with-cyrus-prefix=%{_libexecdir}
 %{__make}
 
-%{__cc} %{?debug:-O0 -g}%{!?debug:$RPM_OPT_FLAGS} \
-	-DLIBEXECDIR=\"%{_libexecdir}\" -s -Wall -o deliver-wrapper %{SOURCE3}
+%{__cc} %{rpmcflags} \
+	-DLIBEXECDIR=\"%{_libexecdir}\" %{rpmldflags} -Wall -o deliver-wrapper %{SOURCE3}
 
 %install
 rm -rf $RPM_BUILD_ROOT
-
 install -d \
 	$RPM_BUILD_ROOT{%{_sbindir},%{_libexecdir},%{_mandir}} \
 	$RPM_BUILD_ROOT%{_sysconfdir}/{logrotate.d,sysconfig/rc-inetd} \
