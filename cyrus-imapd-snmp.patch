@@ -1,0 +1,10 @@
+--- cyrus-imapd-2.0.9/master/master.c.wiget	Thu Dec 28 14:33:35 2000
++++ cyrus-imapd-2.0.9/master/master.c	Thu Dec 28 14:33:49 2000
+@@ -76,6 +76,7 @@
+ #include <ucd-snmp/ucd-snmp-agent-includes.h>
+ 
+ #include "cyrusMasterMIB.h"
++int smux_listen_sd;
+ #endif
+ 
+ #include "masterconf.h"
