@@ -185,7 +185,8 @@ cp -f %{_datadir}/automake/install-sh .
 	--with-cyrus-prefix=%{_libexecdir} \
 	--with-service-path=%{_libexecdir} \
 	--with-com_err=/usr \
-	--with-perl=%{__perl}
+	--with-perl=%{__perl} \
+	--enable-nntp
 %{__make} \
 	INSTALLDIRS=vendor
 
@@ -320,6 +321,8 @@ fi
 %attr(755,root,root) %{_libexecdir}/squatter
 %attr(755,root,root) %{_libexecdir}/timsieved
 %attr(755,root,root) %{_libexecdir}/tls_prune
+%attr(755,root,root) %{_libexecdir}/fetchnews
+%attr(755,root,root) %{_libexecdir}/nntpd
 
 %attr(750,cyrus,mail) /var/spool/imap
 %attr(750,cyrus,mail) %dir /var/lib/imap
