@@ -4,10 +4,11 @@ Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.0.17
-Release:	1
+Release:	2
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
+# Source0-md5:	21a666e8bf41be5169ede375309f6e94
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
@@ -23,7 +24,8 @@ Patch0:		%{name}-snmp.patch
 Patch1:		%{name}-mandir.patch
 Patch2:		%{name}-paths.patch
 Patch3:		%{name}-overquota.patch
-Patch4:		http://www.imasy.or.jp/~ume/ipv6/%{name}-2.0.17-ipv6-20021205.diff.gz
+# http://www.imasy.or.jp/~ume/ipv6/cyrus-imapd-2.0.17-ipv6-20021205.diff.gz
+Patch4:		%{name}-2.0.17-ipv6-20021205.diff.gz
 Patch5:		%{name}-et.patch
 Patch6:		%{name}-ac250.patch
 Patch7:		%{name}-db3.patch
@@ -37,7 +39,7 @@ BuildRequires:	cyrus-sasl-devel >= 1.5.27
 BuildRequires:	db3-devel >= 3.1.17
 BuildRequires:	e2fsprogs-devel >= 1.21
 BuildRequires:	flex
-BuildRequires:	openssl-devel >= 0.9.6a
+BuildRequires:	openssl-devel >= 0.9.6k
 BuildRequires:	perl-devel >= 5.6.1
 BuildRequires:	ucd-snmp-devel >= 4.2.6
 PreReq:		rc-scripts
