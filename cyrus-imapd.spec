@@ -1,5 +1,6 @@
 %include	/usr/lib/rpm/macros.perl
 Summary:	high-performance mail store with imap and pop3
+Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Name:		cyrus-imapd
 Version:	2.0.16
 Release:	1
@@ -38,6 +39,7 @@ BuildRequires:	openssl-devel >= 0.9.6a
 BuildRequires:	perl >= 5.6.1
 BuildRequires:	ucd-snmp-devel
 Prereq:		rc-scripts
+Prereq:		/sbin/chkconfig
 Provides:	imapdaemon
 Provides:	pop3daemon
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
