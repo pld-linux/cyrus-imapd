@@ -2,8 +2,8 @@
 auth		required	/lib/security/pam_listfile.so item=user sense=deny file=/etc/security/blacklist onerr=succeed
 auth		required	/lib/security/pam_listfile.so item=user sense=deny file=/etc/security/blacklist.pop onerr=succeed
 auth		required	/lib/security/pam_unix.so
-auth		required	/lib/security/pam_tally.so file=/var/state/imap/faillog onerr=succeed no_magic_root
+auth		required	/lib/security/pam_tally.so file=/var/lib/imap/faillog onerr=succeed no_magic_root
 auth		required	/lib/security/pam_nologin.so
-account		required	/lib/security/pam_tally.so deny=0 file=/var/state/imap/faillog onerr=succeed no_magic_root
+account		required	/lib/security/pam_tally.so deny=0 file=/var/lib/imap/faillog onerr=succeed no_magic_root
 #account		required 	/lib/security/pam_access.so
 account		required	/lib/security/pam_unix.so
