@@ -40,6 +40,7 @@ PreReq:		rc-scripts
 Requires(pre):	/usr/sbin/useradd
 Requires(postun):	/usr/sbin/userdel
 Requires(post,preun):/sbin/chkconfig
+Requires:	pam >= 0.77.3
 Provides:	imapdaemon
 Provides:	pop3daemon
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
