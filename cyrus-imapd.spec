@@ -32,10 +32,11 @@ URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 #Icon:		cyrus.gif
 BuildRequires:	e2fsprogs-devel >= 1.21
 BuildRequires:	cyrus-sasl-devel >= 1.5.27
+BuildRequires:	db3-devel >= 3.1.17
 BuildRequires:	flex
 BuildRequires:	openssl-devel >= 0.9.6a
 BuildRequires:	perl >= 5.6.1
-BuildRequires:	db3-devel >= 3.1.17
+BuildRequires:	ucd-snmp-devel
 Prereq:		rc-scripts
 Provides:	imapdaemon
 Provides:	pop3daemon
