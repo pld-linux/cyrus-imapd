@@ -4,6 +4,7 @@ Version:	1.6.22
 Release:	0.2
 Copyright:	academic/research
 Group:		Networking/Daemons
+Group(pl):	Sieciowe/Serwery
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
@@ -35,37 +36,40 @@ BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 %define		_libexecdir	%{_prefix}/lib/cyrus
 
 %description
-The Cyrus IMAP server is a scaleable enterprise mail system
-designed for use from small to large enterprise environments using
+The Cyrus IMAP server is a scaleable enterprise mail system designed
+for use from small to large enterprise environments using
 standards-based technologies.
 
 A full Cyrus IMAP implementation allows a seamless mail and bulletin
-board environment to be set up across multiple servers. It differs from
-other IMAP server implementations in that it is run on "sealed"
+board environment to be set up across multiple servers. It differs
+from other IMAP server implementations in that it is run on "sealed"
 servers, where users are not normally permitted to log in. The mailbox
 database is stored in parts of the filesystem that are private to the
 Cyrus IMAP system. All user access to mail is through software using
 the IMAP, POP3, or KPOP protocols.
 
 Note that this package can be used by ISPs and other to provide mail
-services, but it may not be distributed as part of a commercial product.
+services, but it may not be distributed as part of a commercial
+product.
 
 %description -l pl
-Serwer Cyrus IMAP jest skalowalnym systemem e-mail dla przedsiêbiorstwa,
-zaprojektowanym dla ma³ych i du¿ych firm i wykorzystuj±cym oparte na
-standardach technologie.
+Serwer Cyrus IMAP jest skalowalnym systemem e-mail dla
+przedsiêbiorstwa, zaprojektowanym dla ma³ych i du¿ych firm i
+wykorzystuj±cym oparte na standardach technologie.
 
 Pe³na implementacja Cyrus IMAP pozwala na bezproblemowe ustawienie
-¶rodowiska poczty i elektronicznej tablicy og³oszeniowej na kilku serwerach.
-Tym siê ró¿ni od innych implementacji serwerów IMAP, ¿e jest uruchamiany
-na "opieczêtowanych" serwerach, na które w normalnych waunkach u¿ytkownicy
-nie mog± siê zalogowaæ. Baza danych skrzynek pocztowych jest pzrechowywana 
-w tych czê¶ciach systemu plików, które s± dostêpne jedynie dla systemu
-IMAP Cyrus. Wszelki dostêp do poczty ma miejsce poprzez oprogramowanie
-wykorzystuj±ce protoko³y IMAP, POP3 oraz KPOP.
+¶rodowiska poczty i elektronicznej tablicy og³oszeniowej na kilku
+serwerach. Tym siê ró¿ni od innych implementacji serwerów IMAP, ¿e
+jest uruchamiany na "opieczêtowanych" serwerach, na które w normalnych
+waunkach u¿ytkownicy nie mog± siê zalogowaæ. Baza danych skrzynek
+pocztowych jest pzrechowywana w tych czê¶ciach systemu plików, które
+s± dostêpne jedynie dla systemu IMAP Cyrus. Wszelki dostêp do poczty
+ma miejsce poprzez oprogramowanie wykorzystuj±ce protoko³y IMAP, POP3
+oraz KPOP.
 
-Nale¿y zwróciæ uwagê na fakt, ¿e pakiet ten mo¿e byæ wykorzystywany przez ISP,
-nie mo¿e byæ jednak rozpowszechniany jako czê¶æ komercyjnego produktu.
+Nale¿y zwróciæ uwagê na fakt, ¿e pakiet ten mo¿e byæ wykorzystywany
+przez ISP, nie mo¿e byæ jednak rozpowszechniany jako czê¶æ
+komercyjnego produktu.
 
 %define version %{PACKAGE_VERSION}
 
@@ -92,10 +96,10 @@ gcc $RPM_OPT_FLAGS -DLIBEXECDIR=\"%{_libexecdir}\" -s -Wall -o deliver-wrapper %
 
 %install
 rm -rf $RPM_BUILD_ROOT
-#install -d $RPM_BUILD_ROOT/usr/cyrus/etc 
+#install -d $RPM_BUILD_ROOT%{_prefix}/cyrus%{_sysconfdir}
 install -d \
 	$RPM_BUILD_ROOT{%{_sbindir},%{_libexecdir},%{_mandir}} \
-	$RPM_BUILD_ROOT/etc/{logrotate.d,cron.daily,sysconfig/rc-inetd} \
+$RPM_BUILD_ROOT%{_sysconfdir}/{logrotate.d,cron.daily,sysconfig/rc-inetd} \
 	$RPM_BUILD_ROOT/var/spool/imap/stage. \
 	$RPM_BUILD_ROOT/var/lib/imap/{user,quota,proc,log,msg,deliverdb,sieve} \
 	$RPM_BUILD_ROOT%{_libdir}/sendmail-cf/cf 
@@ -106,31 +110,31 @@ touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 
 make install DESTDIR=$RPM_BUILD_ROOT CYRUS_USER="`id -u`" CYRUS_GROUP="`id -g`"
 
-#mkdir -p $RPM_BUILD_ROOT/usr/cyrus/bin
-#install -g mail -m 2755 -s deliver-wrapper $RPM_BUILD_ROOT/usr/cyrus/bin/deliver-wrapper
-install deliver-wrapper $RPM_BUILD_ROOT/usr/cyrus/bin/deliver-wrapper
+#install -d $RPM_BUILD_ROOT%{_prefix}/cyrus/bin
+#install -g mail -m 2755 -s deliver-wrapper $RPM_BUILD_ROOT%{_prefix}/cyrus/bin/deliver-wrapper
+install deliver-wrapper $RPM_BUILD_ROOT%{_prefix}/cyrus/bin/deliver-wrapper
 
 install %{SOURCE1} .
-install %{SOURCE2} $RPM_BUILD_ROOT/etc/procmailrc.cyrus
-#install %{SOURCE4} $RPM_BUILD_ROOT/usr/cyrus/etc/user-procmailrc.template
+install %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/procmailrc.cyrus
+#install %{SOURCE4} $RPM_BUILD_ROOT%{_prefix}/cyrus%{_sysconfdir}/user-procmailrc.template
 install %{SOURCE5} $RPM_BUILD_ROOT%{_libdir}/sendmail-cf/cf/procmail+cyrus.mc
 install %{SOURCE6} $RPM_BUILD_ROOT/etc/logrotate.d/cyrus-imapd
-install %{SOURCE7} $RPM_BUILD_ROOT/etc/imapd.conf
+install %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/imapd.conf
 install %{SOURCE8} $RPM_BUILD_ROOT/etc/cron.daily/cyrus-imapd
 install %{SOURCE9} $RPM_BUILD_ROOT/etc/sysconfig/rc-inetd/imapd
 install %{SOURCE10} $RPM_BUILD_ROOT/etc/sysconfig/rc-inetd/pop3d
 install %{SOURCE11} $RPM_BUILD_ROOT/etc/pam.d/imap
 install %{SOURCE12} $RPM_BUILD_ROOT/etc/pam.d/pop
 
-mv $RPM_BUILD_ROOT/usr/cyrus/bin/* 	$RPM_BUILD_ROOT%{_libexecdir}
-mv $RPM_BUILD_ROOT/usr/man/*		$RPM_BUILD_ROOT%{_mandir}
+mv $RPM_BUILD_ROOT%{_prefix}/cyrus/bin/* $RPM_BUILD_ROOT%{_libexecdir}
+mv $RPM_BUILD_ROOT%{_prefix}/man/* $RPM_BUILD_ROOT%{_mandir}
 
-gzip -9fn $RPM_BUILD_ROOT%{_mandir}/man*/* \
+gzip -9nf $RPM_BUILD_ROOT%{_mandir}/man*/* \
 	cyrus-README
 
 # make hashed dirs
 cd $RPM_BUILD_ROOT/var
-/usr/bin/perl <<EOF
+%attr(755,root,root) %{_bindir}/perl <<EOF
 foreach \$i ("a".."z") 
 {
   mkdir "lib/imap/user/\$i", 0755;
@@ -181,8 +185,8 @@ rm -rf $RPM_BUILD_ROOT
 #doc README README.RPM doc
 %doc doc/html/*.html
 
-%config /etc/imapd.conf
-%config /etc/procmailrc.cyrus
+%config %{_sysconfdir}/imapd.conf
+%config %{_sysconfdir}/procmailrc.cyrus
 %config(noreplace) %verify(not size md5 mtime) /etc/logrotate.d/cyrus-imapd
 %attr( 640, root,root) %config(noreplace) %verify(not size md5 mtime) /etc/sysconfig/rc-inetd/*
 %attr( 440, cyrus,root) %config(noreplace) %verify(not size md5 mtime) /etc/pam.d/*
