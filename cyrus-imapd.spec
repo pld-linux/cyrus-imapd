@@ -34,7 +34,7 @@ BuildRequires:	cyrus-sasl-devel >= 1.5.27
 BuildRequires:	db3-devel >= 3.1.17
 BuildRequires:	flex
 BuildRequires:	openssl-devel >= 0.9.6a
-BuildRequires:	perl >= 5.6.1
+BuildRequires:	perl-devel >= 5.6.1
 BuildRequires:	ucd-snmp-devel >= 4.2.3
 BuildRequires:	autoconf
 BuildRequires:	automake
