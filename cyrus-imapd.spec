@@ -34,8 +34,10 @@ BuildRequires:	libcom_err-devel >= 1.21
 BuildRequires:	libtool
 BuildRequires:	openssl-devel >= 0.9.7d
 BuildRequires:	perl-devel >= 1:5.8.0
+BuildRequires:	rpmbuild(macros) >= 1.159
 #BuildRequires:	ucd-snmp-devel >= 4.2.6
 PreReq:		rc-scripts
+Requires(pre):	/bin/id
 Requires(pre):	/usr/sbin/useradd
 Requires(postun):	/usr/sbin/userdel
 Requires(post,preun):	/sbin/chkconfig
@@ -45,6 +47,7 @@ Requires:	perl-%{name} = %{version}-%{release}
 Requires:	pam >= 0.77.3
 Provides:	imapdaemon
 Provides:	pop3daemon
+Provides:	user(cyrus)
 Obsoletes:	imap
 Obsoletes:	imapd
 Obsoletes:	imapdaemon
@@ -239,13 +242,14 @@ done
 rm -rf $RPM_BUILD_ROOT
 
 %pre
-if [ -n "`id -u cyrus 2>/dev/null`" ]; then
-	if [ "`id -u cyrus`" != "76" ]; then
+if [ -n "`/bin/id -u cyrus 2>/dev/null`" ]; then
+	if [ "`/bin/id -u cyrus`" != 76 ]; then
 		echo "Error: user cyrus doesn't have uid=76. Correct this before installing cyrus-imapd." 1>&2
 		exit 1
 	fi
 else
-	/usr/sbin/useradd -u 76 -r -d /var/spool/imap -s /bin/false -c "Cyrus User" -g mail cyrus 1>&2
+	/usr/sbin/useradd -u 76 -d /var/spool/imap -s /bin/false \
+		-c "Cyrus User" -g mail cyrus 1>&2
 fi
 
 %post
@@ -254,8 +258,8 @@ touch /var/lib/imap/faillog
 chown cyrus:mail /var/lib/imap/faillog
 chmod 640 /var/lib/imap/faillog
 cd /var/lib/imap
-chattr +S . user quota user/* quota/* 2>/dev/null
-chattr +S /var/spool/imap /var/spool/imap/* 2>/dev/null
+chattr +S . user quota user/* quota/* 2>/dev/null ||:
+chattr +S /var/spool/imap /var/spool/imap/* 2>/dev/null ||:
 if [ -f /var/lock/subsys/cyrus-imapd ]; then
 	/etc/rc.d/init.d/cyrus-imapd restart 1>&2
 else
@@ -272,7 +276,7 @@ fi
 
 %postun
 if [ "$1" = "0" ]; then
-	/usr/sbin/userdel cyrus
+	%userremove cyrus
 fi
 
 %post	libs -p /sbin/ldconfig
