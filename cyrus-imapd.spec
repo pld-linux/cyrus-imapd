@@ -4,7 +4,7 @@ Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.0.16
-Release:	6
+Release:	7
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -47,6 +47,9 @@ Requires(postun):	/usr/sbin/userdel
 Provides:	imapdaemon
 Provides:	pop3daemon
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
+Conflicts:	courier-imap
+Conflicts:	courier-imap-common
+Conflicts:	courier-imap-pop3
 Conflicts:	imap
 Conflicts:	imap-common
 Conflicts:	imap-pop2
@@ -54,6 +57,7 @@ Conflicts:	imap-pop3
 Conflicts:	qpopper
 Conflicts:	qpopper6
 Conflicts:	solid-pop3d
+Conflicts:	tpop3d
 Obsoletes:	imapd
 Obsoletes:	pop3daemon
 Obsoletes:	imapdaemon
