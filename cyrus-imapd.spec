@@ -5,12 +5,12 @@ Summary:	High-performance mail store with imap and pop3
 Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	2.1.16
+Version:	2.2.3
 Release:	0.1
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
-# Source0-md5:	cd09ca3faff90fd35f2142a5cca46da9
+# Source0-md5:	32888c5120edeb2867d6283fedbdb7d5
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
@@ -22,10 +22,8 @@ Source9:	%{name}.pamd
 Source10:	%{name}-pop.pamd
 Source11:	%{name}.init
 Source12:	cyrus.conf
-Patch0:		%{name}-snmp.patch
-Patch1:		%{name}-mandir.patch
-Patch2:		%{name}-paths.patch
-Patch3:		%{name}-et.patch
+Patch0:		%{name}-mandir.patch
+Patch1:		%{name}-et.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 BuildRequires:	autoconf
 BuildRequires:	automake
@@ -60,7 +58,7 @@ Obsoletes:	imap
 Obsoletes:	pop3daemon
 Obsoletes:	imapdaemon
 
-%define		_libexecdir	%{_prefix}/lib/cyrus
+%define		_libexecdir	%{_libdir}/cyrus
 
 %description
 The Cyrus IMAP server is a scalable enterprise mail system designed
@@ -108,7 +106,7 @@ IMAP, POP3 ou KPOP.
 Summary:	Libraries and include files for developing with cyrus-imapd
 Summary(pl):	Pliki potrzebne do programowania z u¿yciem cyrus-imapd
 Group:		Development/Libraries
-Requires:	%{name} = %{version}
+Requires:	%{name} = %{version}-%{release}
 
 %description devel
 This package provides the necessary development libraries and include
@@ -122,7 +120,7 @@ tworzenia oprogramowania z wykorzystaniem cyrus-imapd.
 Summary:	Static cyrus-imapd libraries
 Summary(pl):	Biblioteki statyczne cyrus-imapd
 Group:		Development/Libraries
-Requires:	%{name}-devel = %{version}
+Requires:	%{name}-devel = %{version}-%{release}
 
 %description static
 Static cyrus-imapd libraries
@@ -134,7 +132,7 @@ Biblioteki statyczne cyrus-imapd
 Summary:	Perl interface to cyrus-imapd library
 Summary(pl):	Perlowy interfejs do biblioteki cyrus-imapd
 Group:		Development/Languages/Perl
-Requires:	%{name} = %{version}
+Requires:	%{name} = %{version}-%{release}
 
 %description -n perl-%{name}
 Perl interface to cyrus-imapd library.
@@ -146,19 +144,17 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %setup -q
 %patch0 -p1
 %patch1 -p1
-%patch2 -p1
-%patch3 -p1
+
+rm -rf autom4te.cache
 
 %build
 cd makedepend
-rm -f aclocal.m4
 %{__aclocal}
 %{__autoconf}
 %configure
 %{__make}
 PATH=$PATH:`pwd`; export PATH
 cd ..
-rm -f aclocal.m4
 %{__aclocal} -I cmulocal
 %{__autoheader}
 %{__autoconf}
@@ -168,6 +164,7 @@ cp -f %{_datadir}/automake/install-sh .
 	--with-auth=unix \
 	--without-libwrap \
 	--with-cyrus-prefix=%{_libexecdir} \
+	--with-service-path=%{_libexecdir} \
 	--with-com_err=/usr \
 	--with-perl=%{__perl}
 %{__make} \
@@ -207,10 +204,8 @@ install %{SOURCE10}	$RPM_BUILD_ROOT/etc/pam.d/pop
 install %{SOURCE11}	$RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
 install %{SOURCE12}	$RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 
-mv -f $RPM_BUILD_ROOT%{_libexecdir}/bin/*	$RPM_BUILD_ROOT%{_libexecdir}
 mv -f $RPM_BUILD_ROOT%{_libexecdir}/master	$RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
 mv -f $RPM_BUILD_ROOT%{_mandir}/man8/master.8	$RPM_BUILD_ROOT%{_mandir}/man8/cyrus-master.8
-rm -rf $RPM_BUILD_ROOT%{_libexecdir}/bin
 rm -rf $RPM_BUILD_ROOT%{_mandir}/man8/idled.8
 
 touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop}
@@ -274,27 +269,30 @@ fi
 %attr(4754,cyrus,mail) %{_libexecdir}/deliver
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
 %attr(755,root,root) %{_libexecdir}/arbitron
+%attr(755,root,root) %{_libexecdir}/chk_cyrus
 %attr(755,root,root) %{_libexecdir}/ctl_deliver
 %attr(755,root,root) %{_libexecdir}/ctl_mboxlist
 %attr(755,root,root) %{_libexecdir}/ctl_cyrusdb
 %attr(755,root,root) %{_libexecdir}/cvt_cyrusdb
-%attr(755,root,root) %{_libexecdir}/chk_cyrus
-%attr(755,root,root) %{_libexecdir}/notifyd
-%attr(755,root,root) %{_libexecdir}/squatter
-%attr(755,root,root) %{_libexecdir}/tls_prune
+%attr(755,root,root) %{_libexecdir}/cyr_expire
 %attr(755,root,root) %{_libexecdir}/cyrdump
-%attr(755,root,root) %{_libexecdir}/feedcyrus
+%attr(755,root,root) %{_libexecdir}/cyrus-master
 %attr(755,root,root) %{_libexecdir}/fud
 %attr(755,root,root) %{_libexecdir}/imapd
 %attr(755,root,root) %{_libexecdir}/ipurge
 %attr(755,root,root) %{_libexecdir}/lmtpd
-%attr(755,root,root) %{_libexecdir}/cyrus-master
 %attr(755,root,root) %{_libexecdir}/mbexamine
 %attr(755,root,root) %{_libexecdir}/mbpath
+%attr(755,root,root) %{_libexecdir}/notifyd
 %attr(755,root,root) %{_libexecdir}/pop3d
+%attr(755,root,root) %{_libexecdir}/pop3proxyd
 %attr(755,root,root) %{_libexecdir}/quota
 %attr(755,root,root) %{_libexecdir}/reconstruct
+%attr(755,root,root) %{_libexecdir}/sievec
+%attr(755,root,root) %{_libexecdir}/smmapd
+%attr(755,root,root) %{_libexecdir}/squatter
 %attr(755,root,root) %{_libexecdir}/timsieved
+%attr(755,root,root) %{_libexecdir}/tls_prune
 
 %attr(750,cyrus,mail) /var/spool/imap
 %attr(750,cyrus,mail) %dir /var/lib/imap
