@@ -4,7 +4,7 @@ Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.1.12
-Release:	0.2
+Release:	0.3
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -158,12 +158,16 @@ rm -f aclocal.m4
 %{__aclocal} -I cmulocal
 %{__autoheader}
 %{__autoconf}
+cp %{_datadir}/automake/config.*   .
+cp %{_datadir}/automake/install-sh .
 %configure \
 	--with-auth=unix \
 	--without-libwrap \
 	--with-cyrus-prefix=%{_libexecdir} \
-	--with-com_err=/usr
-%{__make}
+	--with-com_err=/usr \
+	--with-perl=%{__perl}
+%{__make} \
+	INSTALLDIRS=vendor
 
 %{__cc} %{rpmcflags} \
 	-DLIBEXECDIR="\"%{_libexecdir}\"" %{rpmldflags} -Wall -o deliver-wrapper %{SOURCE3}
@@ -182,7 +186,12 @@ touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 	$RPM_BUILD_ROOT/etc/security/blacklist.imap \
 	$RPM_BUILD_ROOT/etc/security/blacklist.pop
 
-%{__make} install DESTDIR=$RPM_BUILD_ROOT CYRUS_USER="`id -u`" CYRUS_GROUP="`id -g`" mandir=%{_mandir}
+%{__make} install \
+	DESTDIR=$RPM_BUILD_ROOT \
+	CYRUS_USER="`id -u`" \
+	CYRUS_GROUP="`id -g`" \
+	mandir=%{_mandir} \
+	INSTALLDIRS=vendor
 
 install deliver-wrapper $RPM_BUILD_ROOT%{_libexecdir}/deliver-wrapper
 
@@ -202,12 +211,12 @@ rm -rf $RPM_BUILD_ROOT%{_mandir}/man8/idled.8
 
 touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop}
 
-find $RPM_BUILD_ROOT%{perl_sitearch} -name .packlist -exec rm {} \;
+find $RPM_BUILD_ROOT%{perl_vendorarch} -name .packlist -exec rm {} \;
 
 # make hashed dirs
 oldpwd=`pwd`
 cd $RPM_BUILD_ROOT/var
-perl <<EOF
+%{__perl} <<EOF
 foreach \$i ("a".."z")
 {
 	mkdir "lib/imap/user/\$i", 0755;
@@ -313,5 +322,5 @@ rm -rf $RPM_BUILD_ROOT
 
 %files -n perl-%{name}
 %defattr(644,root,root,755)
-%{perl_sitearch}/Cyrus
-%{perl_sitearch}/auto/Cyrus
+%{perl_vendorarch}/Cyrus
+%{perl_vendorarch}/auto/Cyrus
