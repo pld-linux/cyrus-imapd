@@ -4,7 +4,7 @@ Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.0.16
-Release:	7
+Release:	8
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -172,6 +172,7 @@ mv -f $RPM_BUILD_ROOT%{_libexecdir}/bin/*	$RPM_BUILD_ROOT%{_libexecdir}
 mv -f $RPM_BUILD_ROOT%{_libexecdir}/master	$RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
 mv -f $RPM_BUILD_ROOT%{_mandir}/man8/master.8	$RPM_BUILD_ROOT%{_mandir}/man8/cyrus-master.8
 rm -rf $RPM_BUILD_ROOT%{_libexecdir}/bin
+rm -rf $RPM_BUILD_ROOT%{_mandir}/man8/idled.8
 
 touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop}
 
@@ -183,10 +184,10 @@ cd $RPM_BUILD_ROOT/var
 perl <<EOF
 foreach \$i ("a".."z")
 {
-  mkdir "lib/imap/user/\$i", 0755;
-  mkdir "lib/imap/quota/\$i", 0755;
-  mkdir "lib/imap/sieve/\$i", 0755;
-  mkdir "spool/imap/\$i", 0755;
+	mkdir "lib/imap/user/\$i", 0755;
+	mkdir "lib/imap/quota/\$i", 0755;
+	mkdir "lib/imap/sieve/\$i", 0755;
+	mkdir "spool/imap/\$i", 0755;
 }
 EOF
 cd ${oldpwd}
