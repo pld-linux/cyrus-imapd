@@ -232,7 +232,7 @@ fi
 %post
 /sbin/chkconfig --add cyrus-imapd
 touch /var/lib/imap/faillog
-chown cyrus.mail /var/lib/imap/faillog
+chown cyrus:mail /var/lib/imap/faillog
 chmod 640 /var/lib/imap/faillog
 cd /var/lib/imap
 chattr +S . user quota user/* quota/* 2>/dev/null
