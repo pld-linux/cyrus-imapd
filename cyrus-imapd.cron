@@ -1,2 +1,0 @@
-#!/bin/sh
-su cyrus -s /bin/sh -c '/usr/lib/cyrus/deliver -E 3'
