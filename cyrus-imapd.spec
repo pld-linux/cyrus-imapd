@@ -160,15 +160,15 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %build
 cd makedepend
 rm -f aclocal.m4
-aclocal
+%{__aclocal}
 %{__autoconf}
 %configure
 %{__make}
 PATH=$PATH:`pwd`; export PATH
 cd ..
 rm -f aclocal.m4
-aclocal -I cmulocal
-autoheader
+%{__aclocal} -I cmulocal
+%{__autoheader}
 %{__autoconf}
 %configure \
 	--with-auth=unix \
