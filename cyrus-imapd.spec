@@ -37,8 +37,8 @@ BuildRequires:	openssl-devel >= 0.9.7
 BuildRequires:	perl-devel >= 5.6.1
 #BuildRequires:	ucd-snmp-devel >= 4.2.6
 PreReq:		rc-scripts
-Requires(pre): /usr/sbin/useradd
-Requires(postun):      /usr/sbin/userdel
+Requires(pre):	/usr/sbin/useradd
+Requires(postun):	/usr/sbin/userdel
 Requires(post,preun):/sbin/chkconfig
 Provides:	imapdaemon
 Provides:	pop3daemon
