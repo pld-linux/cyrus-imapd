@@ -3,8 +3,8 @@ Summary:	high-performance mail store with imap and pop3
 Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Name:		cyrus-imapd
 Version:	2.0.16
-Release:	3
-License:	Academic/research
+Release:	4
+License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
 Source1:	cyrus-README
@@ -43,9 +43,13 @@ Prereq:		/sbin/chkconfig
 Provides:	imapdaemon
 Provides:	pop3daemon
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
+Conflicts:	imap
+Conflicts:	imap-common
+Conflicts:	imap-pop2
+Conflicts:	imap-pop3
 Conflicts:	qpopper
-Conflicts:	solid-pop3d
 Conflicts:	qpopper6
+Conflicts:	solid-pop3d
 Obsoletes:	imapd
 Obsoletes:	pop3daemon
 Obsoletes:	imapdaemon
@@ -65,10 +69,6 @@ database is stored in parts of the filesystem that are private to the
 Cyrus IMAP system. All user access to mail is through software using
 the IMAP, POP3, or KPOP protocols.
 
-Note that this package can be used by ISPs and other to provide mail
-services, but it may not be distributed as part of a commercial
-product.
-
 %description -l pl
 Serwer Cyrus IMAP jest skalowalnym systemem e-mail dla
 przedsiêbiorstwa, zaprojektowanym dla ma³ych i du¿ych firm i
@@ -83,10 +83,6 @@ pocztowych jest pzrechowywana w tych czê¶ciach systemu plików, które
 s± dostêpne jedynie dla systemu IMAP Cyrus. Wszelki dostêp do poczty
 ma miejsce poprzez oprogramowanie wykorzystuj±ce protoko³y IMAP, POP3
 oraz KPOP.
-
-Nale¿y zwróciæ uwagê na fakt, ¿e pakiet ten mo¿e byæ wykorzystywany
-przez ISP, nie mo¿e byæ jednak rozpowszechniany jako czê¶æ
-komercyjnego produktu.
 
 %prep
 %setup -q
@@ -107,7 +103,7 @@ aclocal
 autoconf
 %configure
 %{__make}
-export PATH=$PATH:`pwd`
+PATH=$PATH:`pwd`; export PATH
 cd ..
 rm -f aclocal.m4
 aclocal -I cmulocal
