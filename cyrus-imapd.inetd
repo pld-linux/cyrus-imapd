@@ -1,0 +1,9 @@
+SERVICE_NAME=imap
+SOCK_TYPE=stream
+PROTOCOL=tcp
+PORT=143
+FLAGS=nowait
+USER=cyrus
+SERVER=tcpd
+FAMILY=ipv4
+DAEMON=/usr/lib/cyrus/imapd

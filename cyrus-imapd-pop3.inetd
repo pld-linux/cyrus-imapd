@@ -1,0 +1,9 @@
+SERVICE_NAME=pop-3
+SOCK_TYPE=stream
+PROTOCOL=tcp
+PORT=110
+FLAGS=nowait
+USER=cyrus
+SERVER=tcpd
+FAMILY=ipv4
+DAEMON=/usr/lib/cyrus/pop3d
