@@ -41,6 +41,8 @@ Requires(pre):	/usr/sbin/useradd
 Requires(postun):	/usr/sbin/userdel
 Requires(post,preun):	/sbin/chkconfig
 Requires:	%{name}-libs = %{version}-%{release}
+# needed by scripts from %{_bindir}
+Requires:	perl-%{name} = %{version}-%{release}
 Requires:	pam >= 0.77.3
 Provides:	imapdaemon
 Provides:	pop3daemon
