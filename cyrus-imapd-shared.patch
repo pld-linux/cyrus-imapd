@@ -40,13 +40,14 @@
 -	chartable.o imapurl.o nonblock_@WITH_NONBLOCK@.o lock_@WITH_LOCK@.o \
 -	gmtoff_@WITH_GMTOFF@.o map_@WITH_MAP@.o $(ACL) $(AUTH) \
 -	@LIBOBJS@ @CYRUSDB_OBJS@ \
+-	iptostring.o xmalloc.o wildmat.o
 +LIBCYR_OBJS = acl.lo bsearch.lo charset.lo glob.lo retry.lo util.lo \
 +	libcyr_cfg.lo mkgmtime.lo prot.lo parseaddr.lo imclient.lo imparse.lo \
 +	lsort.lo stristr.lo rfc822date.lo cyrusdb.lo strhash.lo \
 +	chartable.lo imapurl.lo nonblock_@WITH_NONBLOCK@.lo lock_@WITH_LOCK@.lo \
 +	gmtoff_@WITH_GMTOFF@.lo map_@WITH_MAP@.lo $(ACL) $(AUTH) \
 +	@LTLIBOBJS@ @CYRUSDB_OBJS@ \
- 	iptostring.o xmalloc.o wildmat.o
++	iptostring.lo xmalloc.lo wildmat.lo
  
  LIBCYRM_HDRS = $(srcdir)/hash.h $(srcdir)/mpool.h $(srcdir)/xmalloc.h \
  	$(srcdir)/strhash.o $(srcdir)/libconfig.h $(srcdir)/assert.h \
