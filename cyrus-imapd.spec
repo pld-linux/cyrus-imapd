@@ -191,7 +191,7 @@ chattr +S /var/spool/imap /var/spool/imap/* 2>/dev/null
 if [ -f /var/lock/subsys/cyrus-imapd ]; then
 	/etc/rc.d/init.d/cyrus-imapd restart 1>&2
 else
-	echo "Run \"/etc/rc.d/init.d/cyrus-imapd start\" to start apache http daemon."
+	echo "Run \"/etc/rc.d/init.d/cyrus-imapd start\" to start cyrus imap daemon."
 fi
 
 %preun
