@@ -1,7 +1,7 @@
 %include	/usr/lib/rpm/macros.perl
 Summary:	high-performance mail store with imap and pop3
 Name:		cyrus-imapd
-Version:	2.0.15
+Version:	2.0.16
 Release:	1
 License:	academic/research
 Group:		Networking/Daemons
@@ -23,16 +23,16 @@ Patch0:		%{name}-snmp.patch
 Patch1:		%{name}-mandir.patch
 Patch2:		%{name}-paths.patch
 Patch3:		%{name}-overquota.patch
-Patch4:		http://www.imasy.or.jp/~ume/ipv6/cyrus-imapd-2.0.15-ipv6-20010709.diff.gz
+Patch4:		http://www.imasy.or.jp/~ume/ipv6/cyrus-imapd-2.0.16-ipv6-20010728.diff.gz
 Patch5:		%{name}-et.patch
-Patch6:		%{name}-checkfd.patch
-Patch7:		%{name}-ac250.patch
-Patch8:		%{name}-db3.patch
-Patch9:		%{name}-ipv6.m4.patch
+Patch6:		%{name}-ac250.patch
+Patch7:		%{name}-db3.patch
+Patch8:		%{name}-ipv6.m4.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 #Icon:		cyrus.gif
 BuildRequires:	e2fsprogs-devel >= 1.21
 BuildRequires:	cyrus-sasl-devel >= 1.5.27
+BuildRequires:	flex
 BuildRequires:	openssl-devel >= 0.9.6a
 BuildRequires:	perl >= 5.6.1
 BuildRequires:	db3-devel >= 3.1.17
@@ -96,7 +96,6 @@ komercyjnego produktu.
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
-%patch9 -p1
 
 %build
 cd makedepend
