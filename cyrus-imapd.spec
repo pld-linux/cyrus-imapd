@@ -2,7 +2,7 @@
 Summary:	high-performance mail store with imap and pop3
 Name:		cyrus-imapd
 Version:	2.0.11
-Release:	0.2
+Release:	1.2
 License:	academic/research
 Group:		Networking/Daemons
 Group(de):	Netzwerkwesen/Server
