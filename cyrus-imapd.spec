@@ -84,13 +84,13 @@ rm -rf $RPM_BUILD_ROOT
 cd makedepend
 autoconf
 %configure 
-make
+%{__make}
 export PATH=$PATH:`pwd`
 cd ..
 autoconf
 %configure \
 	--with-auth=unix
-make
+%{__make}
 
 gcc $RPM_OPT_FLAGS -DLIBEXECDIR=\"%{_libexecdir}\" -s -Wall -o deliver-wrapper %{SOURCE3}
 
