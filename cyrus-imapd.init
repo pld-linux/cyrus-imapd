@@ -2,7 +2,7 @@
 #
 # cyrus-imapd	cyrus-imapd IMAP & POP3 Server
 #
-# chkconfig:    345  85 15
+# chkconfig:	345 85 15
 #
 # description:	cyrus-imapd
 
