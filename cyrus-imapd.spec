@@ -66,7 +66,7 @@ Obsoletes:	imapdaemon
 %define		_libexecdir	%{_prefix}/lib/cyrus
 
 %description
-The Cyrus IMAP server is a scaleable enterprise mail system designed
+The Cyrus IMAP server is a scalable enterprise mail system designed
 for use from small to large enterprise environments using
 standards-based technologies.
 
