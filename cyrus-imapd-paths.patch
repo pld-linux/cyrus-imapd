@@ -1,11 +1,11 @@
---- master/master.c.old	Thu Jan 25 23:35:36 2001
-+++ master/master.c	Thu Jan 25 23:52:54 2001
-@@ -84,7 +84,7 @@
- #include "master.h"
- #include "service.h"
+--- cyrus-imapd-2.1.12/acconfig.h.wiget	Fri Feb 14 01:20:24 2003
++++ cyrus-imapd-2.1.12/acconfig.h	Fri Feb 14 01:21:47 2003
+@@ -176,7 +176,7 @@
+ #endif
  
+ /* where are our binaries? */
 -#define SERVICE_PATH (CYRUS_PATH "/bin")
 +#define SERVICE_PATH CYRUS_PATH
  
- enum {
-     become_cyrus_early = 1,
+ #ifndef HAVE___ATTRIBUTE__
+ /* Can't use attributes... */
