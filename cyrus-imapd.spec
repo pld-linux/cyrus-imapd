@@ -32,7 +32,7 @@ Patch7:		%{name}-db3.patch
 Patch8:		%{name}-ipv6.m4.patch
 Patch9:		%{name}-ac25x.patch
 Patch10:	%{name}-snprintf.patch
-Patch11:	%{name}-CAN-2004-201x.patch
+Patch11:	%{name}-CAN-2004-101x.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 BuildRequires:	autoconf
 BuildRequires:	automake
