@@ -3,8 +3,8 @@ Summary:	High-performance mail store with imap and pop3
 Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	2.0.17
-Release:	1
+Version:	2.1.12
+Release:	0.2
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -22,24 +22,17 @@ Source12:	cyrus.conf
 Patch0:		%{name}-snmp.patch
 Patch1:		%{name}-mandir.patch
 Patch2:		%{name}-paths.patch
-Patch3:		%{name}-overquota.patch
-Patch4:		http://www.imasy.or.jp/~ume/ipv6/%{name}-2.0.17-ipv6-20021205.diff.gz
 Patch5:		%{name}-et.patch
-Patch6:		%{name}-ac250.patch
-Patch7:		%{name}-db3.patch
-Patch8:		%{name}-ipv6.m4.patch
-Patch9:		%{name}-ac25x.patch
-Patch10:	%{name}-snprintf.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 BuildRequires:	autoconf
 BuildRequires:	automake
 BuildRequires:	cyrus-sasl-devel >= 1.5.27
-BuildRequires:	db3-devel >= 3.1.17
+BuildRequires:	db-devel >= 4.1.25
 BuildRequires:	e2fsprogs-devel >= 1.21
 BuildRequires:	flex
 BuildRequires:	openssl-devel >= 0.9.7
 BuildRequires:	perl-devel >= 5.6.1
-BuildRequires:	ucd-snmp-devel >= 4.2.6
+#BuildRequires:	ucd-snmp-devel >= 4.2.6
 PreReq:		rc-scripts
 Requires(pre):	/usr/sbin/useradd
 Requires(post,preun):/sbin/chkconfig
@@ -149,15 +142,8 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %setup -q
 %patch0 -p1
 %patch1 -p1
-%patch2 -p0
-%patch3 -p1
-%patch4 -p0
+%patch2 -p1
 %patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
-%patch10 -p1
 
 %build
 cd makedepend
@@ -270,7 +256,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(644,root,root,755)
 %doc cyrus-README cyrus-procmailrc cyrus-user-procmailrc.template
-%doc cyrus-imapd-procmail+cyrus.mc COPYRIGHT doc/*.html
+%doc cyrus-imapd-procmail+cyrus.mc COPYRIGHT doc/*.html tools
 %config(noreplace) %verify(not size mtime md5) %{_sysconfdir}/*.conf
 %attr(640,root,root) /etc/logrotate.d/cyrus-imapd
 %attr(440,cyrus,root) %config(noreplace) %verify(not size mtime md5) /etc/pam.d/*
@@ -282,6 +268,12 @@ rm -rf $RPM_BUILD_ROOT
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
 %attr(755,root,root) %{_libexecdir}/ctl_deliver
 %attr(755,root,root) %{_libexecdir}/ctl_mboxlist
+%attr(755,root,root) %{_libexecdir}/ctl_cyrusdb
+%attr(755,root,root) %{_libexecdir}/cvt_cyrusdb
+%attr(755,root,root) %{_libexecdir}/chk_cyrus
+%attr(755,root,root) %{_libexecdir}/notifyd
+%attr(755,root,root) %{_libexecdir}/squatter
+%attr(755,root,root) %{_libexecdir}/tls_prune
 %attr(755,root,root) %{_libexecdir}/cyrdump
 %attr(755,root,root) %{_libexecdir}/feedcyrus
 %attr(755,root,root) %{_libexecdir}/fud
