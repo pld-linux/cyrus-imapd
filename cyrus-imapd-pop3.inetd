@@ -4,6 +4,7 @@ PROTOCOL=tcp
 PORT=110
 FLAGS=nowait
 USER=cyrus
+GROUP=mail
 SERVER=tcpd
 FAMILY=ipv4
 DAEMON=/usr/lib/cyrus/pop3d
