@@ -22,7 +22,7 @@ Patch0:		%{name}-snmp.patch
 Patch1:		%{name}-mandir.patch
 Patch2:		%{name}-paths.patch
 Patch3:		%{name}-overquota.patch
-Patch4:		http://www.imasy.or.jp/~ume/ipv6/cyrus-imapd-2.0.16-ipv6-20010728.diff.gz
+Patch4:		http://www.imasy.or.jp/~ume/ipv6/%{name}-2.0.16-ipv6-20010728.diff.gz
 Patch5:		%{name}-et.patch
 Patch6:		%{name}-ac250.patch
 Patch7:		%{name}-db3.patch
@@ -89,7 +89,7 @@ przez ISP, nie mo¿e byæ jednak rozpowszechniany jako czê¶æ
 komercyjnego produktu.
 
 %prep
-%setup -q 
+%setup -q
 %patch0 -p1
 %patch1 -p1
 %patch2 -p0
@@ -105,7 +105,7 @@ cd makedepend
 rm -f aclocal.m4
 aclocal
 autoconf
-%configure 
+%configure
 %{__make}
 export PATH=$PATH:`pwd`
 cd ..
@@ -165,7 +165,7 @@ gzip -9nf cyrus-README cyrus-procmailrc	cyrus-user-procmailrc.template \
 oldpwd=`pwd`
 cd $RPM_BUILD_ROOT/var
 perl <<EOF
-foreach \$i ("a".."z") 
+foreach \$i ("a".."z")
 {
   mkdir "lib/imap/user/\$i", 0755;
   mkdir "lib/imap/quota/\$i", 0755;
