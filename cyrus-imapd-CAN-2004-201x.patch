@@ -1,0 +1,24 @@
+      * Fix lack of bounds checking in PARTIAL and FETCH (CAN-2004-1012,
+        CAN-2004-1013) 
+
+diff -Nur cyrus-imapd-2.2.8/imap/imapd.c cyrus-imapd-2.2.9/imap/imapd.c
+--- cyrus-imapd-2.2.8/imap/imapd.c	2004-07-15 18:19:18.000000000 +0200
++++ cyrus-imapd-2.2.9/imap/imapd.c	2004-11-17 23:29:03.000000000 +0100
+@@ -2813,7 +2819,7 @@
+ 	    else if (!strncmp(fetchatt.s, "BODY[", 5) ||
+ 		     !strncmp(fetchatt.s, "BODY.PEEK[", 10)) {
+ 		p = section = fetchatt.s + 5;
+-		if (*p == 'P') {
++		if (!strncmp(p, "PEEK[", 5)) {
+ 		    p = section += 5;
+ 		}
+ 		else {
+@@ -3154,7 +3160,7 @@
+     else if (!strncmp(data, "body[", 5) ||
+ 	     !strncmp(data, "body.peek[", 10)) {
+ 	p = section = data + 5;
+-	if (*p == 'p') {
++	if (!strncmp(p, "peek[", 5)) {
+ 	    p = section += 5;
+ 	}
+ 	else {
