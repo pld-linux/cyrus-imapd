@@ -103,7 +103,7 @@ install -d \
 	$RPM_BUILD_ROOT{%{_sbindir},%{_libexecdir},%{_mandir}} \
 	$RPM_BUILD_ROOT%{_sysconfdir}/{logrotate.d,cron.daily,sysconfig/rc-inetd} \
 	$RPM_BUILD_ROOT/var/spool/imap/stage. \
-	$RPM_BUILD_ROOT/var/lib/imap/{user,quota,proc,log,msg,deliverdb,sieve,db,socket} \
+	$RPM_BUILD_ROOT/var/lib/imap/{user,quota,proc,log,msg,deliverdb/db,sieve,db,socket} \
 	$RPM_BUILD_ROOT/etc/{security,pam.d,rc.d/init.d}
 
 touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
@@ -185,7 +185,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(644,root,root,755)
 %doc *.gz doc/*.html
-%config %{_sysconfdir}/imapd.conf
+%config %{_sysconfdir}/*.conf
 %attr(640,root,root) %config(noreplace) /etc/logrotate.d/cyrus-imapd
 %attr(440,cyrus,root) %config(noreplace) %verify(not size md5 mtime) /etc/pam.d/*
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-imapd
@@ -228,16 +228,17 @@ rm -rf $RPM_BUILD_ROOT
 
 %attr(750,cyrus,mail) /var/spool/imap
 %attr(750,cyrus,mail) %dir /var/lib/imap
-%attr(640,cyrus,mail) /var/lib/imap/deliverdb
-%attr(640,cyrus,mail) /var/lib/imap/quota
-%attr(640,cyrus,mail) /var/lib/imap/user
-%attr(640,cyrus,mail) /var/lib/imap/sieve
-%attr(640,cyrus,mail) /var/lib/imap/log
-%attr(640,cyrus,mail) /var/lib/imap/msg
-%attr(640,cyrus,mail) /var/lib/imap/proc
-%attr(640,cyrus,mail) /var/lib/imap/db
-%attr(640,cyrus,mail) /var/lib/imap/socket
-%attr(640,cyrus,mail) %config(noreplace) %verify(not size md5 mtime) /var/lib/imap/mailboxes
+%attr(750,cyrus,mail) %dir /var/lib/imap/deliverdb
+%attr(750,cyrus,mail) /var/lib/imap/deliverdb/db
+%attr(750,cyrus,mail) /var/lib/imap/quota
+%attr(750,cyrus,mail) /var/lib/imap/user
+%attr(750,cyrus,mail) /var/lib/imap/sieve
+%attr(750,cyrus,mail) /var/lib/imap/log
+%attr(750,cyrus,mail) /var/lib/imap/msg
+%attr(750,cyrus,mail) /var/lib/imap/proc
+%attr(750,cyrus,mail) /var/lib/imap/db
+%attr(750,cyrus,mail) /var/lib/imap/socket
+%attr(750,cyrus,mail) %config(noreplace) %verify(not size md5 mtime) /var/lib/imap/mailboxes
 
 %{_mandir}/man*/*
 %{_includedir}/cyrus
