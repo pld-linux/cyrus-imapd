@@ -11,16 +11,16 @@ Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
 Source4:	cyrus-user-procmailrc.template
-Source5:	cyrus-imapd-procmail+cyrus.mc
-Source6:	cyrus-imapd.logrotate
-Source7:	cyrus-imapd.conf
-Source8:	cyrus-imapd.cron
-#Source9:	cyrus-imapd.inetd
-#Source10:	cyrus-imapd-pop3.inetd
-Source11:	cyrus-imapd.pamd
-Source12:	cyrus-imapd-pop.pamd
-Patch0:		cyrus-imapd-snmp.patch
-Patch1:		cyrus-imapd-mandir.patch
+Source5:	%{name}-procmail+cyrus.mc
+Source6:	%{name}.logrotate
+Source7:	%{name}.conf
+Source8:	%{name}.cron
+Source9:	%{name}.pamd
+Source10:	%{name}-pop.pamd
+Source11:	%{name}.init
+Source12:	cyrus.conf
+Patch0:		%{name}-snmp.patch
+Patch1:		%{name}-mandir.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 #Icon:		cyrus.gif
 BuildRequires:	cyrus-sasl-devel
@@ -76,18 +76,11 @@ Nale¿y zwróciæ uwagê na fakt, ¿e pakiet ten mo¿e byæ wykorzystywany
 przez ISP, nie mo¿e byæ jednak rozpowszechniany jako czê¶æ
 komercyjnego produktu.
 
-%define version %{PACKAGE_VERSION}
-
 %prep
-rm -rf $RPM_BUILD_ROOT
-
 %setup -q 
 %patch0 -p1
-#%patch1 -p1
-
+%patch1 -p1
 %build
-
-# prepare a makedepend
 cd makedepend
 autoconf
 %configure 
@@ -97,21 +90,21 @@ cd ..
 autoheader
 autoconf
 %configure \
-	--with-auth=unix
+	--with-auth=unix \
+	--without-libwrap
 %{__make}
 
 %{__cc} $RPM_OPT_FLAGS -DLIBEXECDIR=\"%{_libexecdir}\" -s -Wall -o deliver-wrapper %{SOURCE3}
 
 %install
 rm -rf $RPM_BUILD_ROOT
-#install -d $RPM_BUILD_ROOT%{_prefix}/cyrus%{_sysconfdir}
+
 install -d \
 	$RPM_BUILD_ROOT{%{_sbindir},%{_libexecdir},%{_mandir}} \
 	$RPM_BUILD_ROOT%{_sysconfdir}/{logrotate.d,cron.daily,sysconfig/rc-inetd} \
 	$RPM_BUILD_ROOT/var/spool/imap/stage. \
 	$RPM_BUILD_ROOT/var/lib/imap/{user,quota,proc,log,msg,deliverdb,sieve,db,socket} \
-	$RPM_BUILD_ROOT%{_libdir}/sendmail-cf/cf \
-	$RPM_BUILD_ROOT/etc/{security,pam.d}
+	$RPM_BUILD_ROOT/etc/{security,pam.d,rc.d/init.d}
 
 touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 	$RPM_BUILD_ROOT/var/lib/imap/faillog \
@@ -120,26 +113,25 @@ touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 
 %{__make} install DESTDIR=$RPM_BUILD_ROOT CYRUS_USER="`id -u`" CYRUS_GROUP="`id -g`" mandir=%{_mandir}
 
-#install -d $RPM_BUILD_ROOT%{_prefix}/cyrus/bin
-#install -g mail -m 2755 -s deliver-wrapper $RPM_BUILD_ROOT%{_prefix}/cyrus/bin/deliver-wrapper
 install deliver-wrapper $RPM_BUILD_ROOT%{_prefix}/cyrus/bin/deliver-wrapper
 
-install %{SOURCE1} .
-install %{SOURCE2} $RPM_BUILD_ROOT%{_sysconfdir}/procmailrc.cyrus
-#install %{SOURCE4} $RPM_BUILD_ROOT%{_prefix}/cyrus%{_sysconfdir}/user-procmailrc.template
-install %{SOURCE5} $RPM_BUILD_ROOT%{_libdir}/sendmail-cf/cf/procmail+cyrus.mc
-install %{SOURCE6} $RPM_BUILD_ROOT/etc/logrotate.d/cyrus-imapd
-install %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/imapd.conf
-install %{SOURCE8} $RPM_BUILD_ROOT/etc/cron.daily/cyrus-imapd
-#install %{SOURCE9} $RPM_BUILD_ROOT/etc/sysconfig/rc-inetd/imapd
-#install %{SOURCE10} $RPM_BUILD_ROOT/etc/sysconfig/rc-inetd/pop3d
-install %{SOURCE11} $RPM_BUILD_ROOT/etc/pam.d/imap
-install %{SOURCE12} $RPM_BUILD_ROOT/etc/pam.d/pop
+install %{SOURCE1}	.
+install %{SOURCE2}	.
+install %{SOURCE4}	.
+install %{SOURCE5}	.
+install %{SOURCE6}	$RPM_BUILD_ROOT/etc/logrotate.d/cyrus-imapd
+install %{SOURCE7}	$RPM_BUILD_ROOT%{_sysconfdir}/imapd.conf
+install %{SOURCE8}	$RPM_BUILD_ROOT/etc/cron.daily/cyrus-imapd
+install %{SOURCE9}	$RPM_BUILD_ROOT/etc/pam.d/imap
+install %{SOURCE10}	$RPM_BUILD_ROOT/etc/pam.d/pop
+install %{SOURCE11}	$RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
+install %{SOURCE12}	$RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 
-mv $RPM_BUILD_ROOT%{_prefix}/cyrus/bin/* $RPM_BUILD_ROOT%{_libexecdir}
-mv $RPM_BUILD_ROOT%{_libexecdir}/master $RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
+mv $RPM_BUILD_ROOT%{_prefix}/cyrus/bin/*	$RPM_BUILD_ROOT%{_libexecdir}
+mv $RPM_BUILD_ROOT%{_libexecdir}/master		$RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
 
-gzip -9nf cyrus-README
+gzip -9nf cyrus-README cyrus-procmailrc	cyrus-user-procmailrc.template \
+	cyrus-imapd-procmail+cyrus.mc
 
 # make hashed dirs
 oldpwd=`pwd`
@@ -161,28 +153,30 @@ if [ -z "`id -u cyrus 2>/dev/null`" ]; then
 fi
 
 %post
+/sbin/chkconfig --add cyrus-imapd
 touch /var/lib/imap/faillog
 chown cyrus.mail /var/lib/imap/faillog
 chmod 640 /var/lib/imap/faillog
-if [ -f /var/lock/subsys/rc-inetd ]; then
-	/etc/rc.d/init.d/rc-inetd reload 1>&2
-else
-	echo "Type \"/etc/rc.d/init.d/rc-inetd start\" to start inet sever" 1>&2
-fi
-
-# force synchronous updates
 cd /var/lib/imap
 chattr +S . user quota user/* quota/* 2>/dev/null
 chattr +S /var/spool/imap /var/spool/imap/* 2>/dev/null
+if [ -f /var/lock/subsys/cyrus-imapd ]; then
+	/etc/rc.d/init.d/cyrus-imapd restart 1>&2
+else
+	echo "Run \"/etc/rc.d/init.d/cyrus-imapd start\" to start apache http daemon."
+fi
+
+%preun
+if [ "$1" = "0" ]; then
+	if [ -f /var/lock/subsys/cyrus-imapd ]; then
+		/etc/rc.d/init.d/cyrus-imapd stop 1>&2
+	fi
+	/sbin/chkconfig --del cyrus-imapd
+fi
 
 %postun
-if [ -f /var/lock/subsys/rc-inetd ]; then
-	/etc/rc.d/init.d/rc-inetd reload 1>&2
-fi
 if [ "$1" = "0" ]; then
-	if [ -n "`id -u cyrus 2>/dev/null`" ]; then
-		/usr/sbin/userdel cyrus 1>&2
-	fi
+	/usr/sbin/userdel cyrus
 fi
 
 %clean
@@ -190,32 +184,28 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(644,root,root,755)
-#doc README README.RPM doc
-%doc doc/*.html
-
+%doc *.gz doc/*.html
 %config %{_sysconfdir}/imapd.conf
-%config %{_sysconfdir}/procmailrc.cyrus
-%config(noreplace) %verify(not size md5 mtime) /etc/logrotate.d/cyrus-imapd
-%attr( 640, root,root) %config(noreplace) %verify(not size md5 mtime) /etc/sysconfig/rc-inetd/*
-%attr( 440, cyrus,root) %config(noreplace) %verify(not size md5 mtime) /etc/pam.d/*
-%attr( 640, cyrus,mail) %ghost /var/lib/imap/faillog
-%attr( 755, root,root) /etc/cron.daily/cyrus-imapd
-%attr( 755, root,root) %{_bindir}/*
+%attr(640,root,root) %config(noreplace) /etc/logrotate.d/cyrus-imapd
+%attr(440,cyrus,root) %config(noreplace) %verify(not size md5 mtime) /etc/pam.d/*
+%attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
+%attr(755,root,root) /etc/cron.daily/cyrus-imapd
+%attr(755,root,root) %{_bindir}/*
 %attr(4750,cyrus,mail) %{_libexecdir}/deliver
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
-%attr( 755, root,root) %{_libexecdir}/ctl_deliver
-%attr( 755, root,root) %{_libexecdir}/ctl_mboxlist
-%attr( 755, root,root) %{_libexecdir}/feedcyrus
-%attr( 755, root,root) %{_libexecdir}/fud
-%attr( 755, root,root) %{_libexecdir}/imapd
-%attr( 755, root,root) %{_libexecdir}/ipurge
-%attr( 755, root,root) %{_libexecdir}/lmtpd
-%attr( 755, root,root) %{_libexecdir}/cyrus-master
-%attr( 755, root,root) %{_libexecdir}/mbpath
-%attr( 755, root,root) %{_libexecdir}/pop3d
-%attr( 755, root,root) %{_libexecdir}/quota
-%attr( 755, root,root) %{_libexecdir}/reconstruct
-%attr( 755, root,root) %{_libexecdir}/timsieved
+%attr(755,root,root) %{_libexecdir}/ctl_deliver
+%attr(755,root,root) %{_libexecdir}/ctl_mboxlist
+%attr(755,root,root) %{_libexecdir}/feedcyrus
+%attr(755,root,root) %{_libexecdir}/fud
+%attr(755,root,root) %{_libexecdir}/imapd
+%attr(755,root,root) %{_libexecdir}/ipurge
+%attr(755,root,root) %{_libexecdir}/lmtpd
+%attr(755,root,root) %{_libexecdir}/cyrus-master
+%attr(755,root,root) %{_libexecdir}/mbpath
+%attr(755,root,root) %{_libexecdir}/pop3d
+%attr(755,root,root) %{_libexecdir}/quota
+%attr(755,root,root) %{_libexecdir}/reconstruct
+%attr(755,root,root) %{_libexecdir}/timsieved
 
 %dir %{perl_sitearch}/Cyrus
 %{perl_sitearch}/Cyrus/*.pm
@@ -235,22 +225,19 @@ rm -rf $RPM_BUILD_ROOT
 %{perl_sitearch}/auto/Cyrus/SIEVE/managesieve/*.so
 %{perl_sitearch}/auto/Cyrus/SIEVE/managesieve/*.bs
 
-%defattr(640,cyrus,mail,750)
-/var/spool/imap
-%dir /var/lib/imap
-/var/lib/imap/deliverdb
-/var/lib/imap/quota
-/var/lib/imap/user
-/var/lib/imap/sieve
-/var/lib/imap/log
-/var/lib/imap/msg
-/var/lib/imap/proc
-/var/lib/imap/db
-/var/lib/imap/socket
-%config(noreplace) %verify(not size md5 mtime) /var/lib/imap/mailboxes
-%defattr(644,root,root,755)
+%attr(750,cyrus,mail) /var/spool/imap
+%attr(750,cyrus,mail) %dir /var/lib/imap
+%attr(640,cyrus,mail) /var/lib/imap/deliverdb
+%attr(640,cyrus,mail) /var/lib/imap/quota
+%attr(640,cyrus,mail) /var/lib/imap/user
+%attr(640,cyrus,mail) /var/lib/imap/sieve
+%attr(640,cyrus,mail) /var/lib/imap/log
+%attr(640,cyrus,mail) /var/lib/imap/msg
+%attr(640,cyrus,mail) /var/lib/imap/proc
+%attr(640,cyrus,mail) /var/lib/imap/db
+%attr(640,cyrus,mail) /var/lib/imap/socket
+%attr(640,cyrus,mail) %config(noreplace) %verify(not size md5 mtime) /var/lib/imap/mailboxes
 
 %{_mandir}/man*/*
-
 %{_includedir}/cyrus
 %{_libdir}/lib*.a
