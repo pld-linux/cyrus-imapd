@@ -21,6 +21,7 @@ Source11:	%{name}.init
 Source12:	cyrus.conf
 Patch0:		%{name}-snmp.patch
 Patch1:		%{name}-mandir.patch
+Patch2:		%{name}-paths.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 #Icon:		cyrus.gif
 BuildRequires:	cyrus-sasl-devel
@@ -80,6 +81,7 @@ komercyjnego produktu.
 %setup -q 
 %patch0 -p1
 %patch1 -p1
+%patch2 -p0
 %build
 cd makedepend
 autoconf
@@ -91,7 +93,8 @@ autoheader
 autoconf
 %configure \
 	--with-auth=unix \
-	--without-libwrap
+	--without-libwrap \
+	--with-cyrus-prefix=%{_libexecdir}
 %{__make}
 
 %{__cc} $RPM_OPT_FLAGS -DLIBEXECDIR=\"%{_libexecdir}\" -s -Wall -o deliver-wrapper %{SOURCE3}
@@ -113,7 +116,7 @@ touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 
 %{__make} install DESTDIR=$RPM_BUILD_ROOT CYRUS_USER="`id -u`" CYRUS_GROUP="`id -g`" mandir=%{_mandir}
 
-install deliver-wrapper $RPM_BUILD_ROOT%{_prefix}/cyrus/bin/deliver-wrapper
+install deliver-wrapper $RPM_BUILD_ROOT%{_libexecdir}/deliver-wrapper
 
 install %{SOURCE1}	.
 install %{SOURCE2}	.
@@ -127,8 +130,11 @@ install %{SOURCE10}	$RPM_BUILD_ROOT/etc/pam.d/pop
 install %{SOURCE11}	$RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
 install %{SOURCE12}	$RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 
-mv $RPM_BUILD_ROOT%{_prefix}/cyrus/bin/*	$RPM_BUILD_ROOT%{_libexecdir}
+mv $RPM_BUILD_ROOT%{_libexecdir}/bin/*		$RPM_BUILD_ROOT%{_libexecdir}
 mv $RPM_BUILD_ROOT%{_libexecdir}/master		$RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
+rm -rf $RPM_BUILD_ROOT%{_libexecdir}/bin
+
+touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop}
 
 gzip -9nf cyrus-README cyrus-procmailrc	cyrus-user-procmailrc.template \
 	cyrus-imapd-procmail+cyrus.mc
@@ -186,8 +192,9 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(644,root,root,755)
 %doc *.gz doc/*.html
 %config %{_sysconfdir}/*.conf
-%attr(640,root,root) %config(noreplace) /etc/logrotate.d/cyrus-imapd
+%attr(640,root,root) /etc/logrotate.d/cyrus-imapd
 %attr(440,cyrus,root) %config(noreplace) %verify(not size md5 mtime) /etc/pam.d/*
+%attr(640,root,root) %config(noreplace) %verify(not md5 size mtime) /etc/security/blacklist.*
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-imapd
 %attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
 %attr(755,root,root) /etc/cron.daily/cyrus-imapd
