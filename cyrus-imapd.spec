@@ -30,7 +30,7 @@ Conflicts:	solid-pop3d
 Conflicts:	qpopper6
 Provides:	imapdaemon
 Provides:	pop3daemon
-Buildroot:	/tmp/%{name}-%{version}-root
+BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %define		_libexecdir	%{_prefix}/lib/cyrus
 
@@ -104,7 +104,6 @@ touch $RPM_BUILD_ROOT/var/state/imap/mailboxes \
 	$RPM_BUILD_ROOT/etc/security/blacklist.imap \
 	$RPM_BUILD_ROOT/etc/security/blacklist.pop
 
-
 make install DESTDIR=$RPM_BUILD_ROOT CYRUS_USER="`id -u`" CYRUS_GROUP="`id -g`"
 
 #mkdir -p $RPM_BUILD_ROOT/usr/cyrus/bin
@@ -159,7 +158,6 @@ else
 	echo "Type \"/etc/rc.d/init.d/rc-inetd start\" to start inet sever" 1>&2
 fi
 
-
 # force synchronous updates
 cd /var/state/imap
 chattr +S . user quota user/* quota/* 2>/dev/null
@@ -174,8 +172,6 @@ if [ "$1" = "0" ]; then
 		/usr/sbin/userdel cyrus 1>&2
 	fi
 fi
-
-
 
 %clean
 rm -rf $RPM_BUILD_ROOT
