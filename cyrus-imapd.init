@@ -30,8 +30,13 @@ case "$1" in
 	if [ ! -f /var/lock/subsys/cyrus-imapd ]; then
 		msg_starting cyrus-imapd
 		/usr/lib/cyrus/cyrus-master &
-		RETVAL=$?
-		[ $RETVAL -eq 0 ] && touch /var/lock/subsys/cyrus-imapd
+		if ps -C cyrus-master >/dev/null 2>&1; then
+			RETVAL=$?
+			[ $RETVAL -eq 0 ] && touch /var/lock/subsys/cyrus-imapd
+			ok
+		else
+			fail
+		fi
 	else
 		# show "%s service is already running." <service>
 		msg_already_running cyrus-imapd
