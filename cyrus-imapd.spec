@@ -1,6 +1,7 @@
 %include	/usr/lib/rpm/macros.perl
 Summary:	High-performance mail store with imap and pop3
 Summary(pl):	Wysoko wydajny serwer IMAP i POP3
+Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.0.16
 Release:	6
@@ -41,7 +42,7 @@ BuildRequires:	perl-devel >= 5.6.1
 BuildRequires:	ucd-snmp-devel >= 4.2.5-10
 Prereq:		rc-scripts
 Requires(pre):	/usr/sbin/useradd
-Requires(post,preun):	/sbin/chkconfig
+Requires(post,preun):/sbin/chkconfig
 Requires(postun):	/usr/sbin/userdel
 Provides:	imapdaemon
 Provides:	pop3daemon
@@ -86,6 +87,20 @@ pocztowych jest pzrechowywana w tych czê¶ciach systemu plików, które
 s± dostêpne jedynie dla systemu IMAP Cyrus. Wszelki dostêp do poczty
 ma miejsce poprzez oprogramowanie wykorzystuj±ce protoko³y IMAP, POP3
 oraz KPOP.
+
+%description -l pt_BR
+O servidor IMAP Cyrus é um sistema de mail corporativo escalável
+projetado para uso por pequenos a grandes ambientes corporativos
+usando tecnologias baseadas em padrões abertos.
+
+Uma implementação completa do Cyrus permite se configurar um ambiente
+transparente de mail e bulletin board entre múltiplos servidores. Ele
+difere de outros servidores IMAP por rodar em servidores "selados",
+onde usuários não possuem normalmente a permissão de log in. O banco
+de dados de caixas de mail é armazenado em partes do sistema de
+arquivos que são privativos do sistema Cyrus. Todo o acesso de
+usuários aos mails se dá através de software usando os protocolos
+IMAP, POP3 ou KPOP.
 
 %prep
 %setup -q
