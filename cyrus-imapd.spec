@@ -82,7 +82,10 @@ install -d \
 	$RPM_BUILD_ROOT/var/spool/imap/stage. \
 	$RPM_BUILD_ROOT/var/state/imap/{user,quota,proc,log,msg,deliverdb,sieve} \
 	$RPM_BUILD_ROOT%{_libdir}/sendmail-cf/cf 
-touch $RPM_BUILD_ROOT/var/state/imap/mailboxes
+touch $RPM_BUILD_ROOT/var/state/imap/mailboxes \
+	$RPM_BUILD_ROOT/var/state/imap/faillog \
+	$RPM_BUILD_ROOT/etc/security/blacklist.imap \
+	$RPM_BUILD_ROOT/etc/security/blacklist.pop
 
 
 make install DESTDIR=$RPM_BUILD_ROOT CYRUS_USER="`id -u`" CYRUS_GROUP="`id -g`"
@@ -130,6 +133,9 @@ if [ -z "`id -u cyrus 2>/dev/null`" ]; then
 fi
 
 %post
+touch /var/state/imap/faillog
+chown cyrus.mail /var/state/imap/faillog
+chmod 640 /var/state/imap/faillog
 if [ -f /var/lock/subsys/rc-inetd ]; then
 	/etc/rc.d/init.d/rc-inetd reload 1>&2
 else
@@ -139,8 +145,8 @@ fi
 
 # force synchronous updates
 cd /var/state/imap
-chattr +S . user quota 2>/dev/null
-chattr +S /var/spool/imap 2>/dev/null
+chattr +S . user quota user/* quota/* 2>/dev/null
+chattr +S /var/spool/imap /var/spool/imap/* 2>/dev/null
 
 %postun
 if [ -f /var/lock/subsys/rc-inetd ]; then
@@ -167,6 +173,7 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %verify(not size md5 mtime) /etc/logrotate.d/cyrus-imapd
 %attr( 640, root,root) %config(noreplace) %verify(not size md5 mtime) /etc/sysconfig/rc-inetd/*
 %attr( 440, cyrus,root) %config(noreplace) %verify(not size md5 mtime) /etc/pam.d/*
+%attr( 640, cyrus,mail) %ghost /var/state/imap/faillog
 %attr( 755, root,root) /etc/cron.daily/cyrus-imapd
 %attr( 755, root,root) %{_bindir}/*
 %attr(4750,cyrus,mail) %{_libexecdir}/deliver
