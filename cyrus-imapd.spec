@@ -1,7 +1,7 @@
 Summary:	high-performance mail store with imap and pop3
 Name:		cyrus-imapd
 Version:	1.6.22
-Release:	0.1
+Release:	0.2
 Copyright:	academic/research
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -97,10 +97,10 @@ install -d \
 	$RPM_BUILD_ROOT{%{_sbindir},%{_libexecdir},%{_mandir}} \
 	$RPM_BUILD_ROOT/etc/{logrotate.d,cron.daily,sysconfig/rc-inetd} \
 	$RPM_BUILD_ROOT/var/spool/imap/stage. \
-	$RPM_BUILD_ROOT/var/state/imap/{user,quota,proc,log,msg,deliverdb,sieve} \
+	$RPM_BUILD_ROOT/var/lib/imap/{user,quota,proc,log,msg,deliverdb,sieve} \
 	$RPM_BUILD_ROOT%{_libdir}/sendmail-cf/cf 
-touch $RPM_BUILD_ROOT/var/state/imap/mailboxes \
-	$RPM_BUILD_ROOT/var/state/imap/faillog \
+touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
+	$RPM_BUILD_ROOT/var/lib/imap/faillog \
 	$RPM_BUILD_ROOT/etc/security/blacklist.imap \
 	$RPM_BUILD_ROOT/etc/security/blacklist.pop
 
@@ -133,9 +133,9 @@ cd $RPM_BUILD_ROOT/var
 /usr/bin/perl <<EOF
 foreach \$i ("a".."z") 
 {
-  mkdir "state/imap/user/\$i", 0755;
-  mkdir "state/imap/quota/\$i", 0755;
-  mkdir "state/imap/sieve/\$i", 0755;
+  mkdir "lib/imap/user/\$i", 0755;
+  mkdir "lib/imap/quota/\$i", 0755;
+  mkdir "lib/imap/sieve/\$i", 0755;
   mkdir "spool/imap/\$i", 0755;
 }
 EOF
@@ -149,9 +149,9 @@ if [ -z "`id -u cyrus 2>/dev/null`" ]; then
 fi
 
 %post
-touch /var/state/imap/faillog
-chown cyrus.mail /var/state/imap/faillog
-chmod 640 /var/state/imap/faillog
+touch /var/lib/imap/faillog
+chown cyrus.mail /var/lib/imap/faillog
+chmod 640 /var/lib/imap/faillog
 if [ -f /var/lock/subsys/rc-inetd ]; then
 	/etc/rc.d/init.d/rc-inetd reload 1>&2
 else
@@ -159,7 +159,7 @@ else
 fi
 
 # force synchronous updates
-cd /var/state/imap
+cd /var/lib/imap
 chattr +S . user quota user/* quota/* 2>/dev/null
 chattr +S /var/spool/imap /var/spool/imap/* 2>/dev/null
 
@@ -186,7 +186,7 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) %verify(not size md5 mtime) /etc/logrotate.d/cyrus-imapd
 %attr( 640, root,root) %config(noreplace) %verify(not size md5 mtime) /etc/sysconfig/rc-inetd/*
 %attr( 440, cyrus,root) %config(noreplace) %verify(not size md5 mtime) /etc/pam.d/*
-%attr( 640, cyrus,mail) %ghost /var/state/imap/faillog
+%attr( 640, cyrus,mail) %ghost /var/lib/imap/faillog
 %attr( 755, root,root) /etc/cron.daily/cyrus-imapd
 %attr( 755, root,root) %{_bindir}/*
 %attr(4750,cyrus,mail) %{_libexecdir}/deliver
@@ -209,15 +209,15 @@ rm -rf $RPM_BUILD_ROOT
 
 %defattr(640,cyrus,mail,750)
 /var/spool/imap
-%dir /var/state/imap
-/var/state/imap/deliverdb
-/var/state/imap/quota
-/var/state/imap/user
-/var/state/imap/sieve
-/var/state/imap/log
-/var/state/imap/msg
-/var/state/imap/proc
-%config(noreplace) %verify(not size md5 mtime) /var/state/imap/mailboxes
+%dir /var/lib/imap
+/var/lib/imap/deliverdb
+/var/lib/imap/quota
+/var/lib/imap/user
+/var/lib/imap/sieve
+/var/lib/imap/log
+/var/lib/imap/msg
+/var/lib/imap/proc
+%config(noreplace) %verify(not size md5 mtime) /var/lib/imap/mailboxes
 %defattr(644,root,root,755)
 
 %{_mandir}/man*/*
