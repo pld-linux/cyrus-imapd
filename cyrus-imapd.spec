@@ -22,6 +22,7 @@ Source12:	cyrus.conf
 Patch0:		%{name}-snmp.patch
 Patch1:		%{name}-mandir.patch
 Patch2:		%{name}-paths.patch
+Patch3:		%{name}-overquota.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 #Icon:		cyrus.gif
 BuildRequires:	cyrus-sasl-devel
@@ -82,6 +83,7 @@ komercyjnego produktu.
 %patch0 -p1
 %patch1 -p1
 %patch2 -p0
+%patch3 -p1
 
 %build
 cd makedepend
@@ -130,6 +132,7 @@ install %{SOURCE12}	$RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 
 mv -f $RPM_BUILD_ROOT%{_libexecdir}/bin/*	$RPM_BUILD_ROOT%{_libexecdir}
 mv -f $RPM_BUILD_ROOT%{_libexecdir}/master	$RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
+mv -f $RPM_BUILD_ROOT%{_mandir}/man8/master.8	$RPM_BUILD_ROOT%{_mandir}/man8/cyrus-master.8
 rm -rf $RPM_BUILD_ROOT%{_libexecdir}/bin
 
 touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop}
