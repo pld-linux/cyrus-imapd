@@ -214,18 +214,12 @@ touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop}
 find $RPM_BUILD_ROOT%{perl_vendorarch} -name .packlist -exec rm {} \;
 
 # make hashed dirs
-oldpwd=`pwd`
-cd $RPM_BUILD_ROOT/var
-%{__perl} <<EOF
-foreach \$i ("a".."z")
-{
-	mkdir "lib/imap/user/\$i", 0755;
-	mkdir "lib/imap/quota/\$i", 0755;
-	mkdir "lib/imap/sieve/\$i", 0755;
-	mkdir "spool/imap/\$i", 0755;
-}
-EOF
-cd ${oldpwd}
+for i in `%{__perl} -le 'print for "a".."z"'`; do
+	mkdir -p -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/user/$i
+	mkdir -p -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/quota/$i
+	mkdir -p -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/sieve/$i
+	mkdir -p -m 0755 $RPM_BUILD_ROOT%{_var}/spool/imap/$i
+done
 
 %pre
 if [ -z "`id -u cyrus 2>/dev/null`" ]; then
