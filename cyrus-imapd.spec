@@ -1,8 +1,8 @@
 %include	/usr/lib/rpm/macros.perl
 Summary:	high-performance mail store with imap and pop3
 Name:		cyrus-imapd
-Version:	2.0.14
-Release:	1.1
+Version:	2.0.15
+Release:	1
 License:	academic/research
 Group:		Networking/Daemons
 Group(de):	Netzwerkwesen/Server
@@ -23,10 +23,12 @@ Patch0:		%{name}-snmp.patch
 Patch1:		%{name}-mandir.patch
 Patch2:		%{name}-paths.patch
 Patch3:		%{name}-overquota.patch
-Patch4:		http://www.imasy.or.jp/~ume/ipv6/cyrus-imapd-2.0.14-ipv6-20010531.diff.gz
+Patch4:		http://www.imasy.or.jp/~ume/ipv6/cyrus-imapd-2.0.15-ipv6-20010709.diff.gz
 Patch5:		%{name}-et.patch
 Patch6:		%{name}-checkfd.patch
 Patch7:		%{name}-ac250.patch
+Patch8:		%{name}-db3.patch
+Patch9:		%{name}-ipv6.m4.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 #Icon:		cyrus.gif
 BuildRequires:	e2fsprogs-devel >= 1.21
@@ -93,14 +95,20 @@ komercyjnego produktu.
 %patch5 -p1
 %patch6 -p1
 %patch7 -p1
+%patch8 -p1
+%patch9 -p1
 
 %build
 cd makedepend
+rm -f aclocal.m4
+aclocal
 autoconf
 %configure 
 %{__make}
 export PATH=$PATH:`pwd`
 cd ..
+rm -f aclocal.m4
+aclocal -I cmulocal
 autoheader
 autoconf
 %configure \
@@ -149,7 +157,7 @@ touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop}
 find $RPM_BUILD_ROOT%{perl_sitearch} -name .packlist -exec rm {} \;
 
 gzip -9nf cyrus-README cyrus-procmailrc	cyrus-user-procmailrc.template \
-	cyrus-imapd-procmail+cyrus.mc
+	cyrus-imapd-procmail+cyrus.mc COPYRIGHT
 
 # make hashed dirs
 oldpwd=`pwd`
