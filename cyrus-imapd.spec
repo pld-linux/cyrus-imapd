@@ -271,6 +271,7 @@ rm -rf $RPM_BUILD_ROOT
 %attr(750,cyrus,mail) /var/lib/imap/db
 %attr(750,cyrus,mail) /var/lib/imap/socket
 %attr(750,cyrus,mail) %config(noreplace) %verify(not size md5 mtime) /var/lib/imap/mailboxes
+%attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
 
 %{_mandir}/man*/*
 %{_includedir}/cyrus
