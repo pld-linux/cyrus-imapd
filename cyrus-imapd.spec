@@ -34,7 +34,8 @@ BuildRequires:	openssl-devel >= 0.9.7
 BuildRequires:	perl-devel >= 5.6.1
 #BuildRequires:	ucd-snmp-devel >= 4.2.6
 PreReq:		rc-scripts
-Requires(pre):	user-cyrus
+Requires(pre): /usr/sbin/useradd
+Requires(postun):      /usr/sbin/userdel
 Requires(post,preun):/sbin/chkconfig
 Provides:	imapdaemon
 Provides:	pop3daemon
@@ -220,6 +221,11 @@ for i in `%{__perl} -le 'print for "a".."z"'`; do
 	mkdir -p -m 0755 $RPM_BUILD_ROOT%{_var}/spool/imap/$i
 done
 
+%pre
+if [ -z "`id -u cyrus 2>/dev/null`" ]; then
+       /usr/sbin/useradd -u 76 -r -d /var/spool/imap -s /bin/false -c "Cyrus User" -g mail cyrus 1>&2
+fi
+
 %post
 /sbin/chkconfig --add cyrus-imapd
 touch /var/lib/imap/faillog
@@ -240,6 +246,11 @@ if [ "$1" = "0" ]; then
 		/etc/rc.d/init.d/cyrus-imapd stop 1>&2
 	fi
 	/sbin/chkconfig --del cyrus-imapd
+fi
+
+%postun
+if [ "$1" = "0" ]; then
+       /usr/sbin/userdel cyrus
 fi
 
 %clean
