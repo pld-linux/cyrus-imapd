@@ -188,6 +188,7 @@ rm -rf $RPM_BUILD_ROOT
 %config %{_sysconfdir}/imapd.conf
 %attr(640,root,root) %config(noreplace) /etc/logrotate.d/cyrus-imapd
 %attr(440,cyrus,root) %config(noreplace) %verify(not size md5 mtime) /etc/pam.d/*
+%attr(754,root,root) /etc/rc.d/init.d/cyrus-imapd
 %attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
 %attr(755,root,root) /etc/cron.daily/cyrus-imapd
 %attr(755,root,root) %{_bindir}/*
