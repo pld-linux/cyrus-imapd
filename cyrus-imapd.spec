@@ -4,7 +4,7 @@ Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.0.16
-Release:	8
+Release:	0.9
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -30,7 +30,6 @@ Patch7:		%{name}-db3.patch
 Patch8:		%{name}-ipv6.m4.patch
 Patch9:		%{name}-ac25x.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
-#Icon:		cyrus.gif
 BuildRequires:	autoconf
 BuildRequires:	automake
 BuildRequires:	cyrus-sasl-devel >= 1.5.27
@@ -106,6 +105,32 @@ de dados de caixas de mail é armazenado em partes do sistema de
 arquivos que são privativos do sistema Cyrus. Todo o acesso de
 usuários aos mails se dá através de software usando os protocolos
 IMAP, POP3 ou KPOP.
+
+%package devel
+Summary:	Libraries and include files for developing with cyrus-imapd
+Summary(pl):	Pliki potrzebne do programowania z u¿yciem cyrus-imapd
+Group:		Development/Libraries
+Requires:	%{name} = %{version}
+
+%description devel
+This package provides the necessary development libraries and include
+files to allow you to develop with cyrus-imapd.
+
+%description devel -l pl
+Ten pakiet zawiera biblioteki oraz pliki nag³ówkowe niezbêdne do
+tworzenia oprogramowania z wykorzystaniem cyrus-imapd.
+
+%package static
+Summary:	Static cyrus-imapd libraries
+Summary(pl):	Biblioteki statyczne cyrus-imapd
+Group:		Development/Libraries
+Requires:	%{name}-devel = %{version}
+
+%description static
+Static cyrus-imapd libraries
+
+%description static -l pl
+Biblioteki statyczne cyrus-imapd
 
 %prep
 %setup -q
@@ -274,5 +299,11 @@ rm -rf $RPM_BUILD_ROOT
 %attr(750,cyrus,mail) %config(noreplace) %verify(not size md5 mtime) /var/lib/imap/mailboxes
 
 %{_mandir}/man*/*
+
+%files devel
+%defattr(644,root,root,755)
 %{_includedir}/cyrus
+
+%files static
+%defattr(644,root,root,755)
 %{_libdir}/lib*.a
