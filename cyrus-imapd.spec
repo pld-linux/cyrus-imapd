@@ -4,7 +4,7 @@ Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.0.16
-Release:	9
+Release:	10
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -38,7 +38,7 @@ BuildRequires:	e2fsprogs-devel >= 1.21
 BuildRequires:	flex
 BuildRequires:	openssl-devel >= 0.9.6a
 BuildRequires:	perl-devel >= 5.6.1
-BuildRequires:	ucd-snmp-devel >= 4.2.5-10
+BuildRequires:	ucd-snmp-devel >= 4.2.6
 Prereq:		rc-scripts
 Requires(pre):	/usr/sbin/useradd
 Requires(post,preun):/sbin/chkconfig
