@@ -35,7 +35,7 @@ BuildRequires:	db3-devel >= 3.1.17
 BuildRequires:	flex
 BuildRequires:	openssl-devel >= 0.9.6a
 BuildRequires:	perl-devel >= 5.6.1
-BuildRequires:	ucd-snmp-devel >= 4.2.4
+BuildRequires:	ucd-snmp-devel >= 4.2.5
 BuildRequires:	autoconf
 BuildRequires:	automake
 Prereq:		rc-scripts
