@@ -8,6 +8,7 @@ Release:	0.3
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
+# Source0-md5:	dc3355d0170509ccebd9788ed2daad39
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
