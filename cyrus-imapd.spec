@@ -1,6 +1,7 @@
+%include	/usr/lib/rpm/macros.perl
 Summary:	high-performance mail store with imap and pop3
 Name:		cyrus-imapd
-Version:	1.6.22
+Version:	2.0.9
 Release:	0.2
 Copyright:	academic/research
 Group:		Networking/Daemons
@@ -14,15 +15,19 @@ Source5:	cyrus-imapd-procmail+cyrus.mc
 Source6:	cyrus-imapd.logrotate
 Source7:	cyrus-imapd.conf
 Source8:	cyrus-imapd.cron
-Source9:	cyrus-imapd.inetd
-Source10:	cyrus-imapd-pop3.inetd
+#Source9:	cyrus-imapd.inetd
+#Source10:	cyrus-imapd-pop3.inetd
 Source11:	cyrus-imapd.pamd
 Source12:	cyrus-imapd-pop.pamd
+Patch0:		cyrus-imapd-snmp.patch
+Patch1:		cyrus-imapd-mandir.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 #Icon:		cyrus.gif
 BuildRequires:	cyrus-sasl-devel
-BuildRequires:	tcl-devel >= 8.0
+#BuildRequires:	tcl-devel >= 8.0
 BuildRequires:	openssl-devel
+BuildRequires:	perl >= 5.6.0
+BuildRequires:	db3-devel >= 3.1.17
 Obsoletes:	imapd
 Obsoletes:	pop3daemon
 Obsoletes:	imapdaemon
@@ -77,6 +82,8 @@ komercyjnego produktu.
 rm -rf $RPM_BUILD_ROOT
 
 %setup -q 
+%patch0 -p1
+#%patch1 -p1
 
 %build
 
@@ -87,28 +94,31 @@ autoconf
 %{__make}
 export PATH=$PATH:`pwd`
 cd ..
+autoheader
 autoconf
 %configure \
 	--with-auth=unix
 %{__make}
 
-gcc $RPM_OPT_FLAGS -DLIBEXECDIR=\"%{_libexecdir}\" -s -Wall -o deliver-wrapper %{SOURCE3}
+%{__cc} $RPM_OPT_FLAGS -DLIBEXECDIR=\"%{_libexecdir}\" -s -Wall -o deliver-wrapper %{SOURCE3}
 
 %install
 rm -rf $RPM_BUILD_ROOT
 #install -d $RPM_BUILD_ROOT%{_prefix}/cyrus%{_sysconfdir}
 install -d \
 	$RPM_BUILD_ROOT{%{_sbindir},%{_libexecdir},%{_mandir}} \
-$RPM_BUILD_ROOT%{_sysconfdir}/{logrotate.d,cron.daily,sysconfig/rc-inetd} \
+	$RPM_BUILD_ROOT%{_sysconfdir}/{logrotate.d,cron.daily,sysconfig/rc-inetd} \
 	$RPM_BUILD_ROOT/var/spool/imap/stage. \
-	$RPM_BUILD_ROOT/var/lib/imap/{user,quota,proc,log,msg,deliverdb,sieve} \
-	$RPM_BUILD_ROOT%{_libdir}/sendmail-cf/cf 
+	$RPM_BUILD_ROOT/var/lib/imap/{user,quota,proc,log,msg,deliverdb,sieve,db,socket} \
+	$RPM_BUILD_ROOT%{_libdir}/sendmail-cf/cf \
+	$RPM_BUILD_ROOT/etc/{security,pam.d}
+
 touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 	$RPM_BUILD_ROOT/var/lib/imap/faillog \
 	$RPM_BUILD_ROOT/etc/security/blacklist.imap \
 	$RPM_BUILD_ROOT/etc/security/blacklist.pop
 
-%{__make} install DESTDIR=$RPM_BUILD_ROOT CYRUS_USER="`id -u`" CYRUS_GROUP="`id -g`"
+%{__make} install DESTDIR=$RPM_BUILD_ROOT CYRUS_USER="`id -u`" CYRUS_GROUP="`id -g`" mandir=%{_mandir}
 
 #install -d $RPM_BUILD_ROOT%{_prefix}/cyrus/bin
 #install -g mail -m 2755 -s deliver-wrapper $RPM_BUILD_ROOT%{_prefix}/cyrus/bin/deliver-wrapper
@@ -121,20 +131,20 @@ install %{SOURCE5} $RPM_BUILD_ROOT%{_libdir}/sendmail-cf/cf/procmail+cyrus.mc
 install %{SOURCE6} $RPM_BUILD_ROOT/etc/logrotate.d/cyrus-imapd
 install %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/imapd.conf
 install %{SOURCE8} $RPM_BUILD_ROOT/etc/cron.daily/cyrus-imapd
-install %{SOURCE9} $RPM_BUILD_ROOT/etc/sysconfig/rc-inetd/imapd
-install %{SOURCE10} $RPM_BUILD_ROOT/etc/sysconfig/rc-inetd/pop3d
+#install %{SOURCE9} $RPM_BUILD_ROOT/etc/sysconfig/rc-inetd/imapd
+#install %{SOURCE10} $RPM_BUILD_ROOT/etc/sysconfig/rc-inetd/pop3d
 install %{SOURCE11} $RPM_BUILD_ROOT/etc/pam.d/imap
 install %{SOURCE12} $RPM_BUILD_ROOT/etc/pam.d/pop
 
 mv $RPM_BUILD_ROOT%{_prefix}/cyrus/bin/* $RPM_BUILD_ROOT%{_libexecdir}
-mv $RPM_BUILD_ROOT%{_prefix}/man/* $RPM_BUILD_ROOT%{_mandir}
+mv $RPM_BUILD_ROOT%{_libexecdir}/master $RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
 
-gzip -9nf $RPM_BUILD_ROOT%{_mandir}/man*/* \
-	cyrus-README
+gzip -9nf cyrus-README
 
 # make hashed dirs
+oldpwd=`pwd`
 cd $RPM_BUILD_ROOT/var
-%attr(755,root,root) %{_bindir}/perl <<EOF
+perl <<EOF
 foreach \$i ("a".."z") 
 {
   mkdir "lib/imap/user/\$i", 0755;
@@ -143,6 +153,7 @@ foreach \$i ("a".."z")
   mkdir "spool/imap/\$i", 0755;
 }
 EOF
+cd ${oldpwd}
 
 %pre
 if [ -z "`id -u cyrus 2>/dev/null`" ]; then
@@ -180,7 +191,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(644,root,root,755)
 #doc README README.RPM doc
-%doc doc/html/*.html
+%doc doc/*.html
 
 %config %{_sysconfdir}/imapd.conf
 %config %{_sysconfdir}/procmailrc.cyrus
@@ -192,21 +203,37 @@ rm -rf $RPM_BUILD_ROOT
 %attr( 755, root,root) %{_bindir}/*
 %attr(4750,cyrus,mail) %{_libexecdir}/deliver
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
-%attr( 755, root,root) %{_libexecdir}/arbitron
-%attr( 755, root,root) %{_libexecdir}/collectnews
-%attr( 755, root,root) %{_libexecdir}/dump_deliverdb
+%attr( 755, root,root) %{_libexecdir}/ctl_deliver
+%attr( 755, root,root) %{_libexecdir}/ctl_mboxlist
 %attr( 755, root,root) %{_libexecdir}/feedcyrus
 %attr( 755, root,root) %{_libexecdir}/fud
+%attr( 755, root,root) %{_libexecdir}/imapd
+%attr( 755, root,root) %{_libexecdir}/ipurge
+%attr( 755, root,root) %{_libexecdir}/lmtpd
+%attr( 755, root,root) %{_libexecdir}/cyrus-master
 %attr( 755, root,root) %{_libexecdir}/mbpath
+%attr( 755, root,root) %{_libexecdir}/pop3d
 %attr( 755, root,root) %{_libexecdir}/quota
 %attr( 755, root,root) %{_libexecdir}/reconstruct
-%attr( 755, root,root) %{_libexecdir}/syncnews
 %attr( 755, root,root) %{_libexecdir}/timsieved
-%attr( 755, root,root) %{_libexecdir}/pop3d
-%attr( 755, root,root) %{_libexecdir}/imapd
 
-#%attr(0755,root,root) %{_sbindir}/imapd
-#%attr(0755,root,root) %{_sbindir}/ipop3d
+%dir %{perl_sitearch}/Cyrus
+%{perl_sitearch}/Cyrus/*.pm
+%dir %{perl_sitearch}/Cyrus/IMAP
+%{perl_sitearch}/Cyrus/IMAP/*.pm
+%dir %{perl_sitearch}/Cyrus/SIEVE
+%{perl_sitearch}/Cyrus/SIEVE/*.pm
+%dir %{perl_sitearch}/auto/Cyrus
+%dir %{perl_sitearch}/auto/Cyrus/IMAP
+%{perl_sitearch}/auto/Cyrus/IMAP/*.so
+%{perl_sitearch}/auto/Cyrus/IMAP/*.bs
+%dir %{perl_sitearch}/auto/Cyrus/SIEVE
+%dir %{perl_sitearch}/auto/Cyrus/SIEVE/acap
+%{perl_sitearch}/auto/Cyrus/SIEVE/acap/*.so
+%{perl_sitearch}/auto/Cyrus/SIEVE/acap/*.bs
+%dir %{perl_sitearch}/auto/Cyrus/SIEVE/managesieve
+%{perl_sitearch}/auto/Cyrus/SIEVE/managesieve/*.so
+%{perl_sitearch}/auto/Cyrus/SIEVE/managesieve/*.bs
 
 %defattr(640,cyrus,mail,750)
 /var/spool/imap
@@ -218,6 +245,8 @@ rm -rf $RPM_BUILD_ROOT
 /var/lib/imap/log
 /var/lib/imap/msg
 /var/lib/imap/proc
+/var/lib/imap/db
+/var/lib/imap/socket
 %config(noreplace) %verify(not size md5 mtime) /var/lib/imap/mailboxes
 %defattr(644,root,root,755)
 
