@@ -174,23 +174,36 @@ EOF
 cd ${oldpwd}
 
 %pre
-USER=cyrus; UID=76; HOMEDIR=/var/spool/imap; COMMENT="Cyrus User"
-GROUP=mail; %useradd
+if [ -z "`id -u cyrus 2>/dev/null`" ]; then
+	/usr/sbin/useradd -u 76 -r -d /var/spool/imap -s /bin/false -c "Cyrus User" -g mail cyrus 1>&2
+fi
 
 %post
+/sbin/chkconfig --add cyrus-imapd
 touch /var/lib/imap/faillog
 chown cyrus.mail /var/lib/imap/faillog
 chmod 640 /var/lib/imap/faillog
 cd /var/lib/imap
 chattr +S . user quota user/* quota/* 2>/dev/null
 chattr +S /var/spool/imap /var/spool/imap/* 2>/dev/null
-%chkconfig_add
+if [ -f /var/lock/subsys/cyrus-imapd ]; then
+	/etc/rc.d/init.d/cyrus-imapd restart 1>&2
+else
+	echo "Run \"/etc/rc.d/init.d/cyrus-imapd start\" to start apache http daemon."
+fi
 
 %preun
-%chkconfig_del
+if [ "$1" = "0" ]; then
+	if [ -f /var/lock/subsys/cyrus-imapd ]; then
+		/etc/rc.d/init.d/cyrus-imapd stop 1>&2
+	fi
+	/sbin/chkconfig --del cyrus-imapd
+fi
 
 %postun
-USER=cyrus; %userdel
+if [ "$1" = "0" ]; then
+	/usr/sbin/userdel cyrus
+fi
 
 %clean
 rm -rf $RPM_BUILD_ROOT
