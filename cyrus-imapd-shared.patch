@@ -1,5 +1,5 @@
---- cyrus-imapd-2.2.3/lib/Makefile.in.orig	2004-01-03 15:16:44.000000000 +0000
-+++ cyrus-imapd-2.2.3/lib/Makefile.in	2004-03-14 14:48:11.000000000 +0000
+--- cyrus-imapd-2.2.6/lib/Makefile.in.orig	2004-05-28 20:03:04.000000000 +0200
++++ cyrus-imapd-2.2.6/lib/Makefile.in	2004-07-25 19:57:23.404312296 +0200
 @@ -43,10 +43,10 @@
  # $Id$
  
@@ -12,8 +12,8 @@
 +ACL=acl_afs.lo
  
  srcdir = @srcdir@
- VPATH = @srcdir@
-@@ -55,6 +55,8 @@
+ top_srcdir = @top_srcdir@
+@@ -56,6 +56,8 @@
  
  INSTALL = @INSTALL@
  RANLIB = @RANLIB@
@@ -22,15 +22,15 @@
  
  DEFS = @DEFS@ @LOCALDEFS@
  CPPFLAGS = -I.. @CPPFLAGS@ @COM_ERR_CPPFLAGS@ @SASLFLAGS@
-@@ -69,6 +71,7 @@
+@@ -71,6 +73,7 @@
  prefix = @prefix@
  exec_prefix = @exec_prefix@
  cyrus_prefix = @cyrus_prefix@
 +libdir = @libdir@
  
- BUILTSOURCES = imapopts.h imapopts.c
+ libdir = @libdir@
  
-@@ -83,27 +86,26 @@
+@@ -87,26 +90,26 @@
  	$(srcdir)/cyrusdb.h $(srcdir)/iptostring.h $(srcdir)/rfc822date.h \
  	$(srcdir)/libcyr_cfg.h
  
@@ -61,24 +61,22 @@
 +all: $(BUILTSOURCES) libcyrus_min.la libcyrus.la
  
  install:
--	$(srcdir)/../install-sh -d $(DESTDIR)$(exec_prefix)/lib
--	$(INSTALL) -m 644 libcyrus.a $(DESTDIR)$(exec_prefix)/lib
--	$(INSTALL) -m 644 libcyrus_min.a $(DESTDIR)$(exec_prefix)/lib
--	$(RANLIB) $(DESTDIR)$(exec_prefix)/lib/libcyrus.a
-+	$(srcdir)/../install-sh -d $(DESTDIR)$(libdir)
+ 	$(srcdir)/../install-sh -d $(DESTDIR)$(libdir)
+-	$(INSTALL) -m 644 libcyrus.a $(DESTDIR)$(libdir)
+-	$(INSTALL) -m 644 libcyrus_min.a $(DESTDIR)$(libdir)
 +	$(LIBTOOL) --mode=install $(INSTALL) libcyrus.la $(DESTDIR)$(libdir)
 +	$(LIBTOOL) --mode=install $(INSTALL) libcyrus_min.la $(DESTDIR)$(libdir)
+ 	 $(RANLIB) $(DESTDIR)$(libdir)/libcyrus.a
  	for file in $(LIBCYR_HDRS); \
  	do \
- 		$(INSTALL) -m 644 $$file $(DESTDIR)$(prefix)/include/cyrus || exit 1; \
-@@ -113,19 +115,15 @@
+@@ -117,19 +120,15 @@
  		$(INSTALL) -m 644 $$file $(DESTDIR)$(prefix)/include/cyrus || exit 1; \
  	done
  
 -.c.o:
--	$(CC) -c $(CPPFLAGS) $(DEFS) -I$(srcdir) -I. $(CFLAGS) \
+-	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) \
 +%.lo: %.c
-+	$(LIBTOOL) --mode=compile $(CC) -c $(CPPFLAGS) $(DEFS) -I$(srcdir) -I. $(CFLAGS) \
++	$(LIBTOOL) --mode=compile $(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) \
  	$<
  
 -libcyrus.a: $(LIBCYR_OBJS)
@@ -97,21 +95,10 @@
 +	$(LIBTOOL) --mode=link $(CC) -o libcyrus_min.la $(LIBCYRM_OBJS) @IMAP_COM_ERR_LIBS@ -rpath $(libdir)
  
  imapopts.c: imapoptions $(srcdir)/../tools/config2header
- 	$(srcdir)/../tools/config2header $(srcdir)/imapopts.c $(srcdir)/imapopts.h < $(srcdir)/imapoptions
---- cyrus-imapd-2.2.3/man/Makefile.in.orig	2004-03-02 22:00:32.000000000 +0000
-+++ cyrus-imapd-2.2.3/man/Makefile.in	2004-03-14 14:35:32.000000000 +0000
-@@ -52,7 +52,7 @@
- DEFS = @DEFS@
- CPPFLAGS = -I. -I$(srcdir) -I$(srcdir)/../lib -I$(srcdir)/../et @CPPFLAGS@ 
- LIBS = @LIBS@ 
--DEPLIBS = ../lib/libcyrus.a ../lib/libcyrus_min.a @DEPLIBS@
-+DEPLIBS = ../lib/libcyrus.la ../lib/libcyrus_min.la @DEPLIBS@
- 
- CFLAGS = -g
- LDFLAGS = -g
---- cyrus-imapd-2.2.3/imap/Makefile.in.orig	2003-11-12 04:02:01.000000000 +0000
-+++ cyrus-imapd-2.2.3/imap/Makefile.in	2004-03-14 14:41:46.000000000 +0000
-@@ -56,6 +56,8 @@
+ 	$(srcdir)/../tools/config2header CC=$(CC) $(srcdir)/imapopts.c $(srcdir)/imapopts.h < $(srcdir)/imapoptions
+--- cyrus-imapd-2.2.6/imap/Makefile.in.orig	2004-05-28 20:03:02.000000000 +0200
++++ cyrus-imapd-2.2.6/imap/Makefile.in	2004-07-25 20:07:43.948975168 +0200
+@@ -57,6 +57,8 @@
  CC = @CC@
  INSTALL = @INSTALL@
  RANLIB = @RANLIB@
@@ -120,7 +107,7 @@
  AWK = @AWK@
  
  CYRUS_USER=@cyrus_user@
-@@ -68,7 +70,7 @@
+@@ -70,7 +72,7 @@
  IMAP_COM_ERR_LIBS = @IMAP_COM_ERR_LIBS@
  LIB_WRAP = @LIB_WRAP@
  LIBS = $(IMAP_LIBS) $(IMAP_COM_ERR_LIBS)
@@ -129,7 +116,7 @@
  
  CFLAGS = @CFLAGS@
  LDFLAGS = @LDFLAGS@ @COM_ERR_LDFLAGS@ 
-@@ -135,7 +137,7 @@
+@@ -137,7 +139,7 @@
  	$(srcdir)/../install-sh -d ${DESTDIR}$(service_path)
  	for file in $(PROGS); \
  	do \
@@ -138,7 +125,7 @@
  	done
  	ln -f $(DESTDIR)$(service_path)/pop3d $(DESTDIR)$(service_path)/pop3proxyd
  
-@@ -185,156 +187,156 @@
+@@ -187,156 +189,156 @@
  
  ### Services
  idled: idled.o mutex_fake.o libimap.a $(DEPLIBS)
@@ -146,32 +133,32 @@
 +	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o idled \
  	 idled.o mutex_fake.o libimap.a $(DEPLIBS) $(LIBS)
  
- lmtpd: lmtpd.o $(LMTPOBJS) mutex_fake.o libimap.a $(SIEVE_LIBS) \
+ lmtpd: lmtpd.o $(LMTPOBJS) $(SIEVE_OBJS) mutex_fake.o libimap.a $(SIEVE_LIBS) \
  	$(DEPLIBS) $(SERVICE)
 -	$(CC) $(LDFLAGS) -o lmtpd \
 +	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o lmtpd \
- 	 $(SERVICE) lmtpd.o $(LMTPOBJS) mutex_fake.o \
+ 	 $(SERVICE) lmtpd.o $(LMTPOBJS) $(SIEVE_OBJS) mutex_fake.o \
  	 libimap.a $(SIEVE_LIBS) $(DEPLIBS) $(LIBS) $(LIB_WRAP)
  
- lmtpd.pure: lmtpd.o $(LMTPOBJS) mutex_fake.o \
+ lmtpd.pure: lmtpd.o $(LMTPOBJS) $(SIEVE_OBJS) mutex_fake.o \
  	libimap.a $(SIEVE_LIBS) $(DEPLIBS) $(SERVICE)
 -	$(PURIFY) $(PUREOPT) $(CC) $(LDFLAGS) -o lmtpd.pure \
 +	$(PURIFY) $(PUREOPT) $(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o lmtpd.pure \
- 	 $(SERVICE) lmtpd.o $(LMTPOBJS) mutex_fake.o \
+ 	 $(SERVICE) lmtpd.o $(LMTPOBJS) $(SIEVE_OBJS) mutex_fake.o \
  	 libimap.a $(SIEVE_LIBS) $(DEPLIBS) $(LIBS) $(LIB_WRAP)
  
- lmtpproxyd: lmtpproxyd.o $(LMTPOBJS) mutex_fake.o \
+ lmtpproxyd: lmtpproxyd.o backend.o $(LMTPOBJS) mutex_fake.o \
  	libimap.a $(SIEVE_LIBS) $(DEPLIBS) $(SERVICE)
 -	$(CC) $(LDFLAGS) -o lmtpproxyd \
 +	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o lmtpproxyd \
- 	 $(SERVICE) lmtpproxyd.o $(LMTPOBJS) mutex_fake.o \
+ 	 $(SERVICE) lmtpproxyd.o backend.o $(LMTPOBJS) mutex_fake.o \
  	 libimap.a $(SIEVE_LIBS) $(DEPLIBS) $(LIBS) $(LIB_WRAP)
  
- lmtpproxyd.pure: lmtpproxyd.o $(LMTPOBJS) mutex_fake.o \
+ lmtpproxyd.pure: lmtpproxyd.o backend.o $(LMTPOBJS) mutex_fake.o \
  	libimap.a $(SIEVE_LIBS) $(DEPLIBS) $(SERVICE)
 -	$(PURIFY) $(PUREOPT) $(CC) $(LDFLAGS) -o lmtpproxyd.pure \
 +	$(PURIFY) $(PUREOPT) $(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o lmtpproxyd.pure \
- 	 $(SERVICE) lmtpproxyd.o $(LMTPOBJS) mutex_fake.o \
+ 	 $(SERVICE) lmtpproxyd.o backend.o $(LMTPOBJS) mutex_fake.o \
  	 libimap.a $(SIEVE_LIBS) $(DEPLIBS) $(LIBS) $(LIB_WRAP)
  
  imapd: xversion $(IMAPDOBJS) mutex_fake.o libimap.a $(DEPLIBS) $(SERVICE)
@@ -257,10 +244,10 @@
 +	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o chk_cyrus chk_cyrus.o $(CLIOBJS) \
  	libimap.a $(DEPLIBS) $(LIBS)
  
- deliver: deliver.o $(LMTPOBJS) mutex_fake.o libimap.a $(DEPLIBS)
--	$(CC) $(LDFLAGS) -o deliver deliver.o $(LMTPOBJS) mutex_fake.o \
-+	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o deliver deliver.o $(LMTPOBJS) mutex_fake.o \
- 	libimap.a $(DEPLIBS) $(LIBS)
+ deliver: deliver.o backend.o $(LMTPOBJS) mutex_fake.o libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o deliver deliver.o backend.o $(LMTPOBJS) \
++	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o deliver deliver.o backend.o $(LMTPOBJS) \
+ 	mutex_fake.o libimap.a $(DEPLIBS) $(LIBS)
  
  ctl_deliver: ctl_deliver.o $(CLIOBJS) libimap.a $(DEPLIBS)
 -	$(CC) $(LDFLAGS) -o \
@@ -340,9 +327,9 @@
      'DEFINE'	=> '-DPERL_POLLUTE',     # e.g., '-DHAVE_SOMETHING' 
      'INC'	=> "-I../../lib $SASL_INC $OPENSSL_INC", 
      'EXE_FILES' => [cyradm],
---- cyrus-imapd-2.2.3/perl/sieve/lib/Makefile.in.orig	2004-01-03 15:16:45.000000000 +0000
-+++ cyrus-imapd-2.2.3/perl/sieve/lib/Makefile.in	2004-03-14 14:47:42.000000000 +0000
-@@ -48,15 +48,17 @@
+--- cyrus-imapd-2.2.6/perl/sieve/lib/Makefile.in.orig	2004-05-28 20:03:07.000000000 +0200
++++ cyrus-imapd-2.2.6/perl/sieve/lib/Makefile.in	2004-07-25 20:10:30.304685256 +0200
+@@ -49,12 +49,14 @@
  CC = @CC@
  INSTALL = @INSTALL@
  RANLIB = @RANLIB@
@@ -350,21 +337,16 @@
 +top_builddir = @top_builddir@
  
  DEFS = @DEFS@ @LOCALDEFS@ -Dbool=char -DHAS_BOOL
- CPPFLAGS = -I. -I../../.. -I$(srcdir) -I$(srcdir)/../../../lib @CPPFLAGS@ @DYNSASLFLAGS@
+ CPPFLAGS = -I. -I../../.. -I$(srcdir) -I$(srcdir)/../../../lib @CPPFLAGS@ @DYNSASLFLAGS@ @COM_ERR_CPPFLAGS@
 -LIBS = ../../../lib/libcyrus.a ../../../lib/libcyrus_min.a @LIB_DYN_SASL@ @LIBS@
 +LIBS = ../../../lib/libcyrus.la ../../../lib/libcyrus_min.la @LIB_DYN_SASL@ @LIBS@
  IMAP_LIBS = @IMAP_LIBS@
 -DEPLIBS = ../../../lib/libcyrus.a ../../../lib/libcyrus_min.a @DEPLIBS@
 +DEPLIBS = ../../../lib/libcyrus.la ../../../lib/libcyrus_min.la @DEPLIBS@
  
--CFLAGS = -g
--LDFLAGS = -g @LDFLAGS@
-+CFLAGS = @CFLAGS@
-+LDFLAGS = @LDFLAGS@
- 
- SHELL = /bin/sh
- MAKEDEPEND = @MAKEDEPEND@
-@@ -65,19 +67,17 @@
+ MAKEDEPEND_CFLAGS = @CFLAGS@
+ CFLAGS = @CFLAGS@ @PERL_CCCDLFLAGS@
+@@ -67,19 +69,17 @@
  exec_prefix = @exec_prefix@
  cyrus_prefix = @cyrus_prefix@
  
@@ -413,9 +395,9 @@
  
  CFLAGS = -g
  LDFLAGS = -g
---- cyrus-imapd-2.2.3/sieve/Makefile.in.orig	2003-11-12 04:02:12.000000000 +0000
-+++ cyrus-imapd-2.2.3/sieve/Makefile.in	2004-03-14 14:52:53.000000000 +0000
-@@ -34,6 +34,8 @@
+--- cyrus-imapd-2.2.6/sieve/Makefile.in.orig	2004-05-28 20:03:09.000000000 +0200
++++ cyrus-imapd-2.2.6/sieve/Makefile.in	2004-07-25 20:13:56.311367480 +0200
+@@ -35,6 +35,8 @@
  YFLAGS = -d
  LEX = @LEX@
  RANLIB = @RANLIB@
@@ -424,7 +406,7 @@
  COMPILE_ET = @COMPILE_ET@
  
  DEFS = @DEFS@
-@@ -47,7 +49,7 @@
+@@ -49,7 +51,7 @@
  IMAP_COM_ERR_LIBS = @IMAP_COM_ERR_LIBS@
  IMAP_LIBS = @IMAP_LIBS@ @LIB_RT@
  LIBS = libsieve.a $(IMAP_LIBS) $(IMAP_COM_ERR_LIBS)
@@ -433,12 +415,12 @@
  
  BUILT_SOURCES = addr.c addr.h addr-lex.c \
  	sieve.c sieve.h sieve-lex.c \
-@@ -59,10 +61,10 @@
+@@ -61,10 +63,10 @@
  
  install: sievec
  	$(srcdir)/../install-sh -d ${DESTDIR}$(service_path)
--	$(srcdir)/../install-sh -m 755 sievec $(DESTDIR)$(service_path) || exit
-+	$(LIBTOOL) --mode=install $(srcdir)/../install-sh sievec $(DESTDIR)$(service_path) || exit
+-	$(srcdir)/../install-sh -c -m 755 sievec $(DESTDIR)$(service_path) || exit
++	$(LIBTOOL) --mode=install $(srcdir)/../install-sh -c sievec $(DESTDIR)$(service_path) || exit
  
  test: $(DEPLIBS) libsieve.a test.o
 -	$(CC) $(LDFLAGS) -o test test.o libsieve.a $(DEPLIBS) $(LIBS)
@@ -446,7 +428,7 @@
  
  OBJS = sieve_err.o \
         sieve.o sieve-lex.o comparator.o interp.o message.o \
-@@ -100,10 +102,10 @@
+@@ -102,10 +104,10 @@
  	$(RANLIB) libsieve.a
  
  sievec: sievec.o libsieve.a
@@ -572,9 +554,9 @@
  		$(DEPLIBS) $(LIBS)
  
  
---- cyrus-imapd-2.2.3/configure.in.orig	2004-03-02 22:00:32.000000000 +0000
-+++ cyrus-imapd-2.2.3/configure.in	2004-03-14 14:34:05.000000000 +0000
-@@ -89,7 +89,7 @@
+--- cyrus-imapd-2.2.6/configure.in.orig	2004-07-25 19:28:56.114859744 +0200
++++ cyrus-imapd-2.2.6/configure.in	2004-07-25 20:14:16.360319576 +0200
+@@ -86,7 +86,7 @@
  AC_DEFINE_UNQUOTED(SYSCONFDIR,"$sysconfdir",[Config File Location])
  
  AC_PROG_CC
@@ -583,7 +565,7 @@
  AC_PROG_MAKE_SET
  AC_PROG_INSTALL
  AC_AIX
-@@ -123,7 +123,7 @@
+@@ -120,7 +120,7 @@
  	cyrus_cv_getaddrinfo=no)], cyrus_cv_getaddrinfo=no)
  
  if test $cyrus_cv_getaddrinfo = no; then
@@ -592,7 +574,7 @@
  fi
  
  cyrus_cv_getnameinfo=yes
-@@ -132,7 +132,7 @@
+@@ -129,7 +129,7 @@
  	cyrus_cv_getnameinfo=no)
  
  if test $cyrus_cv_getnameinfo = no; then
@@ -601,16 +583,16 @@
  fi
  
  IPv6_CHECK_SS_FAMILY()
-@@ -166,7 +166,7 @@
+@@ -163,7 +163,7 @@
  dnl function for doing each of the database backends
  dnl parameters: backend name, variable to set, withval
  
--CYRUSDB_OBJS="cyrusdb_flat.o cyrusdb_skiplist.o"
-+CYRUSDB_OBJS="cyrusdb_flat.lo cyrusdb_skiplist.lo"
+-CYRUSDB_OBJS="cyrusdb_flat.o cyrusdb_skiplist.o cyrusdb_quotalegacy.o"
++CYRUSDB_OBJS="cyrusdb_flat.lo cyrusdb_skiplist.lo cyrusdb_quotalegacy.lo"
  
  dnl Berkeley DB Detection
  
-@@ -213,7 +213,7 @@
+@@ -210,7 +210,7 @@
    LIBS="${LIBS} ${BDB_LIBADD}"
    CPPFLAGS="${BDB_INCADD} ${CPPFLAGS}"
  
@@ -619,9 +601,9 @@
    AC_DEFINE(HAVE_BDB,[],[Build in Berkeley DB support?])
  fi
  
---- cyrus-imapd-2.2.3/imtest/Makefile.in.orig	2004-01-03 15:16:43.000000000 +0000
-+++ cyrus-imapd-2.2.3/imtest/Makefile.in	2004-03-14 15:00:16.000000000 +0000
-@@ -48,15 +48,17 @@
+--- cyrus-imapd-2.2.6/imtest/Makefile.in.orig	2004-05-28 20:03:03.000000000 +0200
++++ cyrus-imapd-2.2.6/imtest/Makefile.in	2004-07-25 20:14:57.524061736 +0200
+@@ -49,12 +49,14 @@
  CC = @CC@
  INSTALL = @INSTALL@
  RANLIB = @RANLIB@
@@ -629,20 +611,15 @@
 +top_builddir = @top_builddir@
  
  DEFS = @DEFS@ @LOCALDEFS@
- CPPFLAGS = -I. -I.. -I$(srcdir) -I$(srcdir)/../lib -I$(srcdir)/../et @CPPFLAGS@  @SASLFLAGS@
+ CPPFLAGS = -I.. -I$(srcdir)/../lib @COM_ERR_CPPFLAGS@ @CPPFLAGS@  @SASLFLAGS@
  LIBS = @LIBS@ 
  IMAP_LIBS = @IMAP_LIBS@ @LIB_RT@
 -DEPLIBS = ../lib/libcyrus.a ../lib/libcyrus_min.a @DEPLIBS@
 +DEPLIBS = ../lib/libcyrus.la ../lib/libcyrus_min.la @DEPLIBS@
  
--CFLAGS = -g
--LDFLAGS = -g @LDFLAGS@
-+CFLAGS = @CFLAGS@
-+LDFLAGS = @LDFLAGS@
- 
- SHELL = /bin/sh
- MAKEDEPEND = @MAKEDEPEND@
-@@ -71,7 +73,7 @@
+ CFLAGS = @CFLAGS@
+ LDFLAGS = @LDFLAGS@ @COM_ERR_LDFLAGS@
+@@ -72,7 +74,7 @@
  all: imtest
  
  install:
@@ -651,7 +628,7 @@
  	ln -f $(DESTDIR)$(exec_prefix)/bin/imtest $(DESTDIR)$(exec_prefix)/bin/pop3test
  	ln -f $(DESTDIR)$(exec_prefix)/bin/imtest $(DESTDIR)$(exec_prefix)/bin/nntptest
  	ln -f $(DESTDIR)$(exec_prefix)/bin/imtest $(DESTDIR)$(exec_prefix)/bin/lmtptest
-@@ -83,10 +85,10 @@
+@@ -84,10 +86,10 @@
  	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
  
  imtest: imtest.o $(DEPLIBS)
@@ -748,9 +725,9 @@
  	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
  
  clean:
---- cyrus-imapd-2.2.3/ptclient/Makefile.in.orig	2003-11-12 04:02:11.000000000 +0000
-+++ cyrus-imapd-2.2.3/ptclient/Makefile.in	2004-03-14 15:05:38.000000000 +0000
-@@ -50,6 +50,8 @@
+--- cyrus-imapd-2.2.6/ptclient/Makefile.in.orig	2004-05-28 20:03:08.000000000 +0200
++++ cyrus-imapd-2.2.6/ptclient/Makefile.in	2004-07-25 20:17:40.561276312 +0200
+@@ -51,6 +51,8 @@
  CC = @CC@
  INSTALL = @INSTALL@
  RANLIB = @RANLIB@
@@ -759,7 +736,7 @@
  
  DEFS = @DEFS@
  CPPFLAGS = -I.. -I$(srcdir)/../imap -I$(srcdir)/../lib @COM_ERR_CPPFLAGS@ @CPPFLAGS@
-@@ -59,7 +61,7 @@
+@@ -60,7 +62,7 @@
  LIBS = $(IMAP_LIBS) @COM_ERR_LIBS@
  LIB_SASL = @LIB_SASL@
  LIB_WRAP = @LIB_WRAP@
@@ -768,7 +745,7 @@
  UTIL_LIBS = ../imap/mutex_fake.o ../imap/cli_fatal.o
  
  LDAP_LIBS=@LDAP_LIBS@
-@@ -88,33 +90,33 @@
+@@ -89,33 +91,33 @@
  all: $(PROGS)
  
  install:
@@ -791,16 +768,16 @@
 +	$(PURIFY) $(PUREARGS) $(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o $@ ptloader.o @WITH_PTS@.o ../imap/mutex_fake.o $(SERVICETHREAD) ${AFS_LDFLAGS} ${LDAP_LDFLAGS} $(AFS_LIBS) ${LDAP_LIBS} $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
  
  ptexpire: ptexpire.o $(DEPLIBS) $(UTIL_LIBS)
--	$(CC) $(LDFLAGS) -o $@ ptexpire.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
-+	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o $@ ptexpire.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
+-	$(CC) $(LDFLAGS) -o $@ ptexpire.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
++	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o $@ ptexpire.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
  
  ptexpire.pure: ptexpire.o $(DEPLIBS) $(UTIL_LIBS)
 -	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ ptexpire.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
 +	$(PURIFY) $(PUREARGS) $(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o $@ ptexpire.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
  
  ptdump: ptdump.o $(DEPLIBS) $(UTIL_LIBS)
--	$(CC) $(LDFLAGS) -o $@ ptdump.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
-+	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o $@ ptdump.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
+-	$(CC) $(LDFLAGS) -o $@ ptdump.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
++	$(LIBTOOL) --mode=link $(CC) $(LDFLAGS) -o $@ ptdump.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
  
  ptdump.pure: ptexpire.o $(DEPLIBS) $(UTIL_LIBS)
 -	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ ptdump.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
