@@ -1,14 +1,16 @@
+# TODO:
+# - use net-snmp (it wants ucd-snmp)
 %include	/usr/lib/rpm/macros.perl
 Summary:	High-performance mail store with imap and pop3
 Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	2.1.12
+Version:	2.1.14
 Release:	0.3
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
-# Source0-md5:	dc3355d0170509ccebd9788ed2daad39
+# Source0-md5:	e30da9749e926f847be5ab4e75eaf110
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
@@ -23,7 +25,7 @@ Source12:	cyrus.conf
 Patch0:		%{name}-snmp.patch
 Patch1:		%{name}-mandir.patch
 Patch2:		%{name}-paths.patch
-Patch5:		%{name}-et.patch
+Patch3:		%{name}-et.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 BuildRequires:	autoconf
 BuildRequires:	automake
@@ -144,7 +146,7 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %patch0 -p1
 %patch1 -p1
 %patch2 -p1
-%patch5 -p1
+%patch3 -p1
 
 %build
 cd makedepend
@@ -159,8 +161,8 @@ rm -f aclocal.m4
 %{__aclocal} -I cmulocal
 %{__autoheader}
 %{__autoconf}
-cp %{_datadir}/automake/config.*   .
-cp %{_datadir}/automake/install-sh .
+cp -f %{_datadir}/automake/config.*   .
+cp -f %{_datadir}/automake/install-sh .
 %configure \
 	--with-auth=unix \
 	--without-libwrap \
@@ -285,6 +287,7 @@ rm -rf $RPM_BUILD_ROOT
 %attr(755,root,root) %{_libexecdir}/ipurge
 %attr(755,root,root) %{_libexecdir}/lmtpd
 %attr(755,root,root) %{_libexecdir}/cyrus-master
+%attr(755,root,root) %{_libexecdir}/mbexamine
 %attr(755,root,root) %{_libexecdir}/mbpath
 %attr(755,root,root) %{_libexecdir}/pop3d
 %attr(755,root,root) %{_libexecdir}/quota
@@ -318,4 +321,11 @@ rm -rf $RPM_BUILD_ROOT
 %files -n perl-%{name}
 %defattr(644,root,root,755)
 %{perl_vendorarch}/Cyrus
-%{perl_vendorarch}/auto/Cyrus
+%dir %{perl_vendorarch}/auto/Cyrus
+%dir %{perl_vendorarch}/auto/Cyrus/IMAP
+%attr(755,root,root) %{perl_vendorarch}/auto/Cyrus/IMAP/IMAP.so
+%{perl_vendorarch}/auto/Cyrus/IMAP/IMAP.bs
+%dir %{perl_vendorarch}/auto/Cyrus/SIEVE
+%dir %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve
+%attr(755,root,root) %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve/managesieve.so
+%{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve/managesieve.bs
