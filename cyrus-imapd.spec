@@ -50,6 +50,23 @@ the IMAP, POP3, or KPOP protocols.
 Note that this package can be used by ISPs and other to provide mail
 services, but it may not be distributed as part of a commercial product.
 
+%description -l pl
+Serwer Cyrus IMAP jest skalowalnym systemem e-mail dla przedsiêbiorstwa,
+zaprojektowanym dla ma³ych i du¿ych firm i wykorzystuj±cym oparte na
+standardach technologie.
+
+Pe³na implementacja Cyrus IMAP pozwala na bezproblemowe ustawienie
+¶rodowiska poczty i elektronicznej tablicy og³oszeniowej na kilku serwerach.
+Tym siê ró¿ni od innych implementacji serwerów IMAP, ¿e jest uruchamiany
+na "opieczêtowanych" serwerach, na które w normalnych waunkach u¿ytkownicy
+nie mog± siê zalogowaæ. Baza danych skrzynek pocztowych jest pzrechowywana 
+w tych czê¶ciach systemu plików, które s± dostêpne jedynie dla systemu
+IMAP Cyrus. Wszelki dostêp do poczty ma miejsce poprzez oprogramowanie
+wykorzystuj±ce protoko³y IMAP, POP3 oraz KPOP.
+
+Nale¿y zwróciæ uwagê na fakt, ¿e pakiet ten mo¿e byæ wykorzystywany przez ISP,
+nie mo¿e byæ jednak rozpowszechniany jako czê¶æ komercyjnego produktu.
+
 %define version %{PACKAGE_VERSION}
 
 %prep
