@@ -4,7 +4,7 @@ Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Name:		cyrus-imapd
 Version:	2.0.16
 Release:	3
-License:	academic/research
+License:	Academic/research
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
 Source1:	cyrus-README
