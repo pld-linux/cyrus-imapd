@@ -174,7 +174,7 @@ cd ..
 %{__aclocal} -I cmulocal
 %{__autoheader}
 %{__autoconf}
-cp -f %{_datadir}/automake/config.*   .
+cp -f %{_datadir}/automake/config.* .
 cp -f %{_datadir}/automake/install-sh .
 %configure \
 	--with-auth=unix \
@@ -245,7 +245,7 @@ if [ -n "`id -u cyrus 2>/dev/null`" ]; then
 		exit 1
 	fi
 else
-       /usr/sbin/useradd -u 76 -r -d /var/spool/imap -s /bin/false -c "Cyrus User" -g mail cyrus 1>&2
+	/usr/sbin/useradd -u 76 -r -d /var/spool/imap -s /bin/false -c "Cyrus User" -g mail cyrus 1>&2
 fi
 
 %post
@@ -272,7 +272,7 @@ fi
 
 %postun
 if [ "$1" = "0" ]; then
-       /usr/sbin/userdel cyrus
+	/usr/sbin/userdel cyrus
 fi
 
 %post	libs -p /sbin/ldconfig
