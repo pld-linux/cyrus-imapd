@@ -146,7 +146,7 @@ EOF
 
 %pre
 if [ -z "`id -u cyrus 2>/dev/null`" ]; then
-	/usr/sbin/useradd -u 76 -r -d /var/spool/imap -s /bin/false -c "Cyrus User" -g mail cyrus 1>&2
+	/usr/sbin/useradd -u 76 -r -m -d /var/spool/imap -s /bin/false -c "Cyrus User" -g mail cyrus 1>&2
 	if [ -f /var/db/passwd.db ]; then
 		/usr/bin/update-db 1>&2
 	fi
