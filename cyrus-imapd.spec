@@ -2,7 +2,7 @@
 Summary:	high-performance mail store with imap and pop3
 Name:		cyrus-imapd
 Version:	2.0.13
-Release:	1
+Release:	2
 License:	academic/research
 Group:		Networking/Daemons
 Group(de):	Netzwerkwesen/Server
@@ -31,7 +31,7 @@ URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 # to buildrequires
 BuildConflicts:	e2fsprogs-devel 
 BuildRequires:	cyrus-sasl-devel >= 1.5.27
-BuildRequires:	openssl-devel >= 0.9.6
+BuildRequires:	openssl-devel >= 0.9.6a
 BuildRequires:	perl >= 5.6.1
 BuildRequires:	db3-devel >= 3.1.17
 Prereq:		rc-scripts
