@@ -33,7 +33,7 @@ BuildRequires:	cyrus-sasl-devel >= 1.5.27
 BuildRequires:	db-devel >= 4.1.25
 BuildRequires:	e2fsprogs-devel >= 1.21
 BuildRequires:	flex
-BuildRequires:	openssl-devel >= 0.9.7
+BuildRequires:	openssl-devel >= 0.9.7c
 BuildRequires:	perl-devel >= 5.6.1
 #BuildRequires:	ucd-snmp-devel >= 4.2.6
 PreReq:		rc-scripts
