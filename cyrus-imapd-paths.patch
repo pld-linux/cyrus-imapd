@@ -1,0 +1,11 @@
+--- master/master.c.old	Thu Jan 25 23:35:36 2001
++++ master/master.c	Thu Jan 25 23:52:54 2001
+@@ -84,7 +84,7 @@
+ #include "master.h"
+ #include "service.h"
+ 
+-#define SERVICE_PATH (CYRUS_PATH "/bin")
++#define SERVICE_PATH CYRUS_PATH
+ 
+ enum {
+     become_cyrus_early = 1,
