@@ -3,8 +3,9 @@ Summary:	high-performance mail store with imap and pop3
 Name:		cyrus-imapd
 Version:	2.0.9
 Release:	0.2
-Copyright:	academic/research
+License:	academic/research
 Group:		Networking/Daemons
+Group(de):	Netzwerkwesen/Server
 Group(pl):	Sieciowe/Serwery
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
 Source1:	cyrus-README
@@ -82,6 +83,7 @@ komercyjnego produktu.
 %patch0 -p1
 %patch1 -p1
 %patch2 -p0
+
 %build
 cd makedepend
 autoconf
@@ -97,7 +99,8 @@ autoconf
 	--with-cyrus-prefix=%{_libexecdir}
 %{__make}
 
-%{__cc} $RPM_OPT_FLAGS -DLIBEXECDIR=\"%{_libexecdir}\" -s -Wall -o deliver-wrapper %{SOURCE3}
+%{__cc} "%{?debug:-O -g}%{!?debug:$RPM_OPT_FLAGS}" \
+	-DLIBEXECDIR=\"%{_libexecdir}\" -s -Wall -o deliver-wrapper %{SOURCE3}
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -118,10 +121,7 @@ touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 
 install deliver-wrapper $RPM_BUILD_ROOT%{_libexecdir}/deliver-wrapper
 
-install %{SOURCE1}	.
-install %{SOURCE2}	.
-install %{SOURCE4}	.
-install %{SOURCE5}	.
+install %{SOURCE1}	%{SOURCE2} %{SOURCE4} %{SOURCE5} .
 install %{SOURCE6}	$RPM_BUILD_ROOT/etc/logrotate.d/cyrus-imapd
 install %{SOURCE7}	$RPM_BUILD_ROOT%{_sysconfdir}/imapd.conf
 install %{SOURCE8}	$RPM_BUILD_ROOT/etc/cron.daily/cyrus-imapd
@@ -130,8 +130,8 @@ install %{SOURCE10}	$RPM_BUILD_ROOT/etc/pam.d/pop
 install %{SOURCE11}	$RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
 install %{SOURCE12}	$RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 
-mv $RPM_BUILD_ROOT%{_libexecdir}/bin/*		$RPM_BUILD_ROOT%{_libexecdir}
-mv $RPM_BUILD_ROOT%{_libexecdir}/master		$RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
+mv -f $RPM_BUILD_ROOT%{_libexecdir}/bin/*	$RPM_BUILD_ROOT%{_libexecdir}
+mv -f $RPM_BUILD_ROOT%{_libexecdir}/master	$RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
 rm -rf $RPM_BUILD_ROOT%{_libexecdir}/bin
 
 touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop}
@@ -199,7 +199,7 @@ rm -rf $RPM_BUILD_ROOT
 %attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
 %attr(755,root,root) /etc/cron.daily/cyrus-imapd
 %attr(755,root,root) %{_bindir}/*
-%attr(4750,cyrus,mail) %{_libexecdir}/deliver
+%attr(4754,cyrus,mail) %{_libexecdir}/deliver
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
 %attr(755,root,root) %{_libexecdir}/ctl_deliver
 %attr(755,root,root) %{_libexecdir}/ctl_mboxlist
