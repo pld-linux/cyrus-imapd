@@ -1,7 +1,7 @@
 %include	/usr/lib/rpm/macros.perl
 Summary:	high-performance mail store with imap and pop3
 Name:		cyrus-imapd
-Version:	2.0.9
+Version:	2.0.11
 Release:	0.2
 License:	academic/research
 Group:		Networking/Daemons
@@ -15,7 +15,6 @@ Source4:	cyrus-user-procmailrc.template
 Source5:	%{name}-procmail+cyrus.mc
 Source6:	%{name}.logrotate
 Source7:	%{name}.conf
-Source8:	%{name}.cron
 Source9:	%{name}.pamd
 Source10:	%{name}-pop.pamd
 Source11:	%{name}.init
@@ -99,7 +98,7 @@ autoconf
 	--with-cyrus-prefix=%{_libexecdir}
 %{__make}
 
-%{__cc} "%{?debug:-O -g}%{!?debug:$RPM_OPT_FLAGS}" \
+%{__cc} %{?debug:-O0 -g}%{!?debug:$RPM_OPT_FLAGS} \
 	-DLIBEXECDIR=\"%{_libexecdir}\" -s -Wall -o deliver-wrapper %{SOURCE3}
 
 %install
@@ -107,7 +106,7 @@ rm -rf $RPM_BUILD_ROOT
 
 install -d \
 	$RPM_BUILD_ROOT{%{_sbindir},%{_libexecdir},%{_mandir}} \
-	$RPM_BUILD_ROOT%{_sysconfdir}/{logrotate.d,cron.daily,sysconfig/rc-inetd} \
+	$RPM_BUILD_ROOT%{_sysconfdir}/{logrotate.d,sysconfig/rc-inetd} \
 	$RPM_BUILD_ROOT/var/spool/imap/stage. \
 	$RPM_BUILD_ROOT/var/lib/imap/{user,quota,proc,log,msg,deliverdb/db,sieve,db,socket} \
 	$RPM_BUILD_ROOT/etc/{security,pam.d,rc.d/init.d}
@@ -124,7 +123,6 @@ install deliver-wrapper $RPM_BUILD_ROOT%{_libexecdir}/deliver-wrapper
 install %{SOURCE1}	%{SOURCE2} %{SOURCE4} %{SOURCE5} .
 install %{SOURCE6}	$RPM_BUILD_ROOT/etc/logrotate.d/cyrus-imapd
 install %{SOURCE7}	$RPM_BUILD_ROOT%{_sysconfdir}/imapd.conf
-install %{SOURCE8}	$RPM_BUILD_ROOT/etc/cron.daily/cyrus-imapd
 install %{SOURCE9}	$RPM_BUILD_ROOT/etc/pam.d/imap
 install %{SOURCE10}	$RPM_BUILD_ROOT/etc/pam.d/pop
 install %{SOURCE11}	$RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
@@ -197,7 +195,6 @@ rm -rf $RPM_BUILD_ROOT
 %attr(640,root,root) %config(noreplace) %verify(not md5 size mtime) /etc/security/blacklist.*
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-imapd
 %attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
-%attr(755,root,root) /etc/cron.daily/cyrus-imapd
 %attr(755,root,root) %{_bindir}/*
 %attr(4754,cyrus,mail) %{_libexecdir}/deliver
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
