@@ -6,7 +6,7 @@ Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.2.3
-Release:	0.1
+Release:	0.2
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -24,6 +24,7 @@ Source11:	%{name}.init
 Source12:	cyrus.conf
 Patch0:		%{name}-mandir.patch
 Patch1:		%{name}-et.patch
+Patch2:		%{name}-shared.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 BuildRequires:	autoconf
 BuildRequires:	automake
@@ -31,6 +32,7 @@ BuildRequires:	cyrus-sasl-devel >= 1.5.27
 BuildRequires:	db-devel >= 4.1.25
 BuildRequires:	flex
 BuildRequires:	libcom_err-devel >= 1.21
+BuildRequires:	libtool
 BuildRequires:	openssl-devel >= 0.9.7c
 BuildRequires:	perl-devel >= 1:5.8.0
 #BuildRequires:	ucd-snmp-devel >= 4.2.6
@@ -38,10 +40,14 @@ PreReq:		rc-scripts
 Requires(pre):	/usr/sbin/useradd
 Requires(postun):	/usr/sbin/userdel
 Requires(post,preun):	/sbin/chkconfig
+Requires:	%{name}-libs = %{version}-%{release}
 Requires:	pam >= 0.77.3
 Provides:	imapdaemon
 Provides:	pop3daemon
-BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
+Obsoletes:	imap
+Obsoletes:	imapd
+Obsoletes:	imapdaemon
+Obsoletes:	pop3daemon
 Conflicts:	courier-imap
 Conflicts:	courier-imap-common
 Conflicts:	courier-imap-pop3
@@ -53,10 +59,7 @@ Conflicts:	qpopper
 Conflicts:	qpopper6
 Conflicts:	solid-pop3d
 Conflicts:	tpop3d
-Obsoletes:	imapd
-Obsoletes:	imap
-Obsoletes:	pop3daemon
-Obsoletes:	imapdaemon
+BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %define		_libexecdir	%{_libdir}/cyrus
 
@@ -102,19 +105,30 @@ arquivos que são privativos do sistema Cyrus. Todo o acesso de
 usuários aos mails se dá através de software usando os protocolos
 IMAP, POP3 ou KPOP.
 
+%package libs
+Summary:	Shared cyrus-imapd libraries
+Summary(pl):	Wspó³dzielone biblioteki cyrus-imapd
+Group:		Libraries
+
+%description libs
+Shared cyrus-imapd libraries.
+
+%description libs -l pl
+Wspó³dzielone biblioteki cyrus-imapd.
+
 %package devel
-Summary:	Libraries and include files for developing with cyrus-imapd
-Summary(pl):	Pliki potrzebne do programowania z u¿yciem cyrus-imapd
+Summary:	Header files for developing with cyrus-imapd libraries
+Summary(pl):	Pliki nag³ówkowe do programowania z u¿yciem bibliotek cyrus-imapd
 Group:		Development/Libraries
-Requires:	%{name} = %{version}-%{release}
+Requires:	%{name}-libs = %{version}-%{release}
 
 %description devel
-This package provides the necessary development libraries and include
-files to allow you to develop with cyrus-imapd.
+This package provides the necessary header files files to allow you to
+develop with cyrus-imapd libraries.
 
 %description devel -l pl
-Ten pakiet zawiera biblioteki oraz pliki nag³ówkowe niezbêdne do
-tworzenia oprogramowania z wykorzystaniem cyrus-imapd.
+Ten pakiet zawiera pliki nag³ówkowe niezbêdne do tworzenia
+oprogramowania z wykorzystaniem bibliotek cyrus-imapd.
 
 %package static
 Summary:	Static cyrus-imapd libraries
@@ -132,7 +146,7 @@ Biblioteki statyczne cyrus-imapd
 Summary:	Perl interface to cyrus-imapd library
 Summary(pl):	Perlowy interfejs do biblioteki cyrus-imapd
 Group:		Development/Languages/Perl
-Requires:	%{name} = %{version}-%{release}
+Requires:	%{name}-libs = %{version}-%{release}
 
 %description -n perl-%{name}
 Perl interface to cyrus-imapd library.
@@ -144,6 +158,7 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %setup -q
 %patch0 -p1
 %patch1 -p1
+%patch2 -p1
 
 rm -rf autom4te.cache
 
@@ -155,6 +170,7 @@ cd makedepend
 %{__make}
 PATH=$PATH:`pwd`; export PATH
 cd ..
+%{__libtoolize}
 %{__aclocal} -I cmulocal
 %{__autoheader}
 %{__autoconf}
@@ -191,7 +207,6 @@ touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 	DESTDIR=$RPM_BUILD_ROOT \
 	CYRUS_USER="`id -u`" \
 	CYRUS_GROUP="`id -g`" \
-	mandir=%{_mandir} \
 	INSTALLDIRS=vendor
 
 install deliver-wrapper $RPM_BUILD_ROOT%{_libexecdir}/deliver-wrapper
@@ -224,7 +239,12 @@ done
 rm -rf $RPM_BUILD_ROOT
 
 %pre
-if [ -z "`id -u cyrus 2>/dev/null`" ]; then
+if [ -n "`id -u cyrus 2>/dev/null`" ]; then
+	if [ "`id -u cyrus`" != "76" ]; then
+		echo "Error: user cyrus doesn't have uid=76. Correct this before installing cyrus-imapd." 1>&2
+		exit 1
+	fi
+else
        /usr/sbin/useradd -u 76 -r -d /var/spool/imap -s /bin/false -c "Cyrus User" -g mail cyrus 1>&2
 fi
 
@@ -254,6 +274,9 @@ fi
 if [ "$1" = "0" ]; then
        /usr/sbin/userdel cyrus
 fi
+
+%post	libs -p /sbin/ldconfig
+%postun	libs -p /sbin/ldconfig
 
 %files
 %defattr(644,root,root,755)
@@ -310,8 +333,14 @@ fi
 
 %{_mandir}/man*/*
 
+%files libs
+%defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/lib*.so.*.*.*
+
 %files devel
 %defattr(644,root,root,755)
+%attr(755,root,root) %{_libdir}/lib*.so
+%{_libdir}/lib*.la
 %{_includedir}/cyrus
 
 %files static
