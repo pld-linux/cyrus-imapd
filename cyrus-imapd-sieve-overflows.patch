@@ -1,0 +1,42 @@
+--- cyrus-imapd-2.0.16/sieve/addr.y.orig	Sat Jul 15 06:32:32 2000
++++ cyrus-imapd-2.0.16/sieve/addr.y	Thu Dec  5 11:35:29 2002
+@@ -87,8 +87,9 @@
+ /* copy address error message into buffer provided by sieve parser */
+ int yyerror(char *s)
+ {
+-extern char addrerr[];
++extern char addrerr[500];
+ 
+-    strcpy(addrerr, s);
++    strncpy(addrerr, s, sizeof(addrerr)-1);
++    addrerr[sizeof(addrerr)-1] = '\0';
+     return 0;
+ }
+--- cyrus-imapd-2.0.16/sieve/sieve.y.orig	Mon Dec 18 05:53:43 2000
++++ cyrus-imapd-2.0.16/sieve/sieve.y	Thu Dec  5 11:36:52 2002
+@@ -599,7 +599,7 @@
+ 
+     addrptr = s;
+     if (addrparse()) {
+-	sprintf(errbuf, "address '%s': %s", s, addrerr);
++	snprintf(errbuf, sizeof(errbuf), "address '%s': %s", s, addrerr);
+ 	yyerror(errbuf);
+ 	return 0;
+     }
+@@ -633,14 +633,14 @@
+ 	if (strcmp(f, "\\seen") && strcmp(f, "\\answered") &&
+ 	    strcmp(f, "\\flagged") && strcmp(f, "\\draft") &&
+ 	    strcmp(f, "\\deleted")) {
+-	    sprintf(errbuf, "flag '%s': not a system flag", f);
++	    snprintf(errbuf, sizeof(errbuf), "flag '%s': not a system flag", f);
+ 	    yyerror(errbuf);
+ 	    return 0;
+ 	}
+ 	return 1;
+     }
+     if (!imparse_isatom(f)) {
+-	sprintf(errbuf, "flag '%s': not a valid keyword", f);
++	snprintf(errbuf, sizeof(errbuf), "flag '%s': not a valid keyword", f);
+ 	yyerror(errbuf);
+ 	return 0;
+     }
