@@ -283,7 +283,7 @@ fi
 %doc cyrus-README cyrus-procmailrc cyrus-user-procmailrc.template
 %doc cyrus-imapd-procmail+cyrus.mc COPYRIGHT doc/*.html tools
 %config(noreplace) %verify(not size mtime md5) %{_sysconfdir}/*.conf
-%attr(640,root,root) /etc/logrotate.d/cyrus-imapd
+%attr(640,root,root) %config(noreplace) %verify(not size mtime md5) /etc/logrotate.d/cyrus-imapd
 %attr(440,cyrus,root) %config(noreplace) %verify(not size mtime md5) /etc/pam.d/*
 %attr(640,root,root) %config(noreplace) %verify(not size mtime md5) /etc/security/blacklist.*
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-imapd
