@@ -86,7 +86,7 @@ Pe³na implementacja Cyrus IMAP pozwala na bezproblemowe ustawienie
 ¶rodowiska poczty i elektronicznej tablicy og³oszeniowej na kilku
 serwerach. Tym siê ró¿ni od innych implementacji serwerów IMAP, ¿e
 jest uruchamiany na "opieczêtowanych" serwerach, na które w normalnych
-waunkach u¿ytkownicy nie mog± siê zalogowaæ. Baza danych skrzynek
+warunkach u¿ytkownicy nie mog± siê zalogowaæ. Baza danych skrzynek
 pocztowych jest przechowywana w tych czê¶ciach systemu plików, które
 s± dostêpne jedynie dla systemu IMAP Cyrus. Wszelki dostêp do poczty
 ma miejsce poprzez oprogramowanie wykorzystuj±ce protoko³y IMAP, POP3
