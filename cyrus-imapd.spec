@@ -38,6 +38,8 @@ BuildRequires:	flex
 BuildRequires:	openssl-devel >= 0.9.6a
 BuildRequires:	perl >= 5.6.1
 BuildRequires:	ucd-snmp-devel
+BuildRequires:	autoconf
+BuildRequires:	automake
 Prereq:		rc-scripts
 Prereq:		/sbin/chkconfig
 Provides:	imapdaemon
