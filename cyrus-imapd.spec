@@ -108,7 +108,7 @@ touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 	$RPM_BUILD_ROOT/etc/security/blacklist.imap \
 	$RPM_BUILD_ROOT/etc/security/blacklist.pop
 
-make install DESTDIR=$RPM_BUILD_ROOT CYRUS_USER="`id -u`" CYRUS_GROUP="`id -g`"
+%{__make} install DESTDIR=$RPM_BUILD_ROOT CYRUS_USER="`id -u`" CYRUS_GROUP="`id -g`"
 
 #install -d $RPM_BUILD_ROOT%{_prefix}/cyrus/bin
 #install -g mail -m 2755 -s deliver-wrapper $RPM_BUILD_ROOT%{_prefix}/cyrus/bin/deliver-wrapper
