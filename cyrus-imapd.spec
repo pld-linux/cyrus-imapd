@@ -31,15 +31,15 @@ BuildRequires:	autoconf
 BuildRequires:	automake
 BuildRequires:	cyrus-sasl-devel >= 1.5.27
 BuildRequires:	db-devel >= 4.1.25
-BuildRequires:	libcom_err-devel >= 1.21
 BuildRequires:	flex
+BuildRequires:	libcom_err-devel >= 1.21
 BuildRequires:	openssl-devel >= 0.9.7c
 BuildRequires:	perl-devel >= 5.6.1
 #BuildRequires:	ucd-snmp-devel >= 4.2.6
 PreReq:		rc-scripts
 Requires(pre):	/usr/sbin/useradd
 Requires(postun):	/usr/sbin/userdel
-Requires(post,preun):/sbin/chkconfig
+Requires(post,preun):	/sbin/chkconfig
 Requires:	pam >= 0.77.3
 Provides:	imapdaemon
 Provides:	pop3daemon
@@ -225,6 +225,9 @@ for i in `%{__perl} -le 'print for "a".."z"'`; do
 	mkdir -p -m 0755 $RPM_BUILD_ROOT%{_var}/spool/imap/$i
 done
 
+%clean
+rm -rf $RPM_BUILD_ROOT
+
 %pre
 if [ -z "`id -u cyrus 2>/dev/null`" ]; then
        /usr/sbin/useradd -u 76 -r -d /var/spool/imap -s /bin/false -c "Cyrus User" -g mail cyrus 1>&2
@@ -256,9 +259,6 @@ fi
 if [ "$1" = "0" ]; then
        /usr/sbin/userdel cyrus
 fi
-
-%clean
-rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(644,root,root,755)
