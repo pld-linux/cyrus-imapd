@@ -100,7 +100,7 @@ oraz KPOP.
 cd makedepend
 rm -f aclocal.m4
 aclocal
-autoconf
+%{__autoconf}
 %configure
 %{__make}
 PATH=$PATH:`pwd`; export PATH
@@ -108,7 +108,7 @@ cd ..
 rm -f aclocal.m4
 aclocal -I cmulocal
 autoheader
-autoconf
+%{__autoconf}
 %configure \
 	--with-auth=unix \
 	--without-libwrap \
