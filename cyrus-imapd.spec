@@ -25,7 +25,7 @@ Source12:	cyrus.conf
 Patch0:		%{name}-et.patch
 Patch1:		%{name}-shared.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
-BuildRequires:	autoconf
+BuildRequires:	autoconf >= 2.54
 BuildRequires:	automake
 BuildRequires:	cyrus-sasl-devel >= 1.5.27
 BuildRequires:	db-devel >= 4.1.25
