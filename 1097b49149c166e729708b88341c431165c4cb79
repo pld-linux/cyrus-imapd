@@ -1,0 +1,1 @@
+- added fix for autoconf 2.53, BR: fixed ucd-snmp, new %doc, release 6
