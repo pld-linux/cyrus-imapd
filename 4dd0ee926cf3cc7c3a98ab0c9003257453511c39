@@ -1,0 +1,2 @@
+- added rc-scripts to Prereq,
+- added using %{rpmcflags}, %{rpmldflags} macros.
