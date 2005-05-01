@@ -1,0 +1,2 @@
+- release 8: removed from files %{_mandir}/man8/idled.8
+  (conflict with idled package).
