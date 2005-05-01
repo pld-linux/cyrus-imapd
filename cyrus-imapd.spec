@@ -34,7 +34,7 @@ BuildRequires:	libcom_err-devel >= 1.21
 BuildRequires:	libtool
 BuildRequires:	openssl-devel >= 0.9.7d
 BuildRequires:	perl-devel >= 1:5.8.0
-BuildRequires:	rpmbuild(macros) >= 1.159
+BuildRequires:	rpmbuild(macros) >= 1.202
 #BuildRequires:	ucd-snmp-devel >= 4.2.6
 PreReq:		rc-scripts
 Requires(pre):	/bin/id
@@ -243,15 +243,7 @@ done
 rm -rf $RPM_BUILD_ROOT
 
 %pre
-if [ -n "`/bin/id -u cyrus 2>/dev/null`" ]; then
-	if [ "`/bin/id -u cyrus`" != 76 ]; then
-		echo "Error: user cyrus doesn't have uid=76. Correct this before installing cyrus-imapd." 1>&2
-		exit 1
-	fi
-else
-	/usr/sbin/useradd -u 76 -d /var/spool/imap -s /bin/false \
-		-c "Cyrus User" -g mail cyrus 1>&2
-fi
+%useradd -u 76 -d /var/spool/imap -s /bin/false -c "Cyrus User" -g mail cyrus
 
 %post
 /sbin/chkconfig --add cyrus-imapd
