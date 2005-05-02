@@ -233,10 +233,10 @@ find $RPM_BUILD_ROOT%{perl_vendorarch} -name .packlist -exec rm {} \;
 
 # make hashed dirs
 for i in `%{__perl} -le 'print for "a".."z"'`; do
-	mkdir -p -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/user/$i
-	mkdir -p -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/quota/$i
-	mkdir -p -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/sieve/$i
-	mkdir -p -m 0755 $RPM_BUILD_ROOT%{_var}/spool/imap/$i
+	install -d -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/user/$i
+	install -d -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/quota/$i
+	install -d -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/sieve/$i
+	install -d -m 0755 $RPM_BUILD_ROOT%{_var}/spool/imap/$i
 done
 
 %clean
@@ -279,10 +279,10 @@ fi
 %defattr(644,root,root,755)
 %doc cyrus-README cyrus-procmailrc cyrus-user-procmailrc.template
 %doc cyrus-imapd-procmail+cyrus.mc COPYRIGHT doc/*.html tools
-%config(noreplace) %verify(not size mtime md5) %{_sysconfdir}/*.conf
-%attr(640,root,root) %config(noreplace) %verify(not size mtime md5) /etc/logrotate.d/cyrus-imapd
-%attr(440,cyrus,root) %config(noreplace) %verify(not size mtime md5) /etc/pam.d/*
-%attr(640,root,root) %config(noreplace) %verify(not size mtime md5) /etc/security/blacklist.*
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/*.conf
+%attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) /etc/logrotate.d/cyrus-imapd
+%attr(440,cyrus,root) %config(noreplace) %verify(not md5 mtime size) /etc/pam.d/*
+%attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) /etc/security/blacklist.*
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-imapd
 %attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
 %attr(755,root,root) %{_bindir}/*
@@ -328,7 +328,7 @@ fi
 %attr(750,cyrus,mail) /var/lib/imap/proc
 %attr(750,cyrus,mail) /var/lib/imap/db
 %attr(750,cyrus,mail) /var/lib/imap/socket
-%attr(750,cyrus,mail) %config(noreplace) %verify(not size md5 mtime) /var/lib/imap/mailboxes
+%attr(750,cyrus,mail) %config(noreplace) %verify(not md5 mtime size) /var/lib/imap/mailboxes
 
 %{_mandir}/man*/*
 
