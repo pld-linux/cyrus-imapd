@@ -34,6 +34,7 @@ BuildRequires:	libcom_err-devel >= 1.21
 BuildRequires:	libtool
 BuildRequires:	openssl-devel >= 0.9.7d
 BuildRequires:	perl-devel >= 1:5.8.0
+BuildRequires:	rpm-perlprov
 BuildRequires:	rpmbuild(macros) >= 1.202
 #BuildRequires:	ucd-snmp-devel >= 4.2.6
 PreReq:		rc-scripts
