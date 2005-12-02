@@ -1,12 +1,10 @@
-# TODO:
-# - use net-snmp (it wants ucd-snmp)
 %include	/usr/lib/rpm/macros.perl
 Summary:	High-performance mail store with imap and pop3
 Summary(pl):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.2.12
-Release:	3
+Release:	4
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -32,11 +30,11 @@ BuildRequires:	db-devel >= 4.1.25
 BuildRequires:	flex
 BuildRequires:	libcom_err-devel >= 1.21
 BuildRequires:	libtool
+BuildRequires:	net-snmp-devel
 BuildRequires:	openssl-devel >= 0.9.7d
 BuildRequires:	perl-devel >= 1:5.8.0
 BuildRequires:	rpm-perlprov
 BuildRequires:	rpmbuild(macros) >= 1.202
-#BuildRequires:	ucd-snmp-devel >= 4.2.6
 PreReq:		rc-scripts
 Requires(pre):	/bin/id
 Requires(pre):	/usr/sbin/useradd
