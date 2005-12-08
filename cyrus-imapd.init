@@ -38,7 +38,6 @@ case "$1" in
 			fail
 		fi
 	else
-		# show "%s service is already running." <service>
 		msg_already_running cyrus-imapd
 	fi
 	;;
