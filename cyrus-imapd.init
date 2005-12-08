@@ -49,7 +49,7 @@ case "$1" in
 		rm -f /var/lock/subsys/cyrus-imapd
 	else
 		msg_not_running cyrus-imapd
-	fi	
+	fi
 	;;
   restart|force-reload)
 	$0 stop
