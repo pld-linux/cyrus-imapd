@@ -22,6 +22,7 @@ Source11:	%{name}.init
 Source12:	cyrus.conf
 Patch0:		%{name}-et.patch
 Patch1:		%{name}-shared.patch
+Patch2:		%{name}-quota.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 BuildRequires:	autoconf >= 2.54
 BuildRequires:	automake
@@ -161,6 +162,7 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %setup -q
 %patch0 -p1
 %patch1 -p1
+%patch2 -p1
 
 rm -rf autom4te.cache
 
