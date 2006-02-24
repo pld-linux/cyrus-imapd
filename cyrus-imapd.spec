@@ -35,16 +35,16 @@ BuildRequires:	net-snmp-devel
 BuildRequires:	openssl-devel >= 0.9.7d
 BuildRequires:	perl-devel >= 1:5.8.0
 BuildRequires:	rpm-perlprov
-BuildRequires:	rpmbuild(macros) >= 1.202
-PreReq:		rc-scripts
+BuildRequires:	rpmbuild(macros) >= 1.268
+Requires(post,preun):	/sbin/chkconfig
+Requires(postun):	/usr/sbin/userdel
 Requires(pre):	/bin/id
 Requires(pre):	/usr/sbin/useradd
-Requires(postun):	/usr/sbin/userdel
-Requires(post,preun):	/sbin/chkconfig
 Requires:	%{name}-libs = %{version}-%{release}
+Requires:	rc-scripts
 # needed by scripts from %{_bindir}
-Requires:	perl-%{name} = %{version}-%{release}
 Requires:	pam >= 0.79.0
+Requires:	perl-%{name} = %{version}-%{release}
 Provides:	imapdaemon
 Provides:	pop3daemon
 Provides:	user(cyrus)
@@ -254,17 +254,11 @@ chmod 640 /var/lib/imap/faillog
 cd /var/lib/imap
 chattr +S . user quota user/* quota/* 2>/dev/null ||:
 chattr +S /var/spool/imap /var/spool/imap/* 2>/dev/null ||:
-if [ -f /var/lock/subsys/cyrus-imapd ]; then
-	/etc/rc.d/init.d/cyrus-imapd restart 1>&2
-else
-	echo "Run \"/etc/rc.d/init.d/cyrus-imapd start\" to start cyrus imap daemon."
-fi
+%service cyrus-imapd "cyrus imap daemon"
 
 %preun
 if [ "$1" = "0" ]; then
-	if [ -f /var/lock/subsys/cyrus-imapd ]; then
-		/etc/rc.d/init.d/cyrus-imapd stop 1>&2
-	fi
+	%service cyrus-imapd stop
 	/sbin/chkconfig --del cyrus-imapd
 fi
 
