@@ -1,7 +1,7 @@
 %include	/usr/lib/rpm/macros.perl
 Summary:	High-performance mail store with imap and pop3
-Summary(pl):	Wysoko wydajny serwer IMAP i POP3
-Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
+Summary(pl.UTF-8):   Wysoko wydajny serwer IMAP i POP3
+Summary(pt_BR.UTF-8):   Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.2.12
 Release:	6
@@ -80,49 +80,49 @@ database is stored in parts of the filesystem that are private to the
 Cyrus IMAP system. All user access to mail is through software using
 the IMAP, POP3, or KPOP protocols.
 
-%description -l pl
+%description -l pl.UTF-8
 Serwer Cyrus IMAP jest skalowalnym systemem e-mail dla
-przedsiêbiorstwa, zaprojektowanym dla ma³ych i du¿ych firm i
-wykorzystuj±cym oparte na standardach technologie.
+przedsiÄ™biorstwa, zaprojektowanym dla maÅ‚ych i duÅ¼ych firm i
+wykorzystujÄ…cym oparte na standardach technologie.
 
-Pe³na implementacja Cyrus IMAP pozwala na bezproblemowe ustawienie
-¶rodowiska poczty i elektronicznej tablicy og³oszeniowej na kilku
-serwerach. Tym siê ró¿ni od innych implementacji serwerów IMAP, ¿e
-jest uruchamiany na "opieczêtowanych" serwerach, na które w normalnych
-warunkach u¿ytkownicy nie mog± siê zalogowaæ. Baza danych skrzynek
-pocztowych jest przechowywana w tych czê¶ciach systemu plików, które
-s± dostêpne jedynie dla systemu IMAP Cyrus. Wszelki dostêp do poczty
-ma miejsce poprzez oprogramowanie wykorzystuj±ce protoko³y IMAP, POP3
+PeÅ‚na implementacja Cyrus IMAP pozwala na bezproblemowe ustawienie
+Å›rodowiska poczty i elektronicznej tablicy ogÅ‚oszeniowej na kilku
+serwerach. Tym siÄ™ rÃ³Å¼ni od innych implementacji serwerÃ³w IMAP, Å¼e
+jest uruchamiany na "opieczÄ™towanych" serwerach, na ktÃ³re w normalnych
+warunkach uÅ¼ytkownicy nie mogÄ… siÄ™ zalogowaÄ‡. Baza danych skrzynek
+pocztowych jest przechowywana w tych czÄ™Å›ciach systemu plikÃ³w, ktÃ³re
+sÄ… dostÄ™pne jedynie dla systemu IMAP Cyrus. Wszelki dostÄ™p do poczty
+ma miejsce poprzez oprogramowanie wykorzystujÄ…ce protokoÅ‚y IMAP, POP3
 oraz KPOP.
 
-%description -l pt_BR
-O servidor IMAP Cyrus é um sistema de mail corporativo escalável
+%description -l pt_BR.UTF-8
+O servidor IMAP Cyrus Ã© um sistema de mail corporativo escalÃ¡vel
 projetado para uso por pequenos a grandes ambientes corporativos
-usando tecnologias baseadas em padrões abertos.
+usando tecnologias baseadas em padrÃµes abertos.
 
-Uma implementação completa do Cyrus permite se configurar um ambiente
-transparente de mail e bulletin board entre múltiplos servidores. Ele
+Uma implementaÃ§Ã£o completa do Cyrus permite se configurar um ambiente
+transparente de mail e bulletin board entre mÃºltiplos servidores. Ele
 difere de outros servidores IMAP por rodar em servidores "selados",
-onde usuários não possuem normalmente a permissão de log in. O banco
-de dados de caixas de mail é armazenado em partes do sistema de
-arquivos que são privativos do sistema Cyrus. Todo o acesso de
-usuários aos mails se dá através de software usando os protocolos
+onde usuÃ¡rios nÃ£o possuem normalmente a permissÃ£o de log in. O banco
+de dados de caixas de mail Ã© armazenado em partes do sistema de
+arquivos que sÃ£o privativos do sistema Cyrus. Todo o acesso de
+usuÃ¡rios aos mails se dÃ¡ atravÃ©s de software usando os protocolos
 IMAP, POP3 ou KPOP.
 
 %package libs
 Summary:	Shared cyrus-imapd libraries
-Summary(pl):	Wspó³dzielone biblioteki cyrus-imapd
+Summary(pl.UTF-8):   WspÃ³Å‚dzielone biblioteki cyrus-imapd
 Group:		Libraries
 
 %description libs
 Shared cyrus-imapd libraries.
 
-%description libs -l pl
-Wspó³dzielone biblioteki cyrus-imapd.
+%description libs -l pl.UTF-8
+WspÃ³Å‚dzielone biblioteki cyrus-imapd.
 
 %package devel
 Summary:	Header files for developing with cyrus-imapd libraries
-Summary(pl):	Pliki nag³ówkowe do programowania z u¿yciem bibliotek cyrus-imapd
+Summary(pl.UTF-8):   Pliki nagÅ‚Ã³wkowe do programowania z uÅ¼yciem bibliotek cyrus-imapd
 Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
 
@@ -130,32 +130,32 @@ Requires:	%{name}-libs = %{version}-%{release}
 This package provides the necessary header files files to allow you to
 develop with cyrus-imapd libraries.
 
-%description devel -l pl
-Ten pakiet zawiera pliki nag³ówkowe niezbêdne do tworzenia
+%description devel -l pl.UTF-8
+Ten pakiet zawiera pliki nagÅ‚Ã³wkowe niezbÄ™dne do tworzenia
 oprogramowania z wykorzystaniem bibliotek cyrus-imapd.
 
 %package static
 Summary:	Static cyrus-imapd libraries
-Summary(pl):	Biblioteki statyczne cyrus-imapd
+Summary(pl.UTF-8):   Biblioteki statyczne cyrus-imapd
 Group:		Development/Libraries
 Requires:	%{name}-devel = %{version}-%{release}
 
 %description static
 Static cyrus-imapd libraries
 
-%description static -l pl
+%description static -l pl.UTF-8
 Biblioteki statyczne cyrus-imapd
 
 %package -n perl-%{name}
 Summary:	Perl interface to cyrus-imapd library
-Summary(pl):	Perlowy interfejs do biblioteki cyrus-imapd
+Summary(pl.UTF-8):   Perlowy interfejs do biblioteki cyrus-imapd
 Group:		Development/Languages/Perl
 Requires:	%{name}-libs = %{version}-%{release}
 
 %description -n perl-%{name}
 Perl interface to cyrus-imapd library.
 
-%description -n perl-%{name} -l pl
+%description -n perl-%{name} -l pl.UTF-8
 Perlowy interfejs do biblioteki cyrus-imapd.
 
 %prep
