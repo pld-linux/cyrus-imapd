@@ -1,7 +1,7 @@
 %include	/usr/lib/rpm/macros.perl
 Summary:	High-performance mail store with imap and pop3
-Summary(pl.UTF-8):   Wysoko wydajny serwer IMAP i POP3
-Summary(pt_BR.UTF-8):   Um servidor de mail de alto desempenho que suporta IMAP e POP3
+Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
+Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.2.12
 Release:	6
@@ -111,7 +111,7 @@ IMAP, POP3 ou KPOP.
 
 %package libs
 Summary:	Shared cyrus-imapd libraries
-Summary(pl.UTF-8):   Współdzielone biblioteki cyrus-imapd
+Summary(pl.UTF-8):	Współdzielone biblioteki cyrus-imapd
 Group:		Libraries
 
 %description libs
@@ -122,7 +122,7 @@ Współdzielone biblioteki cyrus-imapd.
 
 %package devel
 Summary:	Header files for developing with cyrus-imapd libraries
-Summary(pl.UTF-8):   Pliki nagłówkowe do programowania z użyciem bibliotek cyrus-imapd
+Summary(pl.UTF-8):	Pliki nagłówkowe do programowania z użyciem bibliotek cyrus-imapd
 Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
 
@@ -136,7 +136,7 @@ oprogramowania z wykorzystaniem bibliotek cyrus-imapd.
 
 %package static
 Summary:	Static cyrus-imapd libraries
-Summary(pl.UTF-8):   Biblioteki statyczne cyrus-imapd
+Summary(pl.UTF-8):	Biblioteki statyczne cyrus-imapd
 Group:		Development/Libraries
 Requires:	%{name}-devel = %{version}-%{release}
 
@@ -148,7 +148,7 @@ Biblioteki statyczne cyrus-imapd
 
 %package -n perl-%{name}
 Summary:	Perl interface to cyrus-imapd library
-Summary(pl.UTF-8):   Perlowy interfejs do biblioteki cyrus-imapd
+Summary(pl.UTF-8):	Perlowy interfejs do biblioteki cyrus-imapd
 Group:		Development/Languages/Perl
 Requires:	%{name}-libs = %{version}-%{release}
 
