@@ -1,3 +1,7 @@
+# TODO
+# - /usr/lib/cyrus not packaged
+# - initscript not lib64 safe
+# - STBR to AC when done
 %include	/usr/lib/rpm/macros.perl
 Summary:	High-performance mail store with imap and pop3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
