@@ -4,7 +4,7 @@ Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.2.12
-Release:	7
+Release:	8
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -206,7 +206,7 @@ install -d \
 touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 	$RPM_BUILD_ROOT/var/lib/imap/faillog \
 	$RPM_BUILD_ROOT/etc/security/blacklist.imap \
-	$RPM_BUILD_ROOT/etc/security/blacklist.pop
+	$RPM_BUILD_ROOT/etc/security/blacklist.pop3
 
 %{__make} install \
 	DESTDIR=$RPM_BUILD_ROOT \
@@ -229,7 +229,7 @@ mv -f $RPM_BUILD_ROOT%{_mandir}/man8/master.8	$RPM_BUILD_ROOT%{_mandir}/man8/cyr
 rm -f $RPM_BUILD_ROOT%{_mandir}/man8/idled.8
 rm -f $RPM_BUILD_ROOT%{perl_archlib}/perllocal.pod
 
-touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop}
+touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop3}
 
 find $RPM_BUILD_ROOT%{perl_vendorarch} -name .packlist | xargs rm -v
 
