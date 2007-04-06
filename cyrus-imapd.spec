@@ -1,14 +1,18 @@
+#
+# TODO:
+# - fix path in .init for lib64
+#
 %include	/usr/lib/rpm/macros.perl
 Summary:	High-performance mail store with imap and pop3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	2.2.12
-Release:	8
+Version:	2.3.8
+Release:	0.1
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
-# Source0-md5:	70b3bba526a8d36d3bb23a87d37e9188
+# Source0-md5:	ac03b02c1ae08d52f807b58c488b204f
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
@@ -22,7 +26,7 @@ Source11:	%{name}.init
 Source12:	cyrus.conf
 Patch0:		%{name}-et.patch
 Patch1:		%{name}-shared.patch
-Patch2:		%{name}-quota.patch
+Patch2:		%{name}-db45.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
 BuildRequires:	autoconf >= 2.54
 BuildRequires:	automake
@@ -287,22 +291,27 @@ fi
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
 %attr(755,root,root) %{_libexecdir}/arbitron
 %attr(755,root,root) %{_libexecdir}/chk_cyrus
+%attr(755,root,root) %{_libexecdir}/ctl_cyrusdb
 %attr(755,root,root) %{_libexecdir}/ctl_deliver
 %attr(755,root,root) %{_libexecdir}/ctl_mboxlist
-%attr(755,root,root) %{_libexecdir}/ctl_cyrusdb
 %attr(755,root,root) %{_libexecdir}/cvt_cyrusdb
-%attr(755,root,root) %{_libexecdir}/cyr_expire
+%attr(755,root,root) %{_libexecdir}/cyr_dbtool
 %attr(755,root,root) %{_libexecdir}/cyrdump
+%attr(755,root,root) %{_libexecdir}/cyr_expire
 %attr(755,root,root) %{_libexecdir}/cyrus-master
+%attr(755,root,root) %{_libexecdir}/fetchnews
 %attr(755,root,root) %{_libexecdir}/fud
 %attr(755,root,root) %{_libexecdir}/imapd
 %attr(755,root,root) %{_libexecdir}/ipurge
 %attr(755,root,root) %{_libexecdir}/lmtpd
+%attr(755,root,root) %{_libexecdir}/lmtpproxyd
 %attr(755,root,root) %{_libexecdir}/mbexamine
 %attr(755,root,root) %{_libexecdir}/mbpath
+%attr(755,root,root) %{_libexecdir}/nntpd
 %attr(755,root,root) %{_libexecdir}/notifyd
 %attr(755,root,root) %{_libexecdir}/pop3d
 %attr(755,root,root) %{_libexecdir}/pop3proxyd
+%attr(755,root,root) %{_libexecdir}/proxyd
 %attr(755,root,root) %{_libexecdir}/quota
 %attr(755,root,root) %{_libexecdir}/reconstruct
 %attr(755,root,root) %{_libexecdir}/sievec
@@ -310,8 +319,8 @@ fi
 %attr(755,root,root) %{_libexecdir}/squatter
 %attr(755,root,root) %{_libexecdir}/timsieved
 %attr(755,root,root) %{_libexecdir}/tls_prune
-%attr(755,root,root) %{_libexecdir}/fetchnews
-%attr(755,root,root) %{_libexecdir}/nntpd
+%attr(755,root,root) %{_libexecdir}/unexpunge
+
 
 %attr(750,cyrus,mail) /var/spool/imap
 %attr(750,cyrus,mail) %dir /var/lib/imap
