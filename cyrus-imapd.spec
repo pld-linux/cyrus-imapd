@@ -1,14 +1,10 @@
-# TODO
-# - /usr/lib/cyrus not packaged
-# - initscript not lib64 safe
-# - STBR to AC when done
 %include	/usr/lib/rpm/macros.perl
 Summary:	High-performance mail store with imap and pop3
-Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
-Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
+Summary(pl):	Wysoko wydajny serwer IMAP i POP3
+Summary(pt_BR):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.2.12
-Release:	6
+Release:	8
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -84,49 +80,49 @@ database is stored in parts of the filesystem that are private to the
 Cyrus IMAP system. All user access to mail is through software using
 the IMAP, POP3, or KPOP protocols.
 
-%description -l pl.UTF-8
+%description -l pl
 Serwer Cyrus IMAP jest skalowalnym systemem e-mail dla
-przedsiÄ™biorstwa, zaprojektowanym dla maÅ‚ych i duÅ¼ych firm i
-wykorzystujÄ…cym oparte na standardach technologie.
+przedsiêbiorstwa, zaprojektowanym dla ma³ych i du¿ych firm i
+wykorzystuj±cym oparte na standardach technologie.
 
-PeÅ‚na implementacja Cyrus IMAP pozwala na bezproblemowe ustawienie
-Å›rodowiska poczty i elektronicznej tablicy ogÅ‚oszeniowej na kilku
-serwerach. Tym siÄ™ rÃ³Å¼ni od innych implementacji serwerÃ³w IMAP, Å¼e
-jest uruchamiany na "opieczÄ™towanych" serwerach, na ktÃ³re w normalnych
-warunkach uÅ¼ytkownicy nie mogÄ… siÄ™ zalogowaÄ‡. Baza danych skrzynek
-pocztowych jest przechowywana w tych czÄ™Å›ciach systemu plikÃ³w, ktÃ³re
-sÄ… dostÄ™pne jedynie dla systemu IMAP Cyrus. Wszelki dostÄ™p do poczty
-ma miejsce poprzez oprogramowanie wykorzystujÄ…ce protokoÅ‚y IMAP, POP3
+Pe³na implementacja Cyrus IMAP pozwala na bezproblemowe ustawienie
+¶rodowiska poczty i elektronicznej tablicy og³oszeniowej na kilku
+serwerach. Tym siê ró¿ni od innych implementacji serwerów IMAP, ¿e
+jest uruchamiany na "opieczêtowanych" serwerach, na które w normalnych
+warunkach u¿ytkownicy nie mog± siê zalogowaæ. Baza danych skrzynek
+pocztowych jest przechowywana w tych czê¶ciach systemu plików, które
+s± dostêpne jedynie dla systemu IMAP Cyrus. Wszelki dostêp do poczty
+ma miejsce poprzez oprogramowanie wykorzystuj±ce protoko³y IMAP, POP3
 oraz KPOP.
 
-%description -l pt_BR.UTF-8
-O servidor IMAP Cyrus Ã© um sistema de mail corporativo escalÃ¡vel
+%description -l pt_BR
+O servidor IMAP Cyrus é um sistema de mail corporativo escalável
 projetado para uso por pequenos a grandes ambientes corporativos
-usando tecnologias baseadas em padrÃµes abertos.
+usando tecnologias baseadas em padrões abertos.
 
-Uma implementaÃ§Ã£o completa do Cyrus permite se configurar um ambiente
-transparente de mail e bulletin board entre mÃºltiplos servidores. Ele
+Uma implementação completa do Cyrus permite se configurar um ambiente
+transparente de mail e bulletin board entre múltiplos servidores. Ele
 difere de outros servidores IMAP por rodar em servidores "selados",
-onde usuÃ¡rios nÃ£o possuem normalmente a permissÃ£o de log in. O banco
-de dados de caixas de mail Ã© armazenado em partes do sistema de
-arquivos que sÃ£o privativos do sistema Cyrus. Todo o acesso de
-usuÃ¡rios aos mails se dÃ¡ atravÃ©s de software usando os protocolos
+onde usuários não possuem normalmente a permissão de log in. O banco
+de dados de caixas de mail é armazenado em partes do sistema de
+arquivos que são privativos do sistema Cyrus. Todo o acesso de
+usuários aos mails se dá através de software usando os protocolos
 IMAP, POP3 ou KPOP.
 
 %package libs
 Summary:	Shared cyrus-imapd libraries
-Summary(pl.UTF-8):	WspÃ³Å‚dzielone biblioteki cyrus-imapd
+Summary(pl):	Wspó³dzielone biblioteki cyrus-imapd
 Group:		Libraries
 
 %description libs
 Shared cyrus-imapd libraries.
 
-%description libs -l pl.UTF-8
-WspÃ³Å‚dzielone biblioteki cyrus-imapd.
+%description libs -l pl
+Wspó³dzielone biblioteki cyrus-imapd.
 
 %package devel
 Summary:	Header files for developing with cyrus-imapd libraries
-Summary(pl.UTF-8):	Pliki nagÅ‚Ã³wkowe do programowania z uÅ¼yciem bibliotek cyrus-imapd
+Summary(pl):	Pliki nag³ówkowe do programowania z u¿yciem bibliotek cyrus-imapd
 Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
 
@@ -134,32 +130,32 @@ Requires:	%{name}-libs = %{version}-%{release}
 This package provides the necessary header files files to allow you to
 develop with cyrus-imapd libraries.
 
-%description devel -l pl.UTF-8
-Ten pakiet zawiera pliki nagÅ‚Ã³wkowe niezbÄ™dne do tworzenia
+%description devel -l pl
+Ten pakiet zawiera pliki nag³ówkowe niezbêdne do tworzenia
 oprogramowania z wykorzystaniem bibliotek cyrus-imapd.
 
 %package static
 Summary:	Static cyrus-imapd libraries
-Summary(pl.UTF-8):	Biblioteki statyczne cyrus-imapd
+Summary(pl):	Biblioteki statyczne cyrus-imapd
 Group:		Development/Libraries
 Requires:	%{name}-devel = %{version}-%{release}
 
 %description static
 Static cyrus-imapd libraries
 
-%description static -l pl.UTF-8
+%description static -l pl
 Biblioteki statyczne cyrus-imapd
 
 %package -n perl-%{name}
 Summary:	Perl interface to cyrus-imapd library
-Summary(pl.UTF-8):	Perlowy interfejs do biblioteki cyrus-imapd
+Summary(pl):	Perlowy interfejs do biblioteki cyrus-imapd
 Group:		Development/Languages/Perl
 Requires:	%{name}-libs = %{version}-%{release}
 
 %description -n perl-%{name}
 Perl interface to cyrus-imapd library.
 
-%description -n perl-%{name} -l pl.UTF-8
+%description -n perl-%{name} -l pl
 Perlowy interfejs do biblioteki cyrus-imapd.
 
 %prep
@@ -225,23 +221,24 @@ install %{SOURCE6}	$RPM_BUILD_ROOT/etc/logrotate.d/cyrus-imapd
 install %{SOURCE7}	$RPM_BUILD_ROOT%{_sysconfdir}/imapd.conf
 install %{SOURCE9}	$RPM_BUILD_ROOT/etc/pam.d/imap
 install %{SOURCE10}	$RPM_BUILD_ROOT/etc/pam.d/pop
-install %{SOURCE11}	$RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
+sed -e 's,/''usr/lib/cyrus,%{_libexecdir},' %{SOURCE11} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
 install %{SOURCE12}	$RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 
 mv -f $RPM_BUILD_ROOT%{_libexecdir}/master	$RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
 mv -f $RPM_BUILD_ROOT%{_mandir}/man8/master.8	$RPM_BUILD_ROOT%{_mandir}/man8/cyrus-master.8
-rm -rf $RPM_BUILD_ROOT%{_mandir}/man8/idled.8
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/idled.8
+rm -f $RPM_BUILD_ROOT%{perl_archlib}/perllocal.pod
 
 touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop}
 
-find $RPM_BUILD_ROOT%{perl_vendorarch} -name .packlist -exec rm {} \;
+find $RPM_BUILD_ROOT%{perl_vendorarch} -name .packlist | xargs rm -v
 
 # make hashed dirs
 for i in `%{__perl} -le 'print for "a".."z"'`; do
-	install -d -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/user/$i
-	install -d -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/quota/$i
-	install -d -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/sieve/$i
-	install -d -m 0755 $RPM_BUILD_ROOT%{_var}/spool/imap/$i
+	install -d $RPM_BUILD_ROOT%{_var}/lib/imap/user/$i
+	install -d $RPM_BUILD_ROOT%{_var}/lib/imap/quota/$i
+	install -d $RPM_BUILD_ROOT%{_var}/lib/imap/sieve/$i
+	install -d $RPM_BUILD_ROOT%{_var}/spool/imap/$i
 done
 
 %clean
@@ -258,7 +255,7 @@ chmod 640 /var/lib/imap/faillog
 cd /var/lib/imap
 chattr +S . user quota user/* quota/* 2>/dev/null ||:
 chattr +S /var/spool/imap /var/spool/imap/* 2>/dev/null ||:
-%service cyrus-imapd "cyrus imap daemon"
+%service cyrus-imapd restart "cyrus imap daemon"
 
 %preun
 if [ "$1" = "0" ]; then
@@ -285,6 +282,7 @@ fi
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-imapd
 %attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
 %attr(755,root,root) %{_bindir}/*
+%dir %{_libexecdir}
 %attr(4754,cyrus,mail) %{_libexecdir}/deliver
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
 %attr(755,root,root) %{_libexecdir}/arbitron
