@@ -785,14 +785,14 @@
 +	message_uuid.lo xstrlcat.lo xstrlcpy.lo
  
  LIBCYRM_HDRS = $(srcdir)/hash.h $(srcdir)/mpool.h $(srcdir)/xmalloc.h \
- 	$(srcdir)/xstrlcat.h $(srcdir)/xstrlcpy.h \
--	$(srcdir)/strhash.o $(srcdir)/libconfig.h $(srcdir)/assert.h \
-+	$(srcdir)/strhash.lo $(srcdir)/libconfig.h $(srcdir)/assert.h \
+ 	$(srcdir)/xstrlcat.h $(srcdir)/xstrlcpy.h $(srcdir)/util.h \
+-	$(srcdir)/strhash.h $(srcdir)/libconfig.h $(srcdir)/assert.h \
++	$(srcdir)/strhash.h $(srcdir)/libconfig.h $(srcdir)/assert.h \
  	imapopts.h
 -LIBCYRM_OBJS = libconfig.o imapopts.o hash.o mpool.o xmalloc.o strhash.o \
--	xstrlcat.o xstrlcpy.o assert.o @IPV6_OBJS@
+-	xstrlcat.o xstrlcpy.o assert.o util.o @IPV6_OBJS@
 +LIBCYRM_OBJS = libconfig.lo imapopts.lo hash.lo mpool.lo xmalloc.lo strhash.lo \
-+	xstrlcat.lo xstrlcpy.lo assert.lo @IPV6_OBJS@
++	xstrlcat.lo xstrlcpy.lo assert.lo util.lo @IPV6_OBJS@
  
 -all: $(BUILTSOURCES) libcyrus_min.a libcyrus.a
 +all: $(BUILTSOURCES) libcyrus_min.la libcyrus.la
@@ -832,7 +832,7 @@
 +	$(LIBTOOL) --mode=link $(CC) -o libcyrus_min.la $(LIBCYRM_OBJS) @IMAP_COM_ERR_LIBS@ -rpath $(libdir)
  
  imapopts.c: imapoptions $(srcdir)/../tools/config2header
- 	$(srcdir)/../tools/config2header CC=$(CC) $(srcdir)/imapopts.c $(srcdir)/imapopts.h < $(srcdir)/imapoptions
+ 	$(srcdir)/../tools/config2header CC="$(CC)" $(srcdir)/imapopts.c $(srcdir)/imapopts.h < $(srcdir)/imapoptions
 --- cyrus-imapd-2.3.8/depot/Makefile.in.wiget	2004-05-28 15:39:38.000000000 +0200
 +++ cyrus-imapd-2.3.8/depot/Makefile.in	2007-02-18 23:43:17.000000000 +0100
 @@ -49,7 +49,7 @@
