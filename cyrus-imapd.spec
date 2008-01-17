@@ -189,7 +189,8 @@ cp -f %{_datadir}/automake/install-sh .
 	--with-service-path=%{_libexecdir} \
 	--with-com_err=/usr \
 	--with-perl=%{__perl} \
-	--enable-nntp
+	--enable-nntp \
+	--enable-replication
 %{__make} \
 	INSTALLDIRS=vendor
 
@@ -303,6 +304,10 @@ fi
 %attr(755,root,root) %{_libexecdir}/ipurge
 %attr(755,root,root) %{_libexecdir}/lmtpd
 %attr(755,root,root) %{_libexecdir}/lmtpproxyd
+%attr(755,root,root) %{_libexecdir}/make_md5
+%attr(755,root,root) %{_libexecdir}/sync_client
+%attr(755,root,root) %{_libexecdir}/sync_reset
+%attr(755,root,root) %{_libexecdir}/sync_server
 %attr(755,root,root) %{_libexecdir}/mbexamine
 %attr(755,root,root) %{_libexecdir}/mbpath
 %attr(755,root,root) %{_libexecdir}/nntpd
