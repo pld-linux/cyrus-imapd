@@ -1,14 +1,10 @@
-# TODO
-# - /usr/lib/cyrus not packaged
-# - initscript not lib64 safe
-# - STBR to AC when done
 %include	/usr/lib/rpm/macros.perl
 Summary:	High-performance mail store with imap and pop3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.2.12
-Release:	6
+Release:	9
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -225,23 +221,24 @@ install %{SOURCE6}	$RPM_BUILD_ROOT/etc/logrotate.d/cyrus-imapd
 install %{SOURCE7}	$RPM_BUILD_ROOT%{_sysconfdir}/imapd.conf
 install %{SOURCE9}	$RPM_BUILD_ROOT/etc/pam.d/imap
 install %{SOURCE10}	$RPM_BUILD_ROOT/etc/pam.d/pop
-install %{SOURCE11}	$RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
+sed -e 's,/''usr/lib/cyrus,%{_libexecdir},' %{SOURCE11} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
 install %{SOURCE12}	$RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 
 mv -f $RPM_BUILD_ROOT%{_libexecdir}/master	$RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
 mv -f $RPM_BUILD_ROOT%{_mandir}/man8/master.8	$RPM_BUILD_ROOT%{_mandir}/man8/cyrus-master.8
-rm -rf $RPM_BUILD_ROOT%{_mandir}/man8/idled.8
+rm -f $RPM_BUILD_ROOT%{_mandir}/man8/idled.8
+rm -f $RPM_BUILD_ROOT%{perl_archlib}/perllocal.pod
 
 touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop}
 
-find $RPM_BUILD_ROOT%{perl_vendorarch} -name .packlist -exec rm {} \;
+find $RPM_BUILD_ROOT%{perl_vendorarch} -name .packlist | xargs rm -v
 
 # make hashed dirs
 for i in `%{__perl} -le 'print for "a".."z"'`; do
-	install -d -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/user/$i
-	install -d -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/quota/$i
-	install -d -m 0755 $RPM_BUILD_ROOT%{_var}/lib/imap/sieve/$i
-	install -d -m 0755 $RPM_BUILD_ROOT%{_var}/spool/imap/$i
+	install -d $RPM_BUILD_ROOT%{_var}/lib/imap/user/$i
+	install -d $RPM_BUILD_ROOT%{_var}/lib/imap/quota/$i
+	install -d $RPM_BUILD_ROOT%{_var}/lib/imap/sieve/$i
+	install -d $RPM_BUILD_ROOT%{_var}/spool/imap/$i
 done
 
 %clean
@@ -258,7 +255,7 @@ chmod 640 /var/lib/imap/faillog
 cd /var/lib/imap
 chattr +S . user quota user/* quota/* 2>/dev/null ||:
 chattr +S /var/spool/imap /var/spool/imap/* 2>/dev/null ||:
-%service cyrus-imapd "cyrus imap daemon"
+%service cyrus-imapd restart "cyrus imap daemon"
 
 %preun
 if [ "$1" = "0" ]; then
@@ -285,6 +282,7 @@ fi
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-imapd
 %attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
 %attr(755,root,root) %{_bindir}/*
+%dir %{_libexecdir}
 %attr(4754,cyrus,mail) %{_libexecdir}/deliver
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
 %attr(755,root,root) %{_libexecdir}/arbitron
