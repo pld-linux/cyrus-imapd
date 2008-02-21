@@ -8,7 +8,7 @@ Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.3.9
-Release:	0.2
+Release:	0.3
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -24,6 +24,7 @@ Source9:	%{name}.pamd
 Source10:	%{name}-pop.pamd
 Source11:	%{name}.init
 Source12:	cyrus.conf
+Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
 Patch1:		%{name}-shared.patch
 URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
@@ -225,6 +226,7 @@ install %{SOURCE7}	$RPM_BUILD_ROOT%{_sysconfdir}/imapd.conf
 install %{SOURCE9}	$RPM_BUILD_ROOT/etc/pam.d/imap
 install %{SOURCE10}	$RPM_BUILD_ROOT/etc/pam.d/pop
 sed -e 's,/''usr/lib/cyrus,%{_libexecdir},' %{SOURCE11} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
+sed -e 's,/''usr/lib/cyrus,%{_libexecdir},' %{SOURCE13} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-sync
 install %{SOURCE12}	$RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 
 mv -f $RPM_BUILD_ROOT%{_libexecdir}/master	$RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
@@ -259,11 +261,14 @@ cd /var/lib/imap
 chattr +S . user quota user/* quota/* 2>/dev/null ||:
 chattr +S /var/spool/imap /var/spool/imap/* 2>/dev/null ||:
 %service cyrus-imapd restart "cyrus imap daemon"
+%service cyrus-sync restart "cyrus replication service"
 
 %preun
 if [ "$1" = "0" ]; then
 	%service cyrus-imapd stop
+	%service cyrus-sync stop
 	/sbin/chkconfig --del cyrus-imapd
+	/sbin/chkconfig --del cyrus-sync
 fi
 
 %postun
@@ -283,6 +288,7 @@ fi
 %attr(440,cyrus,root) %config(noreplace) %verify(not md5 mtime size) /etc/pam.d/*
 %attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) /etc/security/blacklist.*
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-imapd
+%attr(754,root,root) /etc/rc.d/init.d/cyrus-sync
 %attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
 %attr(755,root,root) %{_bindir}/*
 %dir %{_libexecdir}
