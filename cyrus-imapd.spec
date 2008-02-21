@@ -253,13 +253,14 @@ rm -rf $RPM_BUILD_ROOT
 %useradd -u 76 -d /var/spool/imap -s /bin/false -c "Cyrus User" -g mail cyrus
 
 %post
-/sbin/chkconfig --add cyrus-imapd
 touch /var/lib/imap/faillog
 chown cyrus:mail /var/lib/imap/faillog
 chmod 640 /var/lib/imap/faillog
 cd /var/lib/imap
 chattr +S . user quota user/* quota/* 2>/dev/null ||:
 chattr +S /var/spool/imap /var/spool/imap/* 2>/dev/null ||:
+
+/sbin/chkconfig --add cyrus-imapd
 %service cyrus-imapd restart "cyrus imap daemon"
 %service cyrus-sync restart "cyrus replication service"
 
