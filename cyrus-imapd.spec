@@ -45,7 +45,7 @@ Requires(postun):	/usr/sbin/userdel
 Requires(pre):	/bin/id
 Requires(pre):	/usr/sbin/useradd
 Requires:	%{name}-libs = %{version}-%{release}
-Requires:	rc-scripts
+Requires:	rc-scripts >= 0.4.0.18
 # needed by scripts from %{_bindir}
 Requires:	pam >= 0.79.0
 Requires:	perl-%{name} = %{version}-%{release}
