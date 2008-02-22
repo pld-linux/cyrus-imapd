@@ -25,9 +25,9 @@ fi
 
 start() {
 	# Check if the service is already running?
-	if [ ! -f /var/lock/subsys/<service> ]; then
+	if [ ! -f /var/lock/subsys/cyrus-sync ]; then
 		msg_starting cyrus-sync
-		daemon /usr/lib/cyrus/sync_client -r &
+		start-stop-daemon --start --quiet --exec /usr/lib/cyrus/sync_client -- -r
 		if ps -C sync_client >/dev/null 2>&1; then
 			RETVAL=$?
 			[ $RETVAL -eq 0 ] && touch /var/lock/subsys/cyrus-sync
@@ -44,9 +44,14 @@ stop() {
 	if [ -f /var/lock/subsys/cyrus-sync ]; then
 		# Stop daemons.
 		msg_stopping cyrus-sync
-		killproc sync_client
-		killproc sync_client -TERM
-		rm -f /var/lock/subsys/cyrus-sync
+		start-stop-daemon --stop --quiet --name "sync_client"
+		RETVAL=$?
+		if [ $RETVAL -eq 0 ]; then
+			rm -f /var/lock/subsys/cyrus-sync
+			ok
+		else
+			fail
+		fi
 	else
 		msg_not_running cyrus-sync
 	fi
@@ -56,17 +61,17 @@ RETVAL=0
 # See how we were called.
 case "$1" in
   start)
-  	start
+	start
 	;;
   stop)
-  	stop
+	stop
 	;;
   restart|force-reload)
 	stop
 	start
 	;;
   status)
-	status <service>
+	status cyrus-sync
 	RETVAL=$?
 	;;
   *)
