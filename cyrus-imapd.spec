@@ -23,7 +23,7 @@ Source12:	cyrus.conf
 Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
 Patch1:		%{name}-shared.patch
-URL:		http://andrew2.andrew.cmu.edu/cyrus/imapd/
+URL:		http://cyrusimap.web.cmu.edu/imapd/
 BuildRequires:	autoconf >= 2.54
 BuildRequires:	automake
 BuildRequires:	cyrus-sasl-devel >= 1.5.27
