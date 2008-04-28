@@ -1,7 +1,3 @@
-#
-# TODO:
-# - fix path in .init for lib64
-#
 %include	/usr/lib/rpm/macros.perl
 Summary:	High-performance mail store with imap and pop3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
