@@ -1,0 +1,23 @@
+http://www.mail-archive.com/info-cyrus%40lists.andrew.cmu.edu/msg31184.html
+
+cyrusdb_berkeley.c:176: error: structure has no member named `set_lk_max'
+set_lk_max has been deprecated since DB 4.0. I guess it was finally removed.
+
+--- cyrus-imapd-2.2.12/lib/cyrusdb_berkeley.c~	2008-02-11 22:57:19.000000000 +0200
++++ cyrus-imapd-2.2.12/lib/cyrusdb_berkeley.c	2008-02-11 22:58:30.963443889 +0200
+@@ -159,7 +159,15 @@
+ 	syslog(LOG_WARNING,
+ 	       "DBERROR: invalid berkeley_locks_max value, using internal default");
+     } else {
++#if DB_VERSION_MAJOR >= 4
++       r = dbenv->set_lk_max_locks(dbenv, opt);
++       if (!r)
++           r = dbenv->set_lk_max_lockers(dbenv, opt);
++       if (!r)
++           r = dbenv->set_lk_max_objects(dbenv, opt);
++#else
+ 	r = dbenv->set_lk_max(dbenv, opt);
++#endif
+ 	if (r) {
+ 	    dbenv->err(dbenv, r, "set_lk_max");
+ 	    syslog(LOG_ERR, "DBERROR: set_lk_max(): %s", db_strerror(r));
