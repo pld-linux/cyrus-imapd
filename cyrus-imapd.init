@@ -74,9 +74,9 @@ case "$1" in
   restart)
 	stop
 	start
+	;;
   try-restart)
 	condrestart 0
-	;;
 	;;
   force-reload)
 	condrestart 7
