@@ -4,7 +4,7 @@ Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	2.2.12
-Release:	12
+Release:	13
 License:	BSD-like
 Group:		Networking/Daemons
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
@@ -24,8 +24,8 @@ Patch0:		%{name}-et.patch
 Patch1:		%{name}-shared.patch
 Patch2:		%{name}-quota.patch
 Patch3:		%{name}-db.patch
-Patch4:		%{name}-db4.5.patch
-Patch5:		%{name}-pass8bit.patch
+Patch4:		%{name}-pass8bit.patch
+Patch5:		%{name}-quotecc.patch
 URL:		http://cyrusimap.web.cmu.edu/imapd/
 BuildRequires:	autoconf >= 2.54
 BuildRequires:	automake
@@ -339,17 +339,23 @@ fi
 
 %files libs
 %defattr(644,root,root,755)
-%attr(755,root,root) %{_libdir}/lib*.so.*.*.*
+%attr(755,root,root) %{_libdir}/libcyrus.so.*.*.*
+%attr(755,root,root) %{_libdir}/libcyrus_min.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/libcyrus.so.0
+%attr(755,root,root) %ghost %{_libdir}/libcyrus_min.so.0
 
 %files devel
 %defattr(644,root,root,755)
-%attr(755,root,root) %{_libdir}/lib*.so
-%{_libdir}/lib*.la
+%attr(755,root,root) %{_libdir}/libcyrus.so
+%attr(755,root,root) %{_libdir}/libcyrus_min.so
+%{_libdir}/libcyrus.la
+%{_libdir}/libcyrus_min.la
 %{_includedir}/cyrus
 
 %files static
 %defattr(644,root,root,755)
-%{_libdir}/lib*.a
+%{_libdir}/libcyrus.a
+%{_libdir}/libcyrus_min.a
 
 %files -n perl-%{name}
 %defattr(644,root,root,755)
