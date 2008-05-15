@@ -1,0 +1,22 @@
+--- cyrus-imapd-2.2.12/tools/config2header~	2008-05-15 17:26:55.000000000 +0300
++++ cyrus-imapd-2.2.12/tools/config2header	2008-05-15 17:26:57.179137629 +0300
+@@ -69,7 +69,7 @@
+ # Look for CC=xxx "assigments" in the argument list.
+ #
+ while ($#ARGV >= 0) {
+-	last unless ($ARGV[0] =~ m/^(\S+)=(\S+)$/);
++	last unless ($ARGV[0] =~ m/^(\S+)=(.+)$/);
+ 	eval "\$$1='$2';";
+ 	die "$@" if ($@);
+ 	shift @ARGV;
+--- cyrus-imapd-2.2.12/lib/Makefile.in~	2008-05-15 17:27:11.000000000 +0300
++++ cyrus-imapd-2.2.12/lib/Makefile.in	2008-05-15 17:27:12.704034486 +0300
+@@ -131,7 +131,7 @@
+ 	$(LIBTOOL) --mode=link $(CC) -o libcyrus_min.la $(LIBCYRM_OBJS) @IMAP_COM_ERR_LIBS@ -rpath $(libdir)
+ 
+ imapopts.c: imapoptions $(srcdir)/../tools/config2header
+-	$(srcdir)/../tools/config2header CC=$(CC) $(srcdir)/imapopts.c $(srcdir)/imapopts.h < $(srcdir)/imapoptions
++	$(srcdir)/../tools/config2header CC="$(CC)" $(srcdir)/imapopts.c $(srcdir)/imapopts.h < $(srcdir)/imapoptions
+ 
+ imapopts.h: imapopts.c
+ 
