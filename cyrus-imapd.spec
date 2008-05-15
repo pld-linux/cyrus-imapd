@@ -346,17 +346,23 @@ fi
 
 %files libs
 %defattr(644,root,root,755)
-%attr(755,root,root) %{_libdir}/lib*.so.*.*.*
+%attr(755,root,root) %{_libdir}/libcyrus.so.*.*.*
+%attr(755,root,root) %{_libdir}/libcyrus_min.so.*.*.*
+%attr(755,root,root) %ghost %{_libdir}/libcyrus.so.0
+%attr(755,root,root) %ghost %{_libdir}/libcyrus_min.so.0
 
 %files devel
 %defattr(644,root,root,755)
-%attr(755,root,root) %{_libdir}/lib*.so
-%{_libdir}/lib*.la
+%attr(755,root,root) %{_libdir}/libcyrus.so
+%attr(755,root,root) %{_libdir}/libcyrus_min.so
+%{_libdir}/libcyrus.la
+%{_libdir}/libcyrus_min.la
 %{_includedir}/cyrus
 
 %files static
 %defattr(644,root,root,755)
-%{_libdir}/lib*.a
+%{_libdir}/libcyrus.a
+%{_libdir}/libcyrus_min.a
 
 %files -n perl-%{name}
 %defattr(644,root,root,755)
