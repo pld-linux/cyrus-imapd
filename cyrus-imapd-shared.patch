@@ -1,193 +1,5 @@
---- cyrus-imapd-2.3.8/ptclient/Makefile.in	2007-02-18 23:43:17.000000000 +0100
-+++ cyrus-imapd-2.3.12p2/ptclient/Makefile.in	2008-09-23 21:36:44.543737168 +0300
-@@ -51,6 +51,8 @@
- CC = @CC@
- INSTALL = @INSTALL@
- RANLIB = @RANLIB@
-+LIBTOOL = @LIBTOOL@
-+top_builddir = @top_builddir@
- 
- DEFS = @DEFS@
- CPPFLAGS = -I.. -I$(srcdir)/../imap -I$(srcdir)/../lib @COM_ERR_CPPFLAGS@ @CPPFLAGS@ @SASLFLAGS@
-@@ -60,8 +62,8 @@
- LIBS = $(IMAP_LIBS) @COM_ERR_LIBS@
- LIB_SASL = @LIB_SASL@
- LIB_WRAP = @LIB_WRAP@
--DEPLIBS = ../imap/libimap.a ../lib/libcyrus.a ../lib/libcyrus_min.a @DEPLIBS@
--UTIL_LIBS = ../imap/mutex_fake.o ../imap/cli_fatal.o
-+DEPLIBS = ../imap/libimap.la ../lib/libcyrus.la ../lib/libcyrus_min.la @DEPLIBS@
-+UTIL_LIBS = ../imap/mutex_fake.lo ../imap/cli_fatal.lo
- 
- LDAP_LIBS=@LDAP_LIBS@
- LDAP_CPPFLAGS=@LDAP_CPPFLAGS@
-@@ -83,42 +85,42 @@
- 
- LIB_RT = @LIB_RT@
- 
--SERVICE=../master/service.o
--SERVICETHREAD=../master/service-thread.o
-+SERVICE=../master/service.lo
-+SERVICETHREAD=../master/service-thread.lo
- 
- all: $(PROGS)
- 
- install:
--	$(INSTALL) -m 755 ptloader $(DESTDIR)$(service_path)
--	$(INSTALL) -m 755 ptexpire $(DESTDIR)$(service_path)
--	$(INSTALL) -m 755 ptdump $(DESTDIR)$(service_path)
-+	$(LIBTOOL) --mode=install $(INSTALL) ptloader $(DESTDIR)$(service_path)
-+	$(LIBTOOL) --mode=install $(INSTALL) ptexpire $(DESTDIR)$(service_path)
-+	$(LIBTOOL) --mode=install $(INSTALL) ptdump $(DESTDIR)$(service_path)
- 
--.c.o:
--	$(CC) -c $(CPPFLAGS) $(LDAP_CPPFLAGS) $(DEFS) $(CFLAGS) $<
-+%.lo: %.c
-+	$(LIBTOOL) --mode=compile --tag=CC $(CC) -c $(CPPFLAGS) $(LDAP_CPPFLAGS) $(DEFS) $(CFLAGS) $<
- 
--ptloader: ptloader.o afskrb.o ldap.o ../imap/mutex_fake.o $(DEPLIBS)
--	$(CC) $(LDFLAGS) -o $@ ptloader.o afskrb.o ldap.o ../imap/mutex_fake.o $(SERVICETHREAD) ${AFS_LDFLAGS} ${LDAP_LDFLAGS} $(AFS_LIBS) ${LDAP_LIBS} $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
-+ptloader: ptloader.lo afskrb.lo ldap.lo ../imap/mutex_fake.lo $(DEPLIBS)
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptloader.lo afskrb.lo ldap.lo ../imap/mutex_fake.lo $(SERVICETHREAD) ${AFS_LDFLAGS} ${LDAP_LDFLAGS} $(AFS_LIBS) ${LDAP_LIBS} $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
- 
--ptloader.pure: ptloader.o afskrb.o ldap.o ../imap/mutex_fake.o $(DEPLIBS)
--	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ ptloader.o afskrb.o ldap.o ../imap/mutex_fake.o $(SERVICETHREAD) ${AFS_LDFLAGS} ${LDAP_LDFLAGS} $(AFS_LIBS) ${LDAP_LIBS} $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
-+ptloader.pure: ptloader.lo afskrb.lo ldap.lo ../imap/mutex_fake.lo $(DEPLIBS)
-+	$(PURIFY) $(PUREARGS) $(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptloader.lo afskrb.lo ldap.lo ../imap/mutex_fake.lo $(SERVICETHREAD) ${AFS_LDFLAGS} ${LDAP_LDFLAGS} $(AFS_LIBS) ${LDAP_LIBS} $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
- 
--ptexpire: ptexpire.o $(DEPLIBS) $(UTIL_LIBS)
--	$(CC) $(LDFLAGS) -o $@ ptexpire.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
-+ptexpire: ptexpire.lo $(DEPLIBS) $(UTIL_LIBS)
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptexpire.lo $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
- 
--ptexpire.pure: ptexpire.o $(DEPLIBS) $(UTIL_LIBS)
--	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ ptexpire.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
-+ptexpire.pure: ptexpire.lo $(DEPLIBS) $(UTIL_LIBS)
-+	$(PURIFY) $(PUREARGS) $(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptexpire.lo $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
- 
--ptdump: ptdump.o $(DEPLIBS) $(UTIL_LIBS)
--	$(CC) $(LDFLAGS) -o $@ ptdump.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
-+ptdump: ptdump.lo $(DEPLIBS) $(UTIL_LIBS)
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptdump.lo $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
- 
--ptdump.pure: ptexpire.o $(DEPLIBS) $(UTIL_LIBS)
--	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ ptdump.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
-+ptdump.pure: ptexpire.lo $(DEPLIBS) $(UTIL_LIBS)
-+	$(PURIFY) $(PUREARGS) $(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptdump.lo $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
- 
--ptextract: ptextract.o $(DEPLIBS) $(UTIL_LIBS)
--	$(CC) $(LDFLAGS) -o $@ ptextract.o $(UTIL_LIBS) $(DEPLIBS) $(LIBS)
-+ptextract: ptextract.lo $(DEPLIBS) $(UTIL_LIBS)
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptextract.lo $(UTIL_LIBS) $(DEPLIBS) $(LIBS)
- 
- clean:
--	rm -f *.o Makefile.bak $(PROGS) makedepend.log
-+	rm -f *.lo Makefile.bak $(PROGS) makedepend.log
- 
- distclean: clean
- 	rm -f Makefile
---- cyrus-imapd-2.3.8/sieve/Makefile.in.wiget	2006-11-30 18:11:24.000000000 +0100
-+++ cyrus-imapd-2.3.8/sieve/Makefile.in	2007-02-18 23:43:17.000000000 +0100
-@@ -35,6 +35,8 @@
- YFLAGS = -d
- LEX = @LEX@
- RANLIB = @RANLIB@
-+LIBTOOL = @LIBTOOL@
-+top_builddir = @top_builddir@
- COMPILE_ET = @COMPILE_ET@
- 
- DEFS = @DEFS@ @LOCALDEFS@
-@@ -49,7 +51,7 @@
- IMAP_COM_ERR_LIBS = @IMAP_COM_ERR_LIBS@
- IMAP_LIBS = @IMAP_LIBS@ @LIB_RT@
- LIBS = libsieve.a $(IMAP_LIBS) $(IMAP_COM_ERR_LIBS)
--DEPLIBS=../lib/libcyrus.a ../lib/libcyrus_min.a @DEPLIBS@
-+DEPLIBS=../lib/libcyrus.la ../lib/libcyrus_min.la @DEPLIBS@
- 
- BUILT_SOURCES = addr.c addr.h addr-lex.c \
- 	sieve.c sieve.h sieve-lex.c \
-@@ -61,10 +63,10 @@
- 
- install: sievec
- 	$(srcdir)/../install-sh -d ${DESTDIR}$(service_path)
--	$(srcdir)/../install-sh -c -m 755 sievec $(DESTDIR)$(service_path) || exit
-+	$(LIBTOOL) --mode=install $(srcdir)/../install-sh -c -m 755 sievec $(DESTDIR)$(service_path) || exit
- 
- test: $(DEPLIBS) libsieve.a test.o ../imap/message.o
--	$(CC) $(LDFLAGS) -o test test.o ../imap/message.o \
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o test test.o ../imap/message.o \
- 	libsieve.a $(DEPLIBS) $(LIBS)
- 
- OBJS = sieve_err.o \
-@@ -103,10 +105,10 @@
- 	$(RANLIB) libsieve.a
- 
- sievec: sievec.o libsieve.a
--	$(CC) $(LDFLAGS) -o sievec sievec.o libsieve.a $(DEPLIBS) $(LIBS)
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o sievec sievec.o libsieve.a $(DEPLIBS) $(LIBS)
- 
- sieved: sieved.o libsieve.a
--	$(CC) $(LDFLAGS) -o sieved sieved.o libsieve.a $(DEPLIBS) $(LIBS)
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o sieved sieved.o libsieve.a $(DEPLIBS) $(LIBS)
- 
- 
- sieve_interface.h: sieve_err.h
---- cyrus-imapd-2.3.12p2/netnews/Makefile.in~	2008-09-23 18:00:16.000000000 +0300
-+++ cyrus-imapd-2.3.12p2/netnews/Makefile.in	2008-09-23 18:01:26.824280572 +0300
-@@ -49,11 +49,13 @@
- CC = @CC@
- INSTALL = @INSTALL@
- RANLIB = @RANLIB@
-+LIBTOOL = @LIBTOOL@
-+top_builddir = @top_builddir@
- 
- DEFS = @DEFS@
- CPPFLAGS = -I.. -I$(srcdir) -I$(srcdir)/../lib -I$(srcdir)/../com_err/et @CPPFLAGS@
- LIBS =  @IMAP_LIBS@ @LIB_RT@
--DEPLIBS = ../lib/libcyrus.a ../lib/libcyrus_min.a @DEPLIBS@ 
-+DEPLIBS = ../lib/libcyrus.la ../lib/libcyrus_min.la @DEPLIBS@ 
- 
- CFLAGS = @CFLAGS@
- LDFLAGS = @LDFLAGS@
-@@ -69,13 +71,13 @@
- all: remotepurge
- 
- install:
--	$(INSTALL) -s -m 755 remotepurge $(DESTDIR)$(service_path)
-+	$(LIBTOOL) --mode=install $(INSTALL) remotepurge $(DESTDIR)$(service_path)
- 
- .c.o:
- 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
- 
- remotepurge: $(OBJS) $(DEPLIBS)
--	$(CC) $(LDFLAGS) -o remotepurge $(OBJS) \
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o remotepurge $(OBJS) \
- 		$(DEPLIBS) $(LIBS)
- 
- 
---- cyrus-imapd-2.3.8/timsieved/Makefile.in	2007-02-18 23:43:17.000000000 +0100
-+++ cyrus-imapd-2.3.12p2/timsieved/Makefile.in	2008-09-23 21:34:25.039668022 +0300
-@@ -47,6 +47,8 @@
- 
- CC = @CC@
- RANLIB = @RANLIB@
-+LIBTOOL = @LIBTOOL@
-+top_builddir = @top_builddir@
- 
- INSTALL = @INSTALL@
- CYRUS_USER=@cyrus_user@
-@@ -105,8 +107,8 @@
- depend:
- 	${MAKEDEPEND} $(CPPFLAGS) $(DEFS) -I$(srcdir) $(CFLAGS) *.c $(srcdir)/*.c 1>makedepend.log 2>&1
- 
--.c.o:
--	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) \
-+%.lo: %.c
-+	$(LIBTOOL) --mode=compile --tag=CC $(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) \
- 	$<
- 
- # DO NOT DELETE THIS LINE -- make depend depends on it.
---- cyrus-imapd-2.3.8/configure.in.wiget	2007-02-18 23:43:17.000000000 +0100
-+++ cyrus-imapd-2.3.8/configure.in	2007-02-18 23:43:17.000000000 +0100
+--- cyrus-imapd-2.3.12p2/configure.in	2008-09-23 21:46:38.514085631 +0300
++++ cyrus-imapd-2.3.12p2.shared/configure.in	2008-09-23 21:44:50.591844716 +0300
 @@ -87,7 +87,7 @@
  AC_DEFINE_UNQUOTED(SYSCONFDIR,"$sysconfdir",[Config File Location])
  
@@ -233,7 +45,7 @@
    AC_DEFINE(HAVE_BDB,[],[Build in Berkeley DB support?])
  fi
  
-@@ -996,7 +996,7 @@
+@@ -1010,7 +1010,7 @@
  dnl Check for MD5 functions
  AC_FUNC_CHECK(MD5Init,,
         AC_CHECK_LIB(md, MD5Init, LIBS="${LIBS} -lmd",
@@ -242,8 +54,19 @@
  AC_SUBST(MD5OBJ)
  
  dnl snmp
---- cyrus-imapd-2.3.12p2/imap/Makefile.in	2008-09-23 21:18:02.070806071 +0300
-+++ cyrus-imapd-2.3.12p2/imap/Makefile.in	2008-09-23 21:20:01.537715249 +0300
+--- cyrus-imapd-2.3.12p2/depot/Makefile.in	2008-03-24 22:26:12.000000000 +0200
++++ cyrus-imapd-2.3.12p2.shared/depot/Makefile.in	2008-09-23 21:44:50.599845178 +0300
+@@ -53,7 +53,7 @@
+ DEFS = @DEFS@
+ CPPFLAGS = -I. -I$(srcdir) -I$(srcdir)/../lib -I$(srcdir)/../et @CPPFLAGS@ 
+ LIBS = @LIBS@ 
+-DEPLIBS = ../lib/libcyrus.a ../lib/libcyrus_min.a @DEPLIBS@
++DEPLIBS = ../lib/libcyrus.la ../lib/libcyrus_min.la @DEPLIBS@
+ 
+ CFLAGS = @CFLAGS@
+ LDFLAGS = @LDFLAGS@
+--- cyrus-imapd-2.3.12p2/imap/Makefile.in	2008-04-04 00:09:51.000000000 +0300
++++ cyrus-imapd-2.3.12p2.shared/imap/Makefile.in	2008-09-23 21:44:50.591844716 +0300
 @@ -45,16 +45,18 @@
  
  # \Seen state database.  Either 'db' (berkeley db) or 
@@ -667,9 +490,61 @@
  	$(BUILTSOURCES) $(PROGS) $(SUIDPROGS)
  
  distclean: clean
---- cyrus-imapd-2.3.8/installsieve/Makefile.in	2007-02-18 23:43:17.000000000 +0100
-+++ cyrus-imapd-2.3.12p2/installsieve/Makefile.in	2008-09-23 21:33:10.055330477 +0300
-@@ -45,6 +45,8 @@
+--- cyrus-imapd-2.3.12p2/imtest/Makefile.in	2008-03-24 20:55:59.000000000 +0200
++++ cyrus-imapd-2.3.12p2.shared/imtest/Makefile.in	2008-09-23 21:44:50.599845178 +0300
+@@ -50,12 +50,14 @@
+ CC = @CC@
+ INSTALL = @INSTALL@
+ RANLIB = @RANLIB@
++LIBTOOL = @LIBTOOL@
++top_builddir = @top_builddir@
+ 
+ DEFS = @DEFS@ @LOCALDEFS@
+ CPPFLAGS = -I.. -I$(srcdir)/../lib @COM_ERR_CPPFLAGS@ @CPPFLAGS@  @SASLFLAGS@
+ LIBS = @LIBS@ 
+ IMAP_LIBS = @IMAP_LIBS@ @LIB_RT@
+-DEPLIBS = ../lib/libcyrus.a ../lib/libcyrus_min.a @DEPLIBS@
++DEPLIBS = ../lib/libcyrus.la ../lib/libcyrus_min.la @DEPLIBS@
+ 
+ CFLAGS = @CFLAGS@
+ LDFLAGS = @LDFLAGS@ @COM_ERR_LDFLAGS@
+@@ -73,7 +75,7 @@
+ all: imtest
+ 
+ install:
+-	$(INSTALL) -s -m 755 imtest $(DESTDIR)$(exec_prefix)/bin
++	$(LIBTOOL) --mode=install $(INSTALL) imtest $(DESTDIR)$(exec_prefix)/bin
+ 	ln -f $(DESTDIR)$(exec_prefix)/bin/imtest $(DESTDIR)$(exec_prefix)/bin/pop3test
+ 	ln -f $(DESTDIR)$(exec_prefix)/bin/imtest $(DESTDIR)$(exec_prefix)/bin/nntptest
+ 	ln -f $(DESTDIR)$(exec_prefix)/bin/imtest $(DESTDIR)$(exec_prefix)/bin/lmtptest
+@@ -86,10 +88,10 @@
+ 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
+ 
+ imtest: imtest.o $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o imtest imtest.o $(DEPLIBS) $(IMAP_LIBS)
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o imtest imtest.o $(DEPLIBS) $(IMAP_LIBS)
+ 
+ imtest.pure: imtest.o $(DEPLIBS)
+-	$(PURIFY) $(PUREOPT) $(CC) $(LDFLAGS) -o imtest $(OBJS) $(DEPLIBS) $(LIBS) $(IMAP_LIBS)
++	$(PURIFY) $(PUREOPT) $(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o imtest $(OBJS) $(DEPLIBS) $(LIBS) $(IMAP_LIBS)
+ 
+ clean:
+ 	rm -f *.o Makefile.bak makedepend.log imtest
+--- cyrus-imapd-2.3.12p2/imtest/imtest.c	2008-04-11 15:35:18.000000000 +0300
++++ cyrus-imapd-2.3.12p2.shared/imtest/imtest.c	2008-09-23 21:44:50.595844947 +0300
+@@ -272,6 +272,9 @@
+     imtest_fatal(msg);
+ }
+ 
++/* config.c stuff */
++const int config_need_data = 0;
++
+ int mysasl_config(void *context __attribute__((unused)), 
+ 		  const char *plugin_name,
+ 		  const char *option,
+--- cyrus-imapd-2.3.12p2/installsieve/Makefile.in	2008-03-24 22:33:11.000000000 +0200
++++ cyrus-imapd-2.3.12p2.shared/installsieve/Makefile.in	2008-09-23 21:44:50.591844716 +0300
+@@ -47,6 +47,8 @@
  
  CC = @CC@
  RANLIB = @RANLIB@
@@ -678,7 +553,7 @@
  
  DEFS = @DEFS@
  CPPFLAGS = -I. -I$(srcdir) -I$(srcdir)/../lib @CPPFLAGS@ @SASLFLAGS@
-@@ -57,7 +59,7 @@
+@@ -59,7 +61,7 @@
  
  IMAP_LIBS = @IMAP_LIBS@
  LIBS = 
@@ -688,8 +563,8 @@
  prefix = @prefix@
  exec_prefix = @exec_prefix@
 @@ -68,20 +70,18 @@
- install:
- 	$(LIBTOOL) --mode=install $(INSTALL) installsieve $(DESTDIR)$(exec_prefix)/bin
+ all: installsieve
+ 
  install:
 -	$(INSTALL) -s -m 755 installsieve $(DESTDIR)$(exec_prefix)/bin
 +	$(LIBTOOL) --mode=install $(INSTALL) installsieve $(DESTDIR)$(exec_prefix)/bin
@@ -715,7 +590,9 @@
  
  distclean: clean
  	rm -f Makefile installsieve
-@@ -91,7 +91,6 @@
+@@ -89,9 +89,8 @@
+ depend:
+ 	${MAKEDEPEND} $(CPPFLAGS) $(DEFS) -I$(srcdir) $(CFLAGS) *.c $(srcdir)/*.c 1>makedepend.log 2>&1
  
 -.c.o:
 -	$(CC) -c $(CPPFLAGS) $(DEFS) -I$(srcdir) -I. $(CFLAGS) \
@@ -725,258 +602,9 @@
  
 -
  # DO NOT DELETE THIS LINE -- make depend depends on it.
---- cyrus-imapd-2.3.8/perl/sieve/managesieve/Makefile.PL.wiget	2006-11-30 18:11:24.000000000 +0100
-+++ cyrus-imapd-2.3.8/perl/sieve/managesieve/Makefile.PL	2007-02-18 23:43:17.000000000 +0100
-@@ -59,8 +59,8 @@
-     'NAME'	=> 'Cyrus::SIEVE::managesieve',
-     'ABSTRACT'  => 'Cyurs Sieve management interface',
-     'VERSION_FROM' => 'managesieve.pm', # finds $VERSION
--    'MYEXTLIB'  => '../lib/isieve.o ../lib/lex.o ../lib/mystring.o ../lib/request.o ../../../lib/libcyrus.a ../../../lib/libcyrus_min.a',
--    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT -lssl -lcrypto"], 
-+    'MYEXTLIB'  => '../lib/.libs/isieve.o ../lib/.libs/lex.o ../lib/.libs/mystring.o ../lib/.libs/request.o',
-+    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT -lssl -lcrypto -L../../../lib/.libs -lcyrus -lcyrus_min"], 
-     'DEFINE'	=> '-DPERL_POLLUTE',     # e.g., '-DHAVE_SOMETHING' 
-     'INC'	=> "-I../lib/ -I../../../lib/ $SASL_INC $OPENSSL_INC",
- );
---- cyrus-imapd-2.3.8/perl/sieve/managesieve/managesieve.xs.wiget	2006-11-30 18:11:24.000000000 +0100
-+++ cyrus-imapd-2.3.8/perl/sieve/managesieve/managesieve.xs	2007-02-18 23:43:17.000000000 +0100
-@@ -96,6 +96,7 @@
-     croak("failure: %s", s);
-     exit(-1);
- }
-+const int config_need_data = 0;
- 
- static int
- perlsieve_getpass(conn, context, id, psecret)
---- cyrus-imapd-2.3.8/perl/sieve/lib/Makefile.in.wiget	2006-11-30 18:11:24.000000000 +0100
-+++ cyrus-imapd-2.3.8/perl/sieve/lib/Makefile.in	2007-02-18 23:43:17.000000000 +0100
-@@ -49,12 +49,14 @@
- CC = @CC@
- INSTALL = @INSTALL@
- RANLIB = @RANLIB@
-+LIBTOOL = @LIBTOOL@
-+top_builddir = @top_builddir@
- 
- DEFS = @DEFS@ @LOCALDEFS@ -Dbool=char -DHAS_BOOL
- CPPFLAGS = -I. -I../../.. -I$(srcdir) -I$(srcdir)/../../../lib @CPPFLAGS@ @DYNSASLFLAGS@ @COM_ERR_CPPFLAGS@
--LIBS = ../../../lib/libcyrus.a ../../../lib/libcyrus_min.a @LIB_DYN_SASL@ @LIBS@
-+LIBS = ../../../lib/libcyrus.la ../../../lib/libcyrus_min.la @LIB_DYN_SASL@ @LIBS@
- IMAP_LIBS = @IMAP_LIBS@
--DEPLIBS = ../../../lib/libcyrus.a ../../../lib/libcyrus_min.a @DEPLIBS@
-+DEPLIBS = ../../../lib/libcyrus.la ../../../lib/libcyrus_min.la @DEPLIBS@
- 
- MAKEDEPEND_CFLAGS = @CFLAGS@
- CFLAGS = @CFLAGS@ @PERL_CCCDLFLAGS@
-@@ -67,19 +69,17 @@
- exec_prefix = @exec_prefix@
- cyrus_prefix = @cyrus_prefix@
- 
--OBJS=isieve.o lex.o mystring.o request.o
-+OBJS=isieve.lo lex.lo mystring.lo request.lo
- 
--all: libisieve.a
-+all: libisieve.la
- 
- install:
- 
--.c.o:
--	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
-+%.lo: %.c
-+	$(LIBTOOL) --mode=compile $(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
- 
--libisieve.a: $(OBJS)
--	rm -f libisieve.a
--	ar cr libisieve.a $(OBJS)
--	$(RANLIB) libisieve.a
-+libisieve.la: $(OBJS)
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) -o libisievie.la $(OBJS)
- 
- clean:
- 	rm -f *.o Makefile.bak makedepend.log libisieve.a
---- cyrus-imapd-2.3.8/perl/imap/IMAP.xs.wiget	2006-11-30 18:11:23.000000000 +0100
-+++ cyrus-imapd-2.3.8/perl/imap/IMAP.xs	2007-02-18 23:43:17.000000000 +0100
-@@ -75,6 +75,7 @@
- {
-   croak(s);
- }
-+const int config_need_data = 0;
- 
- /*
-  * Decrement the refcounts of the Perl SV's in the passed rock, then free the
---- cyrus-imapd-2.3.8/perl/imap/Makefile.PL.wiget	2006-11-30 18:11:23.000000000 +0100
-+++ cyrus-imapd-2.3.8/perl/imap/Makefile.PL	2007-02-18 23:43:17.000000000 +0100
-@@ -63,8 +63,7 @@
-     'macro'	=> {'IMCLIENT_LIBS' => ''},	# hack
-     'clean'	=> {'FILES' => 'libcyrperl.a cyradm'},
-     'OBJECT'    => 'IMAP.o',
--    'MYEXTLIB'  => '../../lib/libcyrus.a ../../lib/libcyrus_min.a',
--    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT -lssl -lcrypto"],
-+    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT -lssl -lcrypto -L../../lib/.libs -lcyrus -lcyrus_min"],
-     'DEFINE'	=> '-DPERL_POLLUTE',    # e.g., '-DHAVE_SOMETHING' 
-     'INC'	=> "-I../../lib -I../.. -I../../et $SASL_INC $OPENSSL_INC", 
-     'EXE_FILES' => [cyradm],
---- cyrus-imapd-2.3.8/imtest/imtest.c.wiget	2006-11-30 18:11:22.000000000 +0100
-+++ cyrus-imapd-2.3.8/imtest/imtest.c	2007-02-18 23:43:17.000000000 +0100
-@@ -268,6 +268,9 @@
-     imtest_fatal(msg);
- }
- 
-+/* config.c stuff */
-+const int config_need_data = 0;
-+
- int mysasl_config(void *context __attribute__((unused)), 
- 		  const char *plugin_name,
- 		  const char *option,
---- cyrus-imapd-2.3.8/imtest/Makefile.in.wiget	2006-11-30 18:11:22.000000000 +0100
-+++ cyrus-imapd-2.3.8/imtest/Makefile.in	2007-02-18 23:43:17.000000000 +0100
-@@ -49,12 +49,14 @@
- CC = @CC@
- INSTALL = @INSTALL@
- RANLIB = @RANLIB@
-+LIBTOOL = @LIBTOOL@
-+top_builddir = @top_builddir@
- 
- DEFS = @DEFS@ @LOCALDEFS@
- CPPFLAGS = -I.. -I$(srcdir)/../lib @COM_ERR_CPPFLAGS@ @CPPFLAGS@  @SASLFLAGS@
- LIBS = @LIBS@ 
- IMAP_LIBS = @IMAP_LIBS@ @LIB_RT@
--DEPLIBS = ../lib/libcyrus.a ../lib/libcyrus_min.a @DEPLIBS@
-+DEPLIBS = ../lib/libcyrus.la ../lib/libcyrus_min.la @DEPLIBS@
- 
- CFLAGS = @CFLAGS@
- LDFLAGS = @LDFLAGS@ @COM_ERR_LDFLAGS@
-@@ -72,7 +74,7 @@
- all: imtest
- 
- install:
--	$(INSTALL) -s -m 755 imtest $(DESTDIR)$(exec_prefix)/bin
-+	$(LIBTOOL) --mode=install $(INSTALL) imtest $(DESTDIR)$(exec_prefix)/bin
- 	ln -f $(DESTDIR)$(exec_prefix)/bin/imtest $(DESTDIR)$(exec_prefix)/bin/pop3test
- 	ln -f $(DESTDIR)$(exec_prefix)/bin/imtest $(DESTDIR)$(exec_prefix)/bin/nntptest
- 	ln -f $(DESTDIR)$(exec_prefix)/bin/imtest $(DESTDIR)$(exec_prefix)/bin/lmtptest
-@@ -85,10 +87,10 @@
- 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
- 
- imtest: imtest.o $(DEPLIBS)
--	$(CC) $(LDFLAGS) -o imtest imtest.o $(DEPLIBS) $(IMAP_LIBS)
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o imtest imtest.o $(DEPLIBS) $(IMAP_LIBS)
- 
- imtest.pure: imtest.o $(DEPLIBS)
--	$(PURIFY) $(PUREOPT) $(CC) $(LDFLAGS) -o imtest $(OBJS) $(DEPLIBS) $(LIBS) $(IMAP_LIBS)
-+	$(PURIFY) $(PUREOPT) $(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o imtest $(OBJS) $(DEPLIBS) $(LIBS) $(IMAP_LIBS)
- 
- clean:
- 	rm -f *.o Makefile.bak makedepend.log imtest
---- cyrus-imapd-2.3.8/notifyd/Makefile.in	2007-02-18 23:43:17.000000000 +0100
-+++ cyrus-imapd-2.3.12p2/notifyd/Makefile.in	2008-09-23 21:41:12.911256605 +0300
-@@ -47,6 +47,8 @@
- 
- CC = @CC@
- RANLIB = @RANLIB@
-+LIBTOOL = @LIBTOOL@
-+top_builddir = @top_builddir@
- 
- INSTALL = @INSTALL@
- CYRUS_USER=@cyrus_user@
-@@ -68,39 +70,39 @@
- 
- NOTIFYD_LIBS = @NOTIFYD_LIBS@
- 
--SERVICE=../master/service.o
-+SERVICE=../master/service.lo
- 
- IMAP_LIBS = @IMAP_LIBS@ @LIB_RT@
- IMAP_COM_ERR_LIBS = @IMAP_COM_ERR_LIBS@
- LIB_WRAP = @LIB_WRAP@
- LIBS = @ZEPHYR_LIBS@ @LIBS@ $(IMAP_COM_ERR_LIBS)
--DEPLIBS=../imap/mutex_fake.o ../imap/libimap.a ../lib/libcyrus.a ../lib/libcyrus_min.a @DEPLIBS@
-+DEPLIBS=../imap/mutex_fake.lo ../imap/libimap.la ../lib/libcyrus.la ../lib/libcyrus_min.la @DEPLIBS@
- 
- PURIFY=/usr/local/bin/purify
- PUREOPT=-best-effort
- 
- install:
--	$(INSTALL) -m 755 notifyd $(DESTDIR)$(service_path)
-+	$(LIBTOOL) --mode=install $(INSTALL) notifyd $(DESTDIR)$(service_path)
- 
- OBJS= notifyd.o notify_null.o notify_log.o notify_mailto.o notify_zephyr.o
- 
- notifytest: notifytest.o
--	$(CC) $(LDFLAGS) -o notifytest \
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o notifytest \
- 	 notifytest.o $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
- 
- notifyd: $(OBJS) $(SERVICE)
--	$(CC) $(LDFLAGS) -o notifyd \
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o notifyd \
- 	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
- 
- notifyd.pure: $(OBJS) $(SERVICE)
- 	$(PURIFY) $(PUREOPT) \
--	$(CC) $(LDFLAGS) -o notifyd.pure \
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o notifyd.pure \
- 	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
- 
- 	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
- 
- clean:
--	rm -f notifyd notifytest *.o *.a *~ Makefile.bak makedepend.log
-+	rm -f notifyd notifytest *.lo *.la *~ Makefile.bak makedepend.log
- 
- distclean: clean
- 	rm -f Makefile
-@@ -108,8 +110,8 @@
- depend:
- 	${MAKEDEPEND} $(CPPFLAGS) $(DEFS) -I$(srcdir) $(CFLAGS) *.c $(srcdir)/*.c 1>makedepend.log 2>&1
- 
--.c.o:
--	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) \
-+%.lo: %.c
-+	$(LIBTOOL) --mode=compile --tag=CC $(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) \
- 	$<
- 
- # DO NOT DELETE THIS LINE -- make depend depends on it.
---- cyrus-imapd-2.3.12p2/master/Makefile.in~	2008-09-23 18:31:43.000000000 +0300
-+++ cyrus-imapd-2.3.12p2/master/Makefile.in	2008-09-23 18:32:06.430769398 +0300
-@@ -49,6 +49,8 @@
- CC = @CC@
- INSTALL = @INSTALL@
- RANLIB = @RANLIB@
-+LIBTOOL = @LIBTOOL@
-+top_builddir = @top_builddir@
- 
- CYRUS_USER=@cyrus_user@
- CYRUS_GROUP=@cyrus_group@
-@@ -59,7 +61,7 @@
- 
- CFLAGS = @CFLAGS@
- LDFLAGS = @LDFLAGS@ @COM_ERR_LDFLAGS@
--LIBS = ../lib/libcyrus_min.a @LIB_UCDSNMP@ @LIBS@ @COM_ERR_LIBS@
-+LIBS = ../lib/libcyrus_min.la @LIB_UCDSNMP@ @LIBS@ @COM_ERR_LIBS@
- 
- SHELL = /bin/sh
- MAKEDEPEND = @MAKEDEPEND@
-@@ -79,7 +81,7 @@
- 	$(srcdir)/../install-sh -d ${DESTDIR}$(service_path)
- 	for file in $(PROGS); \
- 	do \
--		$(INSTALL) -m 755 $$file $(DESTDIR)$(service_path) || exit 1; \
-+		$(LIBTOOL) --mode=install $(INSTALL) $$file $(DESTDIR)$(service_path) || exit 1; \
- 	done
- 
- .c.o:
-@@ -88,7 +88,7 @@
- 	$<
- 
- master: master.o masterconf.o cyrusMasterMIB.o ../lib/lock_@WITH_LOCK@.o
--	$(CC) $(LDFLAGS) -o master master.o masterconf.o cyrusMasterMIB.o ../lib/lock_@WITH_LOCK@.o $(LIBS) $(DEPLIBS)
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o master master.o masterconf.o cyrusMasterMIB.o ../lib/lock_@WITH_LOCK@.o $(LIBS) $(DEPLIBS)
- 
- clean:
- 	rm -f *.o *.a Makefile.bak $(PROGS)
---- cyrus-imapd-2.3.12p2/lib/Makefile.in~	2008-09-23 18:31:43.000000000 +0300
-+++ cyrus-imapd-2.3.12p2/lib/Makefile.in	2008-09-23 18:35:29.430522834 +0300
-@@ -43,10 +43,10 @@
+--- cyrus-imapd-2.3.12p2/lib/Makefile.in	2008-03-24 19:43:08.000000000 +0200
++++ cyrus-imapd-2.3.12p2.shared/lib/Makefile.in	2008-09-23 21:44:50.599845178 +0300
+@@ -44,10 +44,10 @@
  # $Id$
  
  # Authorization namespace.
@@ -989,7 +617,7 @@
  
  srcdir = @srcdir@
  top_srcdir = @top_srcdir@
-@@ -56,6 +56,8 @@
+@@ -57,6 +57,8 @@
  
  INSTALL = @INSTALL@
  RANLIB = @RANLIB@
@@ -998,7 +626,7 @@
  
  DEFS = @DEFS@ @LOCALDEFS@
  CPPFLAGS = -I.. @CPPFLAGS@ @COM_ERR_CPPFLAGS@ @SASLFLAGS@
-@@ -71,6 +73,7 @@
+@@ -72,6 +74,7 @@
  prefix = @prefix@
  exec_prefix = @exec_prefix@
  cyrus_prefix = @cyrus_prefix@
@@ -1006,7 +634,7 @@
  
  libdir = @libdir@
  
-@@ -93,28 +93,28 @@
+@@ -90,28 +93,28 @@
  	$(srcdir)/libcyr_cfg.h $(srcdir)/byteorder64.h \
  	$(srcdir)/md5.h $(srcdir)/hmac-md5.h
  
@@ -1047,7 +675,7 @@
  	 $(RANLIB) $(DESTDIR)$(libdir)/libcyrus.a
  	for file in $(LIBCYR_HDRS); \
  	do \
-@@ -120,19 +123,15 @@
+@@ -122,19 +125,15 @@
  		$(INSTALL) -m 644 $$file $(DESTDIR)$(prefix)/include/cyrus || exit 1; \
  	done
  
@@ -1074,14 +702,341 @@
  
  imapopts.c: imapoptions $(srcdir)/../tools/config2header
  	$(srcdir)/../tools/config2header CC="$(CC)" $(srcdir)/imapopts.c $(srcdir)/imapopts.h < $(srcdir)/imapoptions
---- cyrus-imapd-2.3.8/depot/Makefile.in.wiget	2004-05-28 15:39:38.000000000 +0200
-+++ cyrus-imapd-2.3.8/depot/Makefile.in	2007-02-18 23:43:17.000000000 +0100
-@@ -49,7 +49,7 @@
+--- cyrus-imapd-2.3.12p2/master/Makefile.in	2008-03-24 19:47:41.000000000 +0200
++++ cyrus-imapd-2.3.12p2.shared/master/Makefile.in	2008-09-23 21:44:50.599845178 +0300
+@@ -48,6 +48,8 @@
+ CC = @CC@
+ INSTALL = @INSTALL@
+ RANLIB = @RANLIB@
++LIBTOOL = @LIBTOOL@
++top_builddir = @top_builddir@
+ 
+ CYRUS_USER=@cyrus_user@
+ CYRUS_GROUP=@cyrus_group@
+@@ -58,7 +60,7 @@
+ 
+ CFLAGS = @CFLAGS@
+ LDFLAGS = @LDFLAGS@ @COM_ERR_LDFLAGS@
+-LIBS = ../lib/libcyrus_min.a @LIB_UCDSNMP@ @LIBS@ @COM_ERR_LIBS@
++LIBS = ../lib/libcyrus_min.la @LIB_UCDSNMP@ @LIBS@ @COM_ERR_LIBS@
+ 
+ SHELL = /bin/sh
+ MAKEDEPEND = @MAKEDEPEND@
+@@ -78,7 +80,7 @@
+ 	$(srcdir)/../install-sh -d ${DESTDIR}$(service_path)
+ 	for file in $(PROGS); \
+ 	do \
+-		$(INSTALL) -m 755 $$file $(DESTDIR)$(service_path) || exit 1; \
++		$(LIBTOOL) --mode=install $(INSTALL) $$file $(DESTDIR)$(service_path) || exit 1; \
+ 	done
+ 
+ .c.o:
+@@ -86,7 +88,7 @@
+ 	$<
+ 
+ master: master.o masterconf.o cyrusMasterMIB.o ../lib/lock_@WITH_LOCK@.o
+-	$(CC) $(LDFLAGS) -o master master.o masterconf.o cyrusMasterMIB.o ../lib/lock_@WITH_LOCK@.o $(LIBS) $(DEPLIBS)
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o master master.o masterconf.o cyrusMasterMIB.o ../lib/lock_@WITH_LOCK@.o $(LIBS) $(DEPLIBS)
+ 
+ clean:
+ 	rm -f *.o *.a Makefile.bak $(PROGS)
+--- cyrus-imapd-2.3.12p2/netnews/Makefile.in	2008-03-24 21:06:32.000000000 +0200
++++ cyrus-imapd-2.3.12p2.shared/netnews/Makefile.in	2008-09-23 21:44:50.587844484 +0300
+@@ -49,11 +49,13 @@
+ CC = @CC@
+ INSTALL = @INSTALL@
+ RANLIB = @RANLIB@
++LIBTOOL = @LIBTOOL@
++top_builddir = @top_builddir@
+ 
  DEFS = @DEFS@
- CPPFLAGS = -I. -I$(srcdir) -I$(srcdir)/../lib -I$(srcdir)/../et @CPPFLAGS@ 
- LIBS = @LIBS@ 
--DEPLIBS = ../lib/libcyrus.a ../lib/libcyrus_min.a @DEPLIBS@
-+DEPLIBS = ../lib/libcyrus.la ../lib/libcyrus_min.la @DEPLIBS@
+ CPPFLAGS = -I.. -I$(srcdir) -I$(srcdir)/../lib -I$(srcdir)/../com_err/et @CPPFLAGS@
+ LIBS =  @IMAP_LIBS@ @LIB_RT@
+-DEPLIBS = ../lib/libcyrus.a ../lib/libcyrus_min.a @DEPLIBS@ 
++DEPLIBS = ../lib/libcyrus.la ../lib/libcyrus_min.la @DEPLIBS@ 
  
  CFLAGS = @CFLAGS@
  LDFLAGS = @LDFLAGS@
+@@ -71,13 +73,13 @@
+ all: remotepurge
+ 
+ install:
+-	$(INSTALL) -s -m 755 remotepurge $(DESTDIR)$(service_path)
++	$(LIBTOOL) --mode=install $(INSTALL) remotepurge $(DESTDIR)$(service_path)
+ 
+ .c.o:
+ 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
+ 
+ remotepurge: $(OBJS) $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o remotepurge $(OBJS) \
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o remotepurge $(OBJS) \
+ 		$(DEPLIBS) $(LIBS)
+ 
+ 
+--- cyrus-imapd-2.3.12p2/notifyd/Makefile.in	2008-03-24 21:59:32.000000000 +0200
++++ cyrus-imapd-2.3.12p2.shared/notifyd/Makefile.in	2008-09-23 21:44:50.599845178 +0300
+@@ -49,6 +49,8 @@
+ 
+ CC = @CC@
+ RANLIB = @RANLIB@
++LIBTOOL = @LIBTOOL@
++top_builddir = @top_builddir@
+ 
+ INSTALL = @INSTALL@
+ CYRUS_USER=@cyrus_user@
+@@ -108,8 +110,8 @@
+ depend:
+ 	${MAKEDEPEND} $(CPPFLAGS) $(DEFS) -I$(srcdir) $(CFLAGS) *.c $(srcdir)/*.c 1>makedepend.log 2>&1
+ 
+-.c.o:
+-	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) \
++%.lo: %.c
++	$(LIBTOOL) --mode=compile --tag=CC $(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) \
+ 	$<
+ 
+ # DO NOT DELETE THIS LINE -- make depend depends on it.
+--- cyrus-imapd-2.3.12p2/perl/imap/IMAP.xs	2008-04-04 15:47:09.000000000 +0300
++++ cyrus-imapd-2.3.12p2.shared/perl/imap/IMAP.xs	2008-09-23 21:44:50.595844947 +0300
+@@ -76,6 +76,7 @@
+ {
+   croak(s);
+ }
++const int config_need_data = 0;
+ 
+ /*
+  * Decrement the refcounts of the Perl SV's in the passed rock, then free the
+--- cyrus-imapd-2.3.12p2/perl/imap/Makefile.PL	2007-10-17 23:06:33.000000000 +0300
++++ cyrus-imapd-2.3.12p2.shared/perl/imap/Makefile.PL	2008-09-23 21:44:50.595844947 +0300
+@@ -63,8 +63,7 @@
+     'macro'	=> {'IMCLIENT_LIBS' => ''},	# hack
+     'clean'	=> {'FILES' => 'libcyrperl.a cyradm'},
+     'OBJECT'    => 'IMAP.o',
+-    'MYEXTLIB'  => '../../lib/libcyrus.a ../../lib/libcyrus_min.a',
+-    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT -lssl -lcrypto"],
++    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT -lssl -lcrypto -L../../lib/.libs -lcyrus -lcyrus_min"],
+     'DEFINE'	=> '-DPERL_POLLUTE',    # e.g., '-DHAVE_SOMETHING' 
+     'INC'	=> "-I../../lib -I../.. -I../../com_err/et $SASL_INC $OPENSSL_INC", 
+     'EXE_FILES' => [cyradm],
+--- cyrus-imapd-2.3.12p2/perl/sieve/lib/Makefile.in	2008-04-04 15:47:17.000000000 +0300
++++ cyrus-imapd-2.3.12p2.shared/perl/sieve/lib/Makefile.in	2008-09-23 21:44:50.595844947 +0300
+@@ -50,12 +50,14 @@
+ CC = @CC@
+ INSTALL = @INSTALL@
+ RANLIB = @RANLIB@
++LIBTOOL = @LIBTOOL@
++top_builddir = @top_builddir@
+ 
+ DEFS = @DEFS@ @LOCALDEFS@ -Dbool=char -DHAS_BOOL
+ CPPFLAGS = -I. -I../../.. -I$(srcdir) -I$(srcdir)/../../../lib @CPPFLAGS@ @DYNSASLFLAGS@ @COM_ERR_CPPFLAGS@
+-LIBS = ../../../lib/libcyrus.a ../../../lib/libcyrus_min.a @LIB_DYN_SASL@ @LIBS@
++LIBS = ../../../lib/libcyrus.la ../../../lib/libcyrus_min.la @LIB_DYN_SASL@ @LIBS@
+ IMAP_LIBS = @IMAP_LIBS@
+-DEPLIBS = ../../../lib/libcyrus.a ../../../lib/libcyrus_min.a @DEPLIBS@
++DEPLIBS = ../../../lib/libcyrus.la ../../../lib/libcyrus_min.la @DEPLIBS@
+ 
+ MAKEDEPEND_CFLAGS = @CFLAGS@
+ CFLAGS = @CFLAGS@ @PERL_CCCDLFLAGS@
+@@ -68,19 +70,17 @@
+ exec_prefix = @exec_prefix@
+ cyrus_prefix = @cyrus_prefix@
+ 
+-OBJS=isieve.o lex.o mystring.o request.o
++OBJS=isieve.lo lex.lo mystring.lo request.lo
+ 
+-all: libisieve.a
++all: libisieve.la
+ 
+ install:
+ 
+-.c.o:
+-	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
++%.lo: %.c
++	$(LIBTOOL) --mode=compile $(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
+ 
+-libisieve.a: $(OBJS)
+-	rm -f libisieve.a
+-	ar cr libisieve.a $(OBJS)
+-	$(RANLIB) libisieve.a
++libisieve.la: $(OBJS)
++	$(LIBTOOL) --mode=link --tag=CC $(CC) -o libisievie.la $(OBJS)
+ 
+ clean:
+ 	rm -f *.o Makefile.bak makedepend.log libisieve.a
+--- cyrus-imapd-2.3.12p2/perl/sieve/managesieve/Makefile.PL	2008-04-04 15:47:23.000000000 +0300
++++ cyrus-imapd-2.3.12p2.shared/perl/sieve/managesieve/Makefile.PL	2008-09-23 21:44:50.591844716 +0300
+@@ -60,8 +60,8 @@
+     'NAME'	=> 'Cyrus::SIEVE::managesieve',
+     'ABSTRACT'  => 'Cyurs Sieve management interface',
+     'VERSION_FROM' => 'managesieve.pm', # finds $VERSION
+-    'MYEXTLIB'  => '../lib/isieve.o ../lib/lex.o ../lib/mystring.o ../lib/request.o ../../../lib/libcyrus.a ../../../lib/libcyrus_min.a',
+-    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT -lssl -lcrypto"], 
++    'MYEXTLIB'  => '../lib/.libs/isieve.o ../lib/.libs/lex.o ../lib/.libs/mystring.o ../lib/.libs/request.o',
++    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT -lssl -lcrypto -L../../../lib/.libs -lcyrus -lcyrus_min"], 
+     'DEFINE'	=> '-DPERL_POLLUTE',     # e.g., '-DHAVE_SOMETHING' 
+     'INC'	=> "-I../lib/ -I../../../lib/ $SASL_INC $OPENSSL_INC",
+ );
+--- cyrus-imapd-2.3.12p2/perl/sieve/managesieve/managesieve.xs	2008-04-04 15:47:24.000000000 +0300
++++ cyrus-imapd-2.3.12p2.shared/perl/sieve/managesieve/managesieve.xs	2008-09-23 21:44:50.595844947 +0300
+@@ -72,6 +72,7 @@
+     croak("failure: %s", s);
+     exit(-1);
+ }
++const int config_need_data = 0;
+ 
+ static int
+ perlsieve_getpass(conn, context, id, psecret)
+--- cyrus-imapd-2.3.12p2/ptclient/Makefile.in	2008-03-24 20:34:22.000000000 +0200
++++ cyrus-imapd-2.3.12p2.shared/ptclient/Makefile.in	2008-09-23 21:44:50.587844484 +0300
+@@ -51,6 +51,8 @@
+ CC = @CC@
+ INSTALL = @INSTALL@
+ RANLIB = @RANLIB@
++LIBTOOL = @LIBTOOL@
++top_builddir = @top_builddir@
+ 
+ DEFS = @DEFS@
+ CPPFLAGS = -I.. -I$(srcdir)/../imap -I$(srcdir)/../lib @COM_ERR_CPPFLAGS@ @CPPFLAGS@ @SASLFLAGS@
+@@ -60,8 +62,8 @@
+ LIBS = $(IMAP_LIBS) @COM_ERR_LIBS@
+ LIB_SASL = @LIB_SASL@
+ LIB_WRAP = @LIB_WRAP@
+-DEPLIBS = ../imap/libimap.a ../lib/libcyrus.a ../lib/libcyrus_min.a @DEPLIBS@
+-UTIL_LIBS = ../imap/mutex_fake.o ../imap/cli_fatal.o
++DEPLIBS = ../imap/libimap.la ../lib/libcyrus.la ../lib/libcyrus_min.la @DEPLIBS@
++UTIL_LIBS = ../imap/mutex_fake.lo ../imap/cli_fatal.lo
+ 
+ LDAP_LIBS=@LDAP_LIBS@
+ LDAP_CPPFLAGS=@LDAP_CPPFLAGS@
+@@ -83,42 +85,42 @@
+ 
+ LIB_RT = @LIB_RT@
+ 
+-SERVICE=../master/service.o
+-SERVICETHREAD=../master/service-thread.o
++SERVICE=../master/service.lo
++SERVICETHREAD=../master/service-thread.lo
+ 
+ all: $(PROGS)
+ 
+ install:
+-	$(INSTALL) -m 755 ptloader $(DESTDIR)$(service_path)
+-	$(INSTALL) -m 755 ptexpire $(DESTDIR)$(service_path)
+-	$(INSTALL) -m 755 ptdump $(DESTDIR)$(service_path)
++	$(LIBTOOL) --mode=install $(INSTALL) ptloader $(DESTDIR)$(service_path)
++	$(LIBTOOL) --mode=install $(INSTALL) ptexpire $(DESTDIR)$(service_path)
++	$(LIBTOOL) --mode=install $(INSTALL) ptdump $(DESTDIR)$(service_path)
+ 
+-.c.o:
+-	$(CC) -c $(CPPFLAGS) $(LDAP_CPPFLAGS) $(DEFS) $(CFLAGS) $<
++%.lo: %.c
++	$(LIBTOOL) --mode=compile --tag=CC $(CC) -c $(CPPFLAGS) $(LDAP_CPPFLAGS) $(DEFS) $(CFLAGS) $<
+ 
+-ptloader: ptloader.o afskrb.o ldap.o ../imap/mutex_fake.o $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o $@ ptloader.o afskrb.o ldap.o ../imap/mutex_fake.o $(SERVICETHREAD) ${AFS_LDFLAGS} ${LDAP_LDFLAGS} $(AFS_LIBS) ${LDAP_LIBS} $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
++ptloader: ptloader.lo afskrb.lo ldap.lo ../imap/mutex_fake.lo $(DEPLIBS)
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptloader.lo afskrb.lo ldap.lo ../imap/mutex_fake.lo $(SERVICETHREAD) ${AFS_LDFLAGS} ${LDAP_LDFLAGS} $(AFS_LIBS) ${LDAP_LIBS} $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
+ 
+-ptloader.pure: ptloader.o afskrb.o ldap.o ../imap/mutex_fake.o $(DEPLIBS)
+-	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ ptloader.o afskrb.o ldap.o ../imap/mutex_fake.o $(SERVICETHREAD) ${AFS_LDFLAGS} ${LDAP_LDFLAGS} $(AFS_LIBS) ${LDAP_LIBS} $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
++ptloader.pure: ptloader.lo afskrb.lo ldap.lo ../imap/mutex_fake.lo $(DEPLIBS)
++	$(PURIFY) $(PUREARGS) $(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptloader.lo afskrb.lo ldap.lo ../imap/mutex_fake.lo $(SERVICETHREAD) ${AFS_LDFLAGS} ${LDAP_LDFLAGS} $(AFS_LIBS) ${LDAP_LIBS} $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
+ 
+-ptexpire: ptexpire.o $(DEPLIBS) $(UTIL_LIBS)
+-	$(CC) $(LDFLAGS) -o $@ ptexpire.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
++ptexpire: ptexpire.lo $(DEPLIBS) $(UTIL_LIBS)
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptexpire.lo $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
+ 
+-ptexpire.pure: ptexpire.o $(DEPLIBS) $(UTIL_LIBS)
+-	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ ptexpire.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
++ptexpire.pure: ptexpire.lo $(DEPLIBS) $(UTIL_LIBS)
++	$(PURIFY) $(PUREARGS) $(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptexpire.lo $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
+ 
+-ptdump: ptdump.o $(DEPLIBS) $(UTIL_LIBS)
+-	$(CC) $(LDFLAGS) -o $@ ptdump.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
++ptdump: ptdump.lo $(DEPLIBS) $(UTIL_LIBS)
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptdump.lo $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
+ 
+-ptdump.pure: ptexpire.o $(DEPLIBS) $(UTIL_LIBS)
+-	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ ptdump.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
++ptdump.pure: ptexpire.lo $(DEPLIBS) $(UTIL_LIBS)
++	$(PURIFY) $(PUREARGS) $(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptdump.lo $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
+ 
+-ptextract: ptextract.o $(DEPLIBS) $(UTIL_LIBS)
+-	$(CC) $(LDFLAGS) -o $@ ptextract.o $(UTIL_LIBS) $(DEPLIBS) $(LIBS)
++ptextract: ptextract.lo $(DEPLIBS) $(UTIL_LIBS)
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ ptextract.lo $(UTIL_LIBS) $(DEPLIBS) $(LIBS)
+ 
+ clean:
+-	rm -f *.o Makefile.bak $(PROGS) makedepend.log
++	rm -f *.lo Makefile.bak $(PROGS) makedepend.log
+ 
+ distclean: clean
+ 	rm -f Makefile
+--- cyrus-imapd-2.3.12p2/sieve/Makefile.in	2008-03-24 22:08:46.000000000 +0200
++++ cyrus-imapd-2.3.12p2.shared/sieve/Makefile.in	2008-09-23 21:44:50.587844484 +0300
+@@ -55,6 +55,8 @@
+ YFLAGS = -d
+ LEX = @LEX@
+ RANLIB = @RANLIB@
++LIBTOOL = @LIBTOOL@
++top_builddir = @top_builddir@
+ COMPILE_ET = @COMPILE_ET@
+ 
+ DEFS = @DEFS@ @LOCALDEFS@
+@@ -69,7 +71,7 @@
+ IMAP_COM_ERR_LIBS = @IMAP_COM_ERR_LIBS@
+ IMAP_LIBS = @IMAP_LIBS@ @LIB_RT@
+ LIBS = libsieve.a $(IMAP_LIBS) $(IMAP_COM_ERR_LIBS)
+-DEPLIBS=../lib/libcyrus.a ../lib/libcyrus_min.a @DEPLIBS@
++DEPLIBS=../lib/libcyrus.la ../lib/libcyrus_min.la @DEPLIBS@
+ 
+ BUILT_SOURCES = addr.c addr.h addr-lex.c \
+ 	sieve.c sieve.h sieve-lex.c \
+@@ -81,10 +83,10 @@
+ 
+ install: sievec
+ 	$(srcdir)/../install-sh -d ${DESTDIR}$(service_path)
+-	$(srcdir)/../install-sh -c -m 755 sievec $(DESTDIR)$(service_path) || exit
++	$(LIBTOOL) --mode=install $(srcdir)/../install-sh -c -m 755 sievec $(DESTDIR)$(service_path) || exit
+ 
+ test: $(DEPLIBS) libsieve.a test.o ../imap/message.o
+-	$(CC) $(LDFLAGS) -o test test.o ../imap/message.o \
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o test test.o ../imap/message.o \
+ 	libsieve.a $(DEPLIBS) $(LIBS)
+ 
+ OBJS = sieve_err.o \
+@@ -123,10 +125,10 @@
+ 	$(RANLIB) libsieve.a
+ 
+ sievec: sievec.o libsieve.a
+-	$(CC) $(LDFLAGS) -o sievec sievec.o libsieve.a $(DEPLIBS) $(LIBS)
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o sievec sievec.o libsieve.a $(DEPLIBS) $(LIBS)
+ 
+ sieved: sieved.o libsieve.a
+-	$(CC) $(LDFLAGS) -o sieved sieved.o libsieve.a $(DEPLIBS) $(LIBS)
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o sieved sieved.o libsieve.a $(DEPLIBS) $(LIBS)
+ 
+ 
+ sieve_interface.h: sieve_err.h
+--- cyrus-imapd-2.3.12p2/timsieved/Makefile.in	2008-03-24 22:20:57.000000000 +0200
++++ cyrus-imapd-2.3.12p2.shared/timsieved/Makefile.in	2008-09-23 21:44:50.587844484 +0300
+@@ -49,6 +49,8 @@
+ 
+ CC = @CC@
+ RANLIB = @RANLIB@
++LIBTOOL = @LIBTOOL@
++top_builddir = @top_builddir@
+ 
+ INSTALL = @INSTALL@
+ CYRUS_USER=@cyrus_user@
+@@ -105,8 +107,8 @@
+ depend:
+ 	${MAKEDEPEND} $(CPPFLAGS) $(DEFS) -I$(srcdir) $(CFLAGS) *.c $(srcdir)/*.c 1>makedepend.log 2>&1
+ 
+-.c.o:
+-	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) \
++%.lo: %.c
++	$(LIBTOOL) --mode=compile --tag=CC $(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) \
+ 	$<
+ 
+ # DO NOT DELETE THIS LINE -- make depend depends on it.
