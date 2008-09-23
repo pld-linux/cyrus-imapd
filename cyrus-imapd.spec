@@ -27,6 +27,7 @@ Source12:	cyrus.conf
 Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
 Patch1:		%{name}-shared.patch
+Patch2:		%{name}-verifydbver.patch
 URL:		http://cyrusimap.web.cmu.edu/imapd/
 BuildRequires:	autoconf >= 2.54
 BuildRequires:	automake
@@ -166,6 +167,7 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %setup -q
 %patch0 -p1
 %patch1 -p1
+%patch2 -p1
 
 rm -rf autom4te.cache
 
@@ -187,11 +189,11 @@ cp -f %{_datadir}/automake/config.* .
 cp -f %{_datadir}/automake/install-sh .
 %configure \
 	--with-auth=unix \
-	--without-libwrap \
 	--with-cyrus-prefix=%{_libexecdir} \
 	--with-service-path=%{_libexecdir} \
 	--with-com_err=/usr \
 	--with-perl=%{__perl} \
+	--without-libwrap \
 	--enable-nntp \
 	--enable-replication
 %{__make} \
