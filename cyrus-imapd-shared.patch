@@ -878,8 +878,8 @@
  
  distclean: clean
  	rm -f Makefile
---- cyrus-imapd-2.3.12p2.shared/notifyd/Makefile.in	2008-09-23 21:44:50.599845178 +0300
-+++ cyrus-imapd-2.3.12p2/notifyd/Makefile.in	2008-09-23 21:50:36.163828302 +0300
+--- cyrus-imapd-2.3.12p2/notifyd/Makefile.in	2008-09-23 21:50:36.163828302 +0300
++++ cyrus-imapd-2.3.12p2/notifyd/Makefile.in	2008-09-23 22:45:04.180745070 +0300
 @@ -49,6 +49,8 @@
  
  CC = @CC@
@@ -905,7 +905,7 @@
  
  PURIFY=/usr/local/bin/purify
  PUREOPT=-best-effort
-@@ -84,11 +86,11 @@
+@@ -84,23 +86,23 @@
  install:
  	$(INSTALL) -m 755 notifyd $(DESTDIR)$(service_path)
  
@@ -913,14 +913,21 @@
 +OBJS= notifyd.lo notify_null.lo notify_log.lo notify_mailto.lo notify_zephyr.lo
  
 -notifytest: notifytest.o
-+notifytest: notifytest.lo
- 	$(CC) $(LDFLAGS) -o notifytest \
+-	$(CC) $(LDFLAGS) -o notifytest \
 -	 notifytest.o $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
++notifytest: notifytest.lo
++	$(LIBTOOL) --mode=compile --tag=CC $(CC) $(LDFLAGS) -o notifytest \
 +	 notifytest.lo $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
  
  notifyd: $(OBJS) $(SERVICE)
- 	$(CC) $(LDFLAGS) -o notifyd \
-@@ -100,7 +102,7 @@
+-	$(CC) $(LDFLAGS) -o notifyd \
++	$(LIBTOOL) --mode=compile --tag=CC $(CC) $(LDFLAGS) -o notifyd \
+ 	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
+ 
+ notifyd.pure: $(OBJS) $(SERVICE)
+ 	$(PURIFY) $(PUREOPT) \
+-	$(CC) $(LDFLAGS) -o notifyd.pure \
++	$(LIBTOOL) --mode=compile --tag=CC $(CC) $(LDFLAGS) -o notifyd.pure \
  	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
  
  clean:
@@ -1224,8 +1231,8 @@
  	$<
  
  # DO NOT DELETE THIS LINE -- make depend depends on it.
---- cyrus-imapd-2.3.12p2.shared/timsieved/Makefile.in	2008-09-23 21:44:50.587844484 +0300
-+++ cyrus-imapd-2.3.12p2/timsieved/Makefile.in	2008-09-23 21:51:30.334960853 +0300
+--- cyrus-imapd-2.3.12p2/timsieved/Makefile.in	2008-09-23 21:51:30.334960853 +0300
++++ cyrus-imapd-2.3.12p2/timsieved/Makefile.in	2008-09-23 22:45:44.807093322 +0300
 @@ -49,6 +49,8 @@
  
  CC = @CC@
@@ -1251,7 +1258,7 @@
  
  PURIFY=/usr/local/bin/purify
  PUREOPT=-best-effort
-@@ -84,8 +86,8 @@
+@@ -84,20 +86,20 @@
  install:
  	$(INSTALL) -m 755 timsieved $(DESTDIR)$(service_path)
  
@@ -1261,8 +1268,14 @@
 +	../imap/proxy.lo
  
  timsieved: $(OBJS) $(SERVICE)
- 	$(CC) $(LDFLAGS) -o timsieved \
-@@ -97,7 +99,7 @@
+-	$(CC) $(LDFLAGS) -o timsieved \
++	$(LIBTOOL) --mode=compile --tag=CC $(CC) $(LDFLAGS) -o timsieved \
+ 	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
+ 
+ timsieved.pure: $(OBJS) $(SERVICE)
+ 	$(PURIFY) $(PUREOPT) \
+-	$(CC) $(LDFLAGS) -o timsieved.pure \
++	$(LIBTOOL) --mode=compile --tag=CC $(CC) $(LDFLAGS) -o timsieved.pure \
  	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
  
  clean:
