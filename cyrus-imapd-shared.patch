@@ -878,8 +878,8 @@
  
  distclean: clean
  	rm -f Makefile
---- cyrus-imapd-2.3.12p2/notifyd/Makefile.in	2008-09-23 21:50:36.163828302 +0300
-+++ cyrus-imapd-2.3.12p2/notifyd/Makefile.in	2008-09-23 22:45:04.180745070 +0300
+--- cyrus-imapd-2.3.12p2/notifyd/Makefile.in	2008-09-23 22:45:04.180745070 +0300
++++ cyrus-imapd-2.3.12p2/notifyd/Makefile.in	2008-09-23 22:54:37.285871790 +0300
 @@ -49,6 +49,8 @@
  
  CC = @CC@
@@ -916,18 +916,18 @@
 -	$(CC) $(LDFLAGS) -o notifytest \
 -	 notifytest.o $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
 +notifytest: notifytest.lo
-+	$(LIBTOOL) --mode=compile --tag=CC $(CC) $(LDFLAGS) -o notifytest \
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o notifytest \
 +	 notifytest.lo $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
  
  notifyd: $(OBJS) $(SERVICE)
 -	$(CC) $(LDFLAGS) -o notifyd \
-+	$(LIBTOOL) --mode=compile --tag=CC $(CC) $(LDFLAGS) -o notifyd \
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o notifyd \
  	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
  
  notifyd.pure: $(OBJS) $(SERVICE)
  	$(PURIFY) $(PUREOPT) \
 -	$(CC) $(LDFLAGS) -o notifyd.pure \
-+	$(LIBTOOL) --mode=compile --tag=CC $(CC) $(LDFLAGS) -o notifyd.pure \
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o notifyd.pure \
  	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
  
  clean:
@@ -1231,8 +1231,8 @@
  	$<
  
  # DO NOT DELETE THIS LINE -- make depend depends on it.
---- cyrus-imapd-2.3.12p2/timsieved/Makefile.in	2008-09-23 21:51:30.334960853 +0300
-+++ cyrus-imapd-2.3.12p2/timsieved/Makefile.in	2008-09-23 22:45:44.807093322 +0300
+--- cyrus-imapd-2.3.12p2/timsieved/Makefile.in	2008-09-23 22:45:44.807093322 +0300
++++ cyrus-imapd-2.3.12p2/timsieved/Makefile.in	2008-09-23 22:53:34.478241318 +0300
 @@ -49,6 +49,8 @@
  
  CC = @CC@
@@ -1269,13 +1269,13 @@
  
  timsieved: $(OBJS) $(SERVICE)
 -	$(CC) $(LDFLAGS) -o timsieved \
-+	$(LIBTOOL) --mode=compile --tag=CC $(CC) $(LDFLAGS) -o timsieved \
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o timsieved \
  	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
  
  timsieved.pure: $(OBJS) $(SERVICE)
  	$(PURIFY) $(PUREOPT) \
 -	$(CC) $(LDFLAGS) -o timsieved.pure \
-+	$(LIBTOOL) --mode=compile --tag=CC $(CC) $(LDFLAGS) -o timsieved.pure \
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o timsieved.pure \
  	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
  
  clean:
