@@ -661,8 +661,8 @@
  
 -
  # DO NOT DELETE THIS LINE -- make depend depends on it.
---- cyrus-imapd-2.3.12p2.shared/lib/Makefile.in	2008-09-23 21:44:50.599845178 +0300
-+++ cyrus-imapd-2.3.12p2/lib/Makefile.in	2008-09-23 21:52:42.531135729 +0300
+--- cyrus-imapd-2.3.12p2/lib/Makefile.in	2008-09-23 21:52:42.531135729 +0300
++++ cyrus-imapd-2.3.12p2/lib/Makefile.in	2008-09-24 00:04:08.275006403 +0300
 @@ -44,10 +44,10 @@
  # $Id$
  
@@ -730,8 +730,8 @@
 -	$(INSTALL) -m 644 libcyrus.a $(DESTDIR)$(libdir)
 -	$(INSTALL) -m 644 libcyrus_min.a $(DESTDIR)$(libdir)
 -	 $(RANLIB) $(DESTDIR)$(libdir)/libcyrus.a
-+	$(LIBTOOL) --mode=install $(INSTALL) -m 644 libcyrus.la $(DESTDIR)$(libdir)
 +	$(LIBTOOL) --mode=install $(INSTALL) -m 644 libcyrus_min.la $(DESTDIR)$(libdir)
++	$(LIBTOOL) --mode=install $(INSTALL) -m 644 libcyrus.la $(DESTDIR)$(libdir)
  	for file in $(LIBCYR_HDRS); \
  	do \
  		$(INSTALL) -m 644 $$file $(DESTDIR)$(prefix)/include/cyrus || exit 1; \
