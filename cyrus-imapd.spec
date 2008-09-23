@@ -1,3 +1,7 @@
+# TODO
+# - unpackaged:
+#   /usr/lib/cyrus/cyr_synclog
+#   /usr/lib/cyrus/make_sha1
 %include	/usr/lib/rpm/macros.perl
 Summary:	High-performance mail store with imap and pop3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
@@ -212,8 +216,8 @@ touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 
 %{__make} install \
 	DESTDIR=$RPM_BUILD_ROOT \
-	CYRUS_USER="`id -u`" \
-	CYRUS_GROUP="`id -g`" \
+	CYRUS_USER=%(id -u) \
+	CYRUS_GROUP=%(id -g) \
 	INSTALLDIRS=vendor
 
 install deliver-wrapper $RPM_BUILD_ROOT%{_libexecdir}/deliver-wrapper
