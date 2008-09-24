@@ -112,8 +112,8 @@
  
  distclean: clean
  	rm -f Makefile
---- cyrus-imapd-2.3.12p2/imap/Makefile.in	2008-04-04 00:09:51.000000000 +0300
-+++ cyrus-imapd-2.3.12p2.shared/imap/Makefile.in	2008-09-23 21:44:50.591844716 +0300
+--- cyrus-imapd-2.3.12p2.shared/imap/Makefile.in	2008-09-23 21:44:50.591844716 +0300
++++ cyrus-imapd-2.3.12p2/imap/Makefile.in	2008-09-24 16:29:37.354850372 +0300
 @@ -45,16 +45,18 @@
  
  # \Seen state database.  Either 'db' (berkeley db) or 
@@ -179,7 +179,17 @@
  
  PROGS = imapd lmtpd pop3d \
  	fud smmapd reconstruct quota mbpath ipurge cyr_dbtool cyr_synclog \
-@@ -139,23 +141,21 @@
+@@ -131,31 +133,28 @@
+ 
+ install:
+ 	$(srcdir)/../install-sh -d ${DESTDIR}$(service_path)
+-	for file in $(PROGS); \
+-	do \
+-		$(INSTALL) -m 755 $$file $(DESTDIR)$(service_path) || exit 1; \
++	for file in $(PROGS); do \
++		$(LIBTOOL) --mode=install $(INSTALL) -m 755 $$file $(DESTDIR)$(service_path) || exit 1; \
+ 	done
+ 	ln -f $(DESTDIR)$(service_path)/pop3d $(DESTDIR)$(service_path)/pop3proxyd
  	ln -f $(DESTDIR)$(service_path)/imapd $(DESTDIR)$(service_path)/proxyd
  	ln -f $(DESTDIR)$(service_path)/lmtpd $(DESTDIR)$(service_path)/lmtpproxyd
  
@@ -208,7 +218,7 @@
  
  pushstats.c: pushstats.snmp $(srcdir)/../snmp/snmpgen
  	$(srcdir)/../snmp/snmpgen $(srcdir)/pushstats.snmp
-@@ -183,179 +183,179 @@
+@@ -183,179 +182,179 @@
  mupdate_err.h: mupdate_err.c
  
  ### Services
@@ -878,8 +888,8 @@
  
  distclean: clean
  	rm -f Makefile
---- cyrus-imapd-2.3.12p2/notifyd/Makefile.in	2008-09-23 22:45:04.180745070 +0300
-+++ cyrus-imapd-2.3.12p2/notifyd/Makefile.in	2008-09-23 22:54:37.285871790 +0300
+--- cyrus-imapd-2.3.12p2/notifyd/Makefile.in	2008-09-23 22:54:37.285871790 +0300
++++ cyrus-imapd-2.3.12p2/notifyd/Makefile.in	2008-09-24 16:33:47.953341763 +0300
 @@ -49,6 +49,8 @@
  
  CC = @CC@
@@ -905,9 +915,12 @@
  
  PURIFY=/usr/local/bin/purify
  PUREOPT=-best-effort
-@@ -84,23 +86,23 @@
+@@ -82,25 +84,25 @@
+ all: notifyd
+ 
  install:
- 	$(INSTALL) -m 755 notifyd $(DESTDIR)$(service_path)
+-	$(INSTALL) -m 755 notifyd $(DESTDIR)$(service_path)
++	$(LIBTOOL) --mode=install $(INSTALL) -m 755 notifyd $(DESTDIR)$(service_path)
  
 -OBJS= notifyd.o notify_null.o notify_log.o notify_mailto.o notify_zephyr.o
 +OBJS= notifyd.lo notify_null.lo notify_log.lo notify_mailto.lo notify_zephyr.lo
@@ -1231,8 +1244,8 @@
  	$<
  
  # DO NOT DELETE THIS LINE -- make depend depends on it.
---- cyrus-imapd-2.3.12p2/timsieved/Makefile.in	2008-09-23 22:45:44.807093322 +0300
-+++ cyrus-imapd-2.3.12p2/timsieved/Makefile.in	2008-09-23 22:53:34.478241318 +0300
+--- cyrus-imapd-2.3.12p2/timsieved/Makefile.in	2008-09-23 22:53:34.478241318 +0300
++++ cyrus-imapd-2.3.12p2/timsieved/Makefile.in	2008-09-24 16:34:58.453418565 +0300
 @@ -49,6 +49,8 @@
  
  CC = @CC@
@@ -1258,9 +1271,12 @@
  
  PURIFY=/usr/local/bin/purify
  PUREOPT=-best-effort
-@@ -84,20 +86,20 @@
+@@ -82,22 +84,22 @@
+ all: timsieved
+ 
  install:
- 	$(INSTALL) -m 755 timsieved $(DESTDIR)$(service_path)
+-	$(INSTALL) -m 755 timsieved $(DESTDIR)$(service_path)
++	$(LIBTOOL) --mode=install $(INSTALL) -m 755 timsieved $(DESTDIR)$(service_path)
  
 -OBJS= actions.o lex.o mystring.o scripttest.o timsieved.o parser.o \
 -	../imap/proxy.o
