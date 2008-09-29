@@ -1,0 +1,93 @@
+#!/bin/sh
+#
+# cyrus-imapd	cyrus-imapd IMAP Daemon
+#
+# chkconfig:	345 85 15
+#
+# description:	cyrus-imapd
+#
+# $Id$
+
+# Source function library
+. /etc/rc.d/init.d/functions
+
+# Get network config
+. /etc/sysconfig/network
+
+# Check that networking is up.
+if is_yes "${NETWORKING}"; then
+	if [ ! -f /var/lock/subsys/network -a "$1" != stop -a "$1" != status ]; then
+		msg_network_down "Cyrus IMAP Daemon"
+		exit 1
+	fi
+else
+	exit 0
+fi
+
+start() {
+	# Check if the service is already running?
+	if [ ! -f /var/lock/subsys/cyrus-imapd ]; then
+		msg_starting "Cyrus IMAP Daemon"
+		/usr/lib/cyrus/cyrus-master &
+		if ps -C cyrus-master >/dev/null 2>&1; then
+			RETVAL=$?
+			[ $RETVAL -eq 0 ] && touch /var/lock/subsys/cyrus-imapd
+			ok
+		else
+			fail
+		fi
+	else
+		msg_already_running "Cyrus IMAPD"
+	fi
+}
+
+stop() {
+	# Stop daemons.
+	if [ -f /var/lock/subsys/cyrus-imapd ]; then
+		msg_stopping "Cyrus IMAP Daemon"
+		killproc cyrus-master
+		rm -f /var/lock/subsys/cyrus-imapd
+	else
+		msg_not_running "Cyrus IMAP Daemon"
+	fi
+}
+
+condrestart() {
+	if [ -f /var/lock/subsys/cyrus-imapd ]; then
+		stop
+		start
+	else
+		msg_not_running "Cyrus IMAP Daemon"
+		RETVAL=$1
+	fi
+}
+
+RETVAL=0
+# See how we were called.
+case "$1" in
+  start)
+  	start
+	;;
+  stop)
+  	stop
+	;;
+  restart)
+	stop
+	start
+	;;
+  try-restart)
+	condrestart 0
+	;;
+  force-reload)
+	condrestart 7
+	;;
+  status)
+	status cyrus-master
+	RETVAL=$?
+	;;
+  *)
+	msg_usage "$0 {start|stop|restart|try-restart|force-reload|status}"
+	exit 3
+esac
+
+exit $RETVAL

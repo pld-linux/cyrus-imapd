@@ -1,0 +1,58 @@
+##############################
+# Begin procmailrc.joe file
+#
+# This is Joe's specific set of procmail
+# recipes.  It assumes that Joe has a
+# number of specific folders created
+# to which these recipes refer.  Otherwise
+# the mail cannot be sorted properly.
+#
+# First, let's define some high-level
+# folder macros to save typing later on.
+# The ALERTSBOX points to the
+# folder where we'll sort out various
+# incoming news alerts.
+# The LISTSBOX will point to a
+# folder where we'll sort out various
+# list services to which we're subscribed.
+#
+# Both ALERTSBOX and LISTSBOX
+# are subfolders of a generic folder called,
+# duh, Folders, which is right off the
+# user's INBOX.
+#
+# So if a Linux-kernel message comes in
+# it gets deposited in the folder
+# Folders/Lists/Linux_Kernel which is
+# represented in Cyrus IMAP terms as
+# user.Joe.Folders.Lists.Linux_kernel
+#
+
+############################
+# Put anchordesk alerts in news alerts folder
+
+:0:$LOGNAME.lock
+* ^From:.*anchordesk
+| $DELIVERTO $ALERTSBOX.News-Alerts
+
+# Put NC World alerts in their own folder
+
+:0:$LOGNAME.lock
+* ^From:.*NCWorld@FDDS.com
+| $DELIVERTO $ALERTSBOX.NCWorld-Alerts
+
+#############################
+# List processing & Misc Alerts
+
+:0:$LOGNAME.lock
+* (^Cc:|^CC:|^To:|^Sender:).*linux-kernel@vger.rutgers.edu
+| $DELIVERTO $LISTSBOX.Linux_Kernel
+
+:0:$LOGNAME.lock
+* (^Cc:|^CC:|^To:|^Sender:).*linux-net@vger.rutgers.edu
+| $DELIVERTO $LISTSBOX.Linux_Net
+
+#
+# End of procmailrc.joe file
+##############################
+

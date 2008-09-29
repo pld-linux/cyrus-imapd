@@ -1,0 +1,36 @@
+--- cyrus-imapd-2.3.12p2/cmulocal/berkdb.m4~	2007-08-15 20:18:01.000000000 +0300
++++ cyrus-imapd-2.3.12p2/cmulocal/berkdb.m4	2008-09-24 01:07:28.790721366 +0300
+@@ -216,13 +216,29 @@
+         for dbname in ${with_bdb} db-4.6 db4.6 db46 db-4.5 db4.5 db45 db-4.4 db4.4 db44 db-4.3 db4.3 db43 db-4.2 db4.2 db42 db-4.1 db4.1 db41 db-4.0 db4.0 db-4 db40 db4 db-3.3 db3.3 db33 db-3.2 db3.2 db32 db-3.1 db3.1 db31 db-3 db30 db3 db
+           do
+ 	    LIBS="$saved_LIBS -l$dbname"
+-	    AC_TRY_LINK([#include <stdio.h>
+-#include <db.h>],
+-	    [db_create(NULL, NULL, 0);],
++	    dnl check that the header / library matches
++	    AC_RUN_IFELSE([
++		    #include <db.h>
++
++		    int main() {
++		    DB *db;
++		    db_create(&db, NULL, 0);
++		    int major, minor;
++
++		    db_version(&major, &minor, NULL);
++		    if (major == DB_VERSION_MAJOR && minor == DB_VERSION_MINOR) {
++			exit(0);
++		    } else {
++			exit(1);
++		    }
++		}
++	    ],
+ 	    BDB_LIBADD="$BDB_LIBADD -l$dbname"; dblib="berkeley"; dbname=db,
+-            dblib="no")
++            dblib="no"
++	    )
+ 	    if test "$dblib" = "berkeley"; then break; fi
+           done
++
+         if test "$dblib" = "no"; then
+ 	    LIBS="$saved_LIBS -ldb"
+ 	    AC_TRY_LINK([#include <stdio.h>
