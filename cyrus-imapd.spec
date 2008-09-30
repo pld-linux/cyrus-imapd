@@ -26,7 +26,9 @@ Source11:	%{name}.init
 Source12:	cyrus.conf
 Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
+# https://bugzilla.andrew.cmu.edu/show_bug.cgi?id=3095
 Patch1:		%{name}-shared.patch
+# https://bugzilla.andrew.cmu.edu/show_bug.cgi?id=3094
 Patch2:		%{name}-verifydbver.patch
 URL:		http://cyrusimap.web.cmu.edu/imapd/
 BuildRequires:	autoconf >= 2.54
