@@ -198,7 +198,7 @@ cp -f %{_datadir}/automake/install-sh .
 	--without-libwrap \
 	--enable-nntp \
 	--enable-replication
-%{__make} \
+%{__make} -j1 \
 	INSTALLDIRS=vendor
 
 %{__cc} %{rpmcflags} \
