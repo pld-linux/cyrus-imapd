@@ -1,0 +1,10 @@
+--- cyrus-imapd-2.3.14/makedepend/def.h~	2009-08-30 10:41:27.000000000 +0300
++++ cyrus-imapd-2.3.14/makedepend/def.h	2009-08-30 10:42:37.085562797 +0300
+@@ -74,6 +74,7 @@
+ #include <sys/types.h>
+ #include <fcntl.h>
+ #include <sys/stat.h>
++#include <string.h>
+ 
+ #define MAXDEFINES	512
+ #define MAXFILES	512
