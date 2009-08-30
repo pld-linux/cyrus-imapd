@@ -2,7 +2,13 @@
 # - unpackaged:
 #   /usr/lib/cyrus/cyr_synclog
 #   /usr/lib/cyrus/make_sha1
-%include	/usr/lib/rpm/macros.perl
+#   /usr/lib/cyrus/sieved
+#
+# Conditional build:
+%bcond_without	perl		# build with perl
+%bcond_without	shared		# build with shared patch (not updated)
+
+%{?with_perl:%include	/usr/lib/rpm/macros.perl}
 Summary:	High-performance mail store with IMAP and POP3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
@@ -30,6 +36,8 @@ Patch0:		%{name}-et.patch
 #Patch1:		%{name}-shared.patch
 # https://bugzilla.andrew.cmu.edu/show_bug.cgi?id=3094
 Patch2:		%{name}-verifydbver.patch
+Patch3:		gcc44.patch
+Patch4:		glibc.patch
 URL:		http://cyrusimap.web.cmu.edu/imapd/
 BuildRequires:	autoconf >= 2.54
 BuildRequires:	automake
@@ -40,18 +48,19 @@ BuildRequires:	libcom_err-devel >= 1.21
 BuildRequires:	libtool
 BuildRequires:	net-snmp-devel
 BuildRequires:	openssl-devel >= 0.9.7d
-BuildRequires:	perl-devel >= 1:5.8.0
-BuildRequires:	rpm-perlprov
+%{?with_perl:BuildRequires:	perl-devel >= 1:5.8.0}
+%{?with_perl:BuildRequires:	rpm-perlprov}
 BuildRequires:	rpmbuild(macros) >= 1.268
 Requires(post,preun):	/sbin/chkconfig
 Requires(postun):	/usr/sbin/userdel
 Requires(pre):	/bin/id
 Requires(pre):	/usr/sbin/useradd
-Requires:	%{name}-libs = %{version}-%{release}
+%{?with_shared:Requires:	%{name}-libs = %{version}-%{release}}
 Requires:	rc-scripts >= 0.4.0.18
+%{!?with_shared:Obsoletes:	%{name}-libs}
 # needed by scripts from %{_bindir}
 Requires:	pam >= 0.79.0
-Requires:	perl-%{name} = %{version}-%{release}
+%{?with_perl:Requires:	perl-%{name} = %{version}-%{release}}
 Provides:	imapdaemon
 Provides:	pop3daemon
 Provides:	user(cyrus)
@@ -170,6 +179,8 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %patch0 -p1
 #%patch1 -p1
 %patch2 -p1
+%patch3 -p1
+%patch4 -p1
 
 rm -rf autom4te.cache
 
@@ -190,11 +201,10 @@ cd ..
 cp -f %{_datadir}/automake/config.* .
 cp -f %{_datadir}/automake/install-sh .
 %configure \
-	--with-auth=unix \
 	--with-cyrus-prefix=%{_libexecdir} \
 	--with-service-path=%{_libexecdir} \
 	--with-com_err=/usr \
-	--with-perl=%{__perl} \
+	--%{!?with_perl:without-perl}%{?with_perl:with-perl=%{__perl}} \
 	--without-libwrap \
 	--enable-nntp \
 	--enable-replication
@@ -238,19 +248,21 @@ install %{SOURCE12}	$RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 mv -f $RPM_BUILD_ROOT%{_libexecdir}/master	$RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
 mv -f $RPM_BUILD_ROOT%{_mandir}/man8/master.8	$RPM_BUILD_ROOT%{_mandir}/man8/cyrus-master.8
 rm -f $RPM_BUILD_ROOT%{_mandir}/man8/idled.8
-rm -f $RPM_BUILD_ROOT%{perl_archlib}/perllocal.pod
 
 touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop3}
 
-find $RPM_BUILD_ROOT%{perl_vendorarch} -name .packlist | xargs rm -v
-
 # make hashed dirs
-for i in `%{__perl} -le 'print for "a".."z"'`; do
+for i in $(%{__perl} -le 'print for "a".."z"'); do
 	install -d $RPM_BUILD_ROOT%{_var}/lib/imap/user/$i
 	install -d $RPM_BUILD_ROOT%{_var}/lib/imap/quota/$i
 	install -d $RPM_BUILD_ROOT%{_var}/lib/imap/sieve/$i
 	install -d $RPM_BUILD_ROOT%{_var}/spool/imap/$i
 done
+
+%if %{with perl}
+find $RPM_BUILD_ROOT%{perl_vendorarch} -name .packlist | xargs rm -v
+rm -f $RPM_BUILD_ROOT%{perl_archlib}/perllocal.pod
+%endif
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -354,26 +366,31 @@ fi
 
 %{_mandir}/man*/*
 
+%if %{with shared}
 %files libs
 %defattr(644,root,root,755)
 %attr(755,root,root) %{_libdir}/libcyrus.so.*.*.*
 %attr(755,root,root) %{_libdir}/libcyrus_min.so.*.*.*
 %attr(755,root,root) %ghost %{_libdir}/libcyrus.so.0
 %attr(755,root,root) %ghost %{_libdir}/libcyrus_min.so.0
+%endif
 
 %files devel
 %defattr(644,root,root,755)
+%{_includedir}/cyrus
+%if %{with shared}
 %attr(755,root,root) %{_libdir}/libcyrus.so
 %attr(755,root,root) %{_libdir}/libcyrus_min.so
 %{_libdir}/libcyrus.la
 %{_libdir}/libcyrus_min.la
-%{_includedir}/cyrus
 
 %files static
 %defattr(644,root,root,755)
+%endif
 %{_libdir}/libcyrus.a
 %{_libdir}/libcyrus_min.a
 
+%if %{with perl}
 %files -n perl-%{name}
 %defattr(644,root,root,755)
 %{perl_vendorarch}/Cyrus
@@ -385,3 +402,4 @@ fi
 %dir %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve
 %attr(755,root,root) %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve/managesieve.so
 %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve/managesieve.bs
+%endif
