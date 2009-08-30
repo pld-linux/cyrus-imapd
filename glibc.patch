@@ -1,0 +1,42 @@
+--- cyrus-imapd-2.3.14/makedepend/def.h~	2008-04-04 15:46:47.000000000 +0300
++++ cyrus-imapd-2.3.14/makedepend/def.h	2009-08-30 10:45:47.435735860 +0300
+@@ -163,7 +163,7 @@
+ 
+ char			*copy();
+ char			*base_name();
+-char			*getline();
++char			*cyrus_getline();
+ struct symtab		*slookup();
+ struct symtab		*isdefined();
+ struct symtab		*fdefined();
+--- cyrus-imapd-2.3.14/makedepend/main.c~	2008-04-04 15:46:49.000000000 +0300
++++ cyrus-imapd-2.3.14/makedepend/main.c	2009-08-30 10:43:37.258890563 +0300
+@@ -549,7 +549,7 @@
+  * Get the next line.  We only return lines beginning with '#' since that
+  * is all this program is ever interested in.
+  */
+-char *getline(filep)
++char *cyrus_getline(filep)
+ 	register struct filepointer	*filep;
+ {
+ 	register char	*p,	/* walking pointer */
+--- cyrus-imapd-2.3.14/makedepend/parse.c~	2008-04-04 15:46:49.000000000 +0300
++++ cyrus-imapd-2.3.14/makedepend/parse.c	2009-08-30 10:44:33.088884798 +0300
+@@ -83,7 +83,7 @@
+ 	register int	type;
+ 	boolean recfailOK;
+ 
+-	while (line = getline(filep)) {
++	while (line = cyrus_getline(filep)) {
+ 		switch(type = deftype(line, filep, file_red, file, TRUE)) {
+ 		case IF:
+ 		doif:
+@@ -205,7 +205,7 @@
+ 	register char	*line;
+ 	register int	type;
+ 
+-	while (line = getline(filep)) {
++	while (line = cyrus_getline(filep)) {
+ 		switch(type = deftype(line, filep, file_red, file, FALSE)) {
+ 		case IF:
+ 		case IFFALSE:
