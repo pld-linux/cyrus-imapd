@@ -1,9 +1,3 @@
-# TODO
-# - unpackaged:
-#   /usr/lib/cyrus/cyr_synclog
-#   /usr/lib/cyrus/make_sha1
-#   /usr/lib/cyrus/sieved
-#
 # Conditional build:
 %bcond_without	perl		# build with perl
 %bcond_without	shared		# build with shared patch (not updated)
@@ -13,12 +7,12 @@ Summary:	High-performance mail store with IMAP and POP3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	2.3.14
+Version:	2.3.16
 Release:	0.1
 License:	BSD-like
 Group:		Networking/Daemons/POP3
 Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
-# Source0-md5:	1030d4d9d04036b2fb9830165723908e
+# Source0-md5:	6a37feb1985974eee8a4a4b2932dd54c
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
@@ -33,7 +27,7 @@ Source12:	cyrus.conf
 Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
 # https://bugzilla.andrew.cmu.edu/show_bug.cgi?id=3095
-#Patch1:		%{name}-shared.patch
+Patch1:		%{name}-shared.patch
 # https://bugzilla.andrew.cmu.edu/show_bug.cgi?id=3094
 Patch2:		%{name}-verifydbver.patch
 Patch3:		gcc44.patch
@@ -177,7 +171,7 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %prep
 %setup -q
 %patch0 -p1
-#%patch1 -p1
+%patch1 -p1
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
@@ -209,7 +203,8 @@ cp -f %{_datadir}/automake/install-sh .
 	--enable-nntp \
 	--enable-replication
 %{__make} -j1 \
-	INSTALLDIRS=vendor
+	INSTALLDIRS=vendor \
+	VERSION=%{version}
 
 %{__cc} %{rpmcflags} \
 	-DLIBEXECDIR="\"%{_libexecdir}\"" %{rpmldflags} -Wall -o deliver-wrapper %{SOURCE3}
@@ -320,8 +315,10 @@ fi
 %attr(755,root,root) %{_libexecdir}/ctl_mboxlist
 %attr(755,root,root) %{_libexecdir}/cvt_cyrusdb
 %attr(755,root,root) %{_libexecdir}/cyr_dbtool
-%attr(755,root,root) %{_libexecdir}/cyrdump
+%attr(755,root,root) %{_libexecdir}/cyr_df
 %attr(755,root,root) %{_libexecdir}/cyr_expire
+%attr(755,root,root) %{_libexecdir}/cyr_synclog
+%attr(755,root,root) %{_libexecdir}/cyrdump
 %attr(755,root,root) %{_libexecdir}/cyrus-master
 %attr(755,root,root) %{_libexecdir}/fetchnews
 %attr(755,root,root) %{_libexecdir}/fud
@@ -330,9 +327,7 @@ fi
 %attr(755,root,root) %{_libexecdir}/lmtpd
 %attr(755,root,root) %{_libexecdir}/lmtpproxyd
 %attr(755,root,root) %{_libexecdir}/make_md5
-%attr(755,root,root) %{_libexecdir}/sync_client
-%attr(755,root,root) %{_libexecdir}/sync_reset
-%attr(755,root,root) %{_libexecdir}/sync_server
+%attr(755,root,root) %{_libexecdir}/make_sha1
 %attr(755,root,root) %{_libexecdir}/mbexamine
 %attr(755,root,root) %{_libexecdir}/mbpath
 %attr(755,root,root) %{_libexecdir}/nntpd
@@ -343,8 +338,12 @@ fi
 %attr(755,root,root) %{_libexecdir}/quota
 %attr(755,root,root) %{_libexecdir}/reconstruct
 %attr(755,root,root) %{_libexecdir}/sievec
+%attr(755,root,root) %{_libexecdir}/sieved
 %attr(755,root,root) %{_libexecdir}/smmapd
 %attr(755,root,root) %{_libexecdir}/squatter
+%attr(755,root,root) %{_libexecdir}/sync_client
+%attr(755,root,root) %{_libexecdir}/sync_reset
+%attr(755,root,root) %{_libexecdir}/sync_server
 %attr(755,root,root) %{_libexecdir}/timsieved
 %attr(755,root,root) %{_libexecdir}/tls_prune
 %attr(755,root,root) %{_libexecdir}/unexpunge
@@ -369,10 +368,8 @@ fi
 %if %{with shared}
 %files libs
 %defattr(644,root,root,755)
-%attr(755,root,root) %{_libdir}/libcyrus.so.*.*.*
-%attr(755,root,root) %{_libdir}/libcyrus_min.so.*.*.*
-%attr(755,root,root) %ghost %{_libdir}/libcyrus.so.0
-%attr(755,root,root) %ghost %{_libdir}/libcyrus_min.so.0
+%attr(755,root,root) %{_libdir}/libcyrus-%{version}.so
+%attr(755,root,root) %{_libdir}/libcyrus_min-%{version}.so
 %endif
 
 %files devel
