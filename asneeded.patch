@@ -1,0 +1,11 @@
+--- cyrus-imapd-2.3.16/sieve/Makefile.in.wiget	2010-06-06 20:38:58.425438471 +0200
++++ cyrus-imapd-2.3.16/sieve/Makefile.in	2010-06-06 20:42:25.121254492 +0200
+@@ -128,7 +128,7 @@ sievec: sievec.lo libsieve.la
+ 	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o sievec sievec.lo libsieve.la $(DEPLIBS) $(LIBS)
+ 
+ sieved: sieved.lo libsieve.la
+-	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o sieved sieved.lo libsieve.la $(DEPLIBS) $(LIBS)
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o sieved sieved.lo libsieve.la $(LIBS) $(DEPLIBS)
+ 
+ 
+ sieve_interface.h: sieve_err.h
