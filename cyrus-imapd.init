@@ -26,40 +26,43 @@ fi
 
 start() {
 	# Check if the service is already running?
-	if [ ! -f /var/lock/subsys/cyrus-imapd ]; then
-		msg_starting "Cyrus IMAP Daemon"
-		/usr/lib/cyrus/cyrus-master &
-		if ps -C cyrus-master >/dev/null 2>&1; then
-			RETVAL=$?
-			[ $RETVAL -eq 0 ] && touch /var/lock/subsys/cyrus-imapd
-			ok
-		else
-			fail
-		fi
-	else
+	if [ -f /var/lock/subsys/cyrus-imapd ]; then
 		msg_already_running "Cyrus IMAPD"
+		return
+	fi
+
+	msg_starting "Cyrus IMAP Daemon"
+	/usr/lib/cyrus/cyrus-master &
+	if ps -C cyrus-master >/dev/null 2>&1; then
+		RETVAL=$?
+		[ $RETVAL -eq 0 ] && touch /var/lock/subsys/cyrus-imapd
+		ok
+	else
+		fail
 	fi
 }
 
 stop() {
 	# Stop daemons.
-	if [ -f /var/lock/subsys/cyrus-imapd ]; then
-		msg_stopping "Cyrus IMAP Daemon"
-		killproc cyrus-master
-		rm -f /var/lock/subsys/cyrus-imapd
-	else
+	if [ ! -f /var/lock/subsys/cyrus-imapd ]; then
 		msg_not_running "Cyrus IMAP Daemon"
+		return
 	fi
+
+	msg_stopping "Cyrus IMAP Daemon"
+	killproc cyrus-master
+	rm -f /var/lock/subsys/cyrus-imapd
 }
 
 condrestart() {
-	if [ -f /var/lock/subsys/cyrus-imapd ]; then
-		stop
-		start
-	else
+	if [ ! -f /var/lock/subsys/cyrus-imapd ]; then
 		msg_not_running "Cyrus IMAP Daemon"
 		RETVAL=$1
+		return
 	fi
+
+	stop
+	start
 }
 
 RETVAL=0
