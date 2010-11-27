@@ -7,12 +7,12 @@ Summary:	High-performance mail store with IMAP and POP3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	2.3.16
-Release:	7
+Version:	2.4.4
+Release:	0.1
 License:	BSD-like
 Group:		Networking/Daemons/POP3
-Source0:	ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/%{name}-%{version}.tar.gz
-# Source0-md5:	6a37feb1985974eee8a4a4b2932dd54c
+Source0:	ftp://ftp.cyrusimap.org/cyrus-imapd/%{name}-%{version}.tar.gz
+# Source0-md5:	9d6970cec96aa867e9ced3978caddb8f
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
@@ -26,14 +26,14 @@ Source11:	%{name}.init
 Source12:	cyrus.conf
 Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
-# https://bugzilla.andrew.cmu.edu/show_bug.cgi?id=3095
+# http://bugzilla.cyrusimap.org/bugzilla3/show_bug.cgi?id=3095
 Patch1:		%{name}-shared.patch
-# https://bugzilla.andrew.cmu.edu/show_bug.cgi?id=3094
+# http://bugzilla.cyrusimap.org/bugzilla3/show_bug.cgi?id=3094
 Patch2:		%{name}-verifydbver.patch
 Patch3:		gcc44.patch
 Patch4:		glibc.patch
 Patch5:		asneeded.patch
-URL:		http://cyrusimap.web.cmu.edu/imapd/
+URL:		http://www.cyrusimap.org/
 BuildRequires:	autoconf >= 2.54
 BuildRequires:	automake
 BuildRequires:	cyrus-sasl-devel >= 1.5.27
@@ -172,11 +172,11 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %prep
 %setup -q
 %patch0 -p1
+%patch5 -p1
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
-%patch5 -p1
 
 rm -rf autom4te.cache
 
@@ -319,7 +319,9 @@ fi
 %attr(755,root,root) %{_libexecdir}/cyr_dbtool
 %attr(755,root,root) %{_libexecdir}/cyr_df
 %attr(755,root,root) %{_libexecdir}/cyr_expire
+%attr(755,root,root) %{_libexecdir}/cyr_sequence
 %attr(755,root,root) %{_libexecdir}/cyr_synclog
+%attr(755,root,root) %{_libexecdir}/cyr_userseen
 %attr(755,root,root) %{_libexecdir}/cyrdump
 %attr(755,root,root) %{_libexecdir}/cyrus-master
 %attr(755,root,root) %{_libexecdir}/fetchnews
@@ -328,8 +330,6 @@ fi
 %attr(755,root,root) %{_libexecdir}/ipurge
 %attr(755,root,root) %{_libexecdir}/lmtpd
 %attr(755,root,root) %{_libexecdir}/lmtpproxyd
-%attr(755,root,root) %{_libexecdir}/make_md5
-%attr(755,root,root) %{_libexecdir}/make_sha1
 %attr(755,root,root) %{_libexecdir}/mbexamine
 %attr(755,root,root) %{_libexecdir}/mbpath
 %attr(755,root,root) %{_libexecdir}/nntpd
@@ -349,7 +349,6 @@ fi
 %attr(755,root,root) %{_libexecdir}/timsieved
 %attr(755,root,root) %{_libexecdir}/tls_prune
 %attr(755,root,root) %{_libexecdir}/unexpunge
-
 
 %attr(750,cyrus,mail) /var/spool/imap
 %attr(750,cyrus,mail) %dir /var/lib/imap
