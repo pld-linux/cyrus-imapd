@@ -32,7 +32,7 @@ Patch1:		%{name}-shared.patch
 Patch2:		%{name}-verifydbver.patch
 Patch3:		gcc44.patch
 Patch4:		glibc.patch
-Patch5:		asneeded.patch
+Patch6:		makeopt.patch
 URL:		http://www.cyrusimap.org/
 BuildRequires:	autoconf >= 2.54
 BuildRequires:	automake
@@ -171,9 +171,15 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 
 %prep
 %setup -q
+%patch6 -p1
 %patch0 -p1
-%patch5 -p1
+%if %{with shared}
+lsdiff --strip 1 %{PATCH1} | xargs %{__sed} -i -e '
+	s/\.o/.lo/g
+	s/\.a/.la/g
+'
 %patch1 -p1
+%endif
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1

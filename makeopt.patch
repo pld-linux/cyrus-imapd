@@ -1,0 +1,488 @@
+--- cyrus-imapd-2.4.4/com_err/et/Makefile.in	2010-11-12 00:15:33.000000000 +0200
++++ cyrus-imapd-2.4.4-makeopt/com_err/et/Makefile.in	2010-11-27 17:50:39.110743283 +0200
+@@ -132,7 +132,7 @@
+ ## 
+ 
+ libcom_err.o:	$(LIBOBJS)
+-	ld -r -s -o libcom_err.o $(LIBOBJS)
++	ld -r -s -o $@ $? \
+ 	chmod -x libcom_err.o
+ 
+ TAGS:	et_name.c error_message.c compile_et.c error_table.c \
+--- cyrus-imapd-2.4.4/imap/Makefile.in	2010-11-12 00:15:33.000000000 +0200
++++ cyrus-imapd-2.4.4-makeopt/imap/Makefile.in	2010-11-27 17:45:48.382799837 +0200
+@@ -181,189 +181,180 @@
+ 
+ ### Services
+ idled: idled.o mutex_fake.o libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o idled \
+-	 idled.o mutex_fake.o libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ lmtpd: lmtpd.o proxy.o $(LMTPOBJS) $(SIEVE_OBJS) mutex_fake.o \
+ 	 libimap.a $(SIEVE_LIBS) $(DEPLIBS) $(SERVICE)
+-	$(CC) $(LDFLAGS) -o lmtpd \
+-	 $(SERVICE) lmtpd.o proxy.o $(LMTPOBJS) $(SIEVE_OBJS) \
+-	 mutex_fake.o libimap.a $(SIEVE_LIBS) $(DEPLIBS) $(LIBS) $(LIB_WRAP)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS) $(LIB_WRAP)
+ 
+ lmtpd.pure: lmtpd.o proxy.o $(LMTPOBJS) $(SIEVE_OBJS) \
+ 	 mutex_fake.o libimap.a $(SIEVE_LIBS) $(DEPLIBS) $(SERVICE)
+-	$(PURIFY) $(PUREOPT) $(CC) $(LDFLAGS) -o lmtpd.pure \
+-	 $(SERVICE) lmtpd.o proxy.o $(LMTPOBJS) $(SIEVE_OBJS) \
+-	 mutex_fake.o libimap.a $(SIEVE_LIBS) $(DEPLIBS) $(LIBS) $(LIB_WRAP)
++	$(PURIFY) $(PUREOPT) $(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS) $(LIB_WRAP)
+ 
+ imapd: $(IMAPDOBJS) mutex_fake.o libimap.a $(DEPLIBS) $(SERVICE)
+-	$(CC) $(LDFLAGS) -o imapd \
+-	 $(SERVICE) $(IMAPDOBJS) mutex_fake.o \
+-	libimap.a $(DEPLIBS) $(LIBS) $(LIB_WRAP)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS) $(LIB_WRAP)
+ 
+ imapd.pure: $(IMAPDOBJS) mutex_fake.o libimap.a $(DEPLIBS) $(SERVICE)
+-	$(PURIFY) $(PUREOPT) $(CC) $(LDFLAGS) -o imapd.pure \
+-	 $(SERVICE) $(IMAPDOBJS) mutex_fake.o libimap.a \
+-	$(DEPLIBS) $(LIBS) $(LIB_WRAP)
++	$(PURIFY) $(PUREOPT) $(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS) $(LIB_WRAP)
+ 
+ imapd.quant: $(IMAPDOBJS) mutex_fake.o libimap.a $(DEPLIBS) $(SERVICE)
+-	$(QUANTIFY) $(QUANTOPT) $(CC) $(LDFLAGS) -o imapd.quant \
+-	 $(SERVICE) $(IMAPDOBJS) mutex_fake.o libimap.a \
+-	$(DEPLIBS) $(LIBS) $(LIB_WRAP)
++	$(QUANTIFY) $(QUANTOPT) $(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS) $(LIB_WRAP)
+ 
+ mupdate: mupdate.o mupdate-slave.o mupdate-client.o mutex_pthread.o tls.o \
+ 	libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o mupdate \
+-	 $(SERVICETHREAD) mupdate.o mupdate-slave.o mupdate-client.o \
+-	 mutex_pthread.o tls.o libimap.a \
+-	 $(DEPLIBS) $(LIBS) $(LIB_WRAP) -lpthread
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(SERVICETHREAD) \
++	$(LIBS) $(LIB_WRAP) -lpthread
+ 
+ mupdate.pure: mupdate.o mupdate-slave.o mupdate-client.o mutex_pthread.o \
+ 	libimap.a $(DEPLIBS)
+-	$(PURIFY) $(PUREOPT) $(CC) $(LDFLAGS) -o mupdate.pure \
+-	 $(SERVICETHREAD) mupdate.o mupdate-slave.o mupdate-client.o \
+-	 mutex_pthread.o libimap.a $(DEPLIBS) $(LIBS) $(LIB_WRAP) -lpthread
++	$(PURIFY) $(PUREOPT) $(CC) $(LDFLAGS) -o $@ $? \
++	$(SERVICETHREAD) \
++	$(LIBS) $(LIB_WRAP) -lpthread
+ 
+ pop3d: pop3d.o proxy.o backend.o tls.o mutex_fake.o libimap.a \
+ 	$(DEPLIBS) $(SERVICE)
+-	$(CC) $(LDFLAGS) -o pop3d pop3d.o proxy.o backend.o tls.o $(SERVICE) \
+-	 mutex_fake.o libimap.a $(DEPLIBS) $(LIBS) $(LIB_WRAP)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS) $(LIB_WRAP)
+ 
+ nntpd: nntpd.o proxy.o backend.o index.o smtpclient.o spool.o tls.o \
+ 	 mutex_fake.o nntp_err.o libimap.a $(DEPLIBS) $(SERVICE)
+-	$(CC) $(LDFLAGS) -o nntpd nntpd.o proxy.o backend.o index.o spool.o \
+-	 smtpclient.o tls.o $(SERVICE) mutex_fake.o nntp_err.o \
+-	 libimap.a $(DEPLIBS) $(LIBS) $(LIB_WRAP)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS) $(LIB_WRAP)
+ 
+ fud: fud.o libimap.a mutex_fake.o $(DEPLIBS) $(SERVICE)
+-	$(CC) $(LDFLAGS) -o fud $(SERVICE) fud.o mutex_fake.o libimap.a \
+-	$(DEPLIBS) $(LIBS) $(LIB_WRAP)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS) $(LIB_WRAP)
+ 
+ smmapd: smmapd.o libimap.a mutex_fake.o $(DEPLIBS) $(SERVICE)
+-	$(CC) $(LDFLAGS) -o smmapd $(SERVICE) smmapd.o mutex_fake.o libimap.a \
+-	$(DEPLIBS) $(LIBS) $(LIB_WRAP)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS) $(LIB_WRAP)
+ 
+ sync_server: sync_server.o sync_support.o \
+ 	imapparse.o tls.o libimap.a mutex_fake.o $(DEPLIBS) $(SERVICE)
+-	$(CC) $(LDFLAGS) -o \
+-	sync_server sync_server.o sync_support.o \
+-	imapparse.o tls.o $(SERVICE) libimap.a mutex_fake.o \
+-	$(DEPLIBS) $(LIBS) $(LIB_WRAP)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS) $(LIB_WRAP)
+ 
+ ### Command Line Utilities
+ arbitron: arbitron.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o arbitron arbitron.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+-cyr_userseen: cyr_userseen.o mutex_fake.o libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o cyr_userseen cyr_userseen.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS)
+-
+-cyr_sequence: cyr_sequence.o mutex_fake.o libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o cyr_sequence cyr_sequence.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS)
+-
+-cyr_dbtool: cyr_dbtool.o mutex_fake.o libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o cyr_dbtool cyr_dbtool.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS)
+-
+-cyr_synclog: cyr_synclog.o mutex_fake.o libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o cyr_synclog cyr_synclog.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS)
+-
+-cvt_cyrusdb: cvt_cyrusdb.o mutex_fake.o libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o cvt_cyrusdb cvt_cyrusdb.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS)
+-
+-chk_cyrus: chk_cyrus.o mutex_fake.o libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o chk_cyrus chk_cyrus.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS)
++cyr_userseen: cyr_userseen.o mutex_fake.o libimap.a $(CLIOBJS) $(DEPLIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
++
++cyr_sequence: cyr_sequence.o mutex_fake.o libimap.a $(CLIOBJS) $(DEPLIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
++
++cyr_dbtool: cyr_dbtool.o mutex_fake.o libimap.a $(CLIOBJS) $(DEPLIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
++
++cyr_synclog: cyr_synclog.o mutex_fake.o libimap.a $(CLIOBJS) $(DEPLIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
++
++cvt_cyrusdb: cvt_cyrusdb.o mutex_fake.o libimap.a $(CLIOBJS) $(DEPLIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
++
++chk_cyrus: chk_cyrus.o mutex_fake.o libimap.a $(CLIOBJS) $(DEPLIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ deliver: deliver.o $(LMTPOBJS) proxy.o mutex_fake.o libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o deliver deliver.o $(LMTPOBJS) proxy.o \
+-	mutex_fake.o libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ ctl_deliver: ctl_deliver.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o \
+-	 $@ ctl_deliver.o $(CLIOBJS) libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ ctl_mboxlist: ctl_mboxlist.o mupdate-client.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o $@ ctl_mboxlist.o mupdate-client.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ ctl_cyrusdb: ctl_cyrusdb.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o \
+-	 $@ ctl_cyrusdb.o $(CLIOBJS) libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ cyr_expire: cyr_expire.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o $@ cyr_expire.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ fetchnews: fetchnews.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o \
+-	 $@ fetchnews.o $(CLIOBJS) libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ squatter: squatter.o index.o squat_build.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o squatter squatter.o index.o squat_build.o \
+-	$(CLIOBJS) libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ mbpath: mbpath.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o mbpath mbpath.o $(CLIOBJS) libimap.a \
+-	$(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ ipurge: ipurge.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o ipurge ipurge.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ cyr_virusscan: cyr_virusscan.o index.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o cyr_virusscan cyr_virusscan.o index.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS) -lclamav
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS) -lclamav
+ 
+ cyrdump: cyrdump.o index.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o cyrdump cyrdump.o index.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ cyr_df: cyr_df.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o \
+-	 cyr_df cyr_df.o $(CLIOBJS) libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ mbexamine: mbexamine.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o \
+-	 mbexamine mbexamine.o $(CLIOBJS) libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ reconstruct: reconstruct.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o \
+-	 reconstruct reconstruct.o $(CLIOBJS) libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ quota: quota.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o quota quota.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ tls_prune: tls_prune.o tls.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o \
+-	 $@ tls_prune.o tls.o $(CLIOBJS) libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ unexpunge: unexpunge.o $(CLIOBJS) libimap.a $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o $@ unexpunge.o $(CLIOBJS) \
+-	libimap.a $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ make_md5: make_md5.o libimap.a mutex_fake.o $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o make_md5 make_md5.o libimap.a mutex_fake.o $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ make_sha1: make_sha1.o libimap.a mutex_fake.o $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o make_sha1 make_sha1.o libimap.a mutex_fake.o $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ sync_client: sync_client.o sync_support.o \
+ 	backend.o tls.o imapparse.o libimap.a mutex_fake.o $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o \
+-	sync_client sync_client.o sync_support.o \
+-	backend.o tls.o imapparse.o libimap.a mutex_fake.o $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ sync_reset: sync_reset.o sync_support.o \
+ 	libimap.a mutex_fake.o $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o \
+-	sync_reset sync_reset.o sync_support.o \
+-	libimap.a mutex_fake.o $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ ### Other Misc Targets
+ 
+--- cyrus-imapd-2.4.4/imtest/Makefile.in	2010-11-12 00:15:33.000000000 +0200
++++ cyrus-imapd-2.4.4-makeopt/imtest/Makefile.in	2010-11-27 17:49:42.564752106 +0200
+@@ -86,10 +86,12 @@
+ 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
+ 
+ imtest: imtest.o $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o imtest imtest.o $(DEPLIBS) $(IMAP_LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(IMAP_LIBS)
+ 
+-imtest.pure: imtest.o $(DEPLIBS)
+-	$(PURIFY) $(PUREOPT) $(CC) $(LDFLAGS) -o imtest $(OBJS) $(DEPLIBS) $(LIBS) $(IMAP_LIBS)
++imtest.pure: imtest.o $(OBJS) $(DEPLIBS)
++	$(PURIFY) $(PUREOPT) $(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS) $(IMAP_LIBS)
+ 
+ clean:
+ 	rm -f *.o Makefile.bak makedepend.log imtest
+--- cyrus-imapd-2.4.4/installsieve/Makefile.in	2010-11-12 00:15:33.000000000 +0200
++++ cyrus-imapd-2.4.4-makeopt/installsieve/Makefile.in	2010-11-27 17:48:40.131123165 +0200
+@@ -78,7 +78,8 @@
+ 	$(RANLIB) libinstallsieve.a
+ 
+ installsieve: libinstallsieve.a installscript.o $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o installsieve libinstallsieve.a installscript.o $(DEPLIBS) $(IMAP_LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(IMAP_LIBS)
+ 
+ clean:
+ 	rm -f *.o *.a Makefile.bak makedepend.log
+--- cyrus-imapd-2.4.4/makedepend/Makefile.in	2010-11-12 00:15:33.000000000 +0200
++++ cyrus-imapd-2.4.4-makeopt/makedepend/Makefile.in	2010-11-27 17:48:27.795755643 +0200
+@@ -65,9 +65,9 @@
+ .c.o:
+ 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
+ 
+-makedepend: cppsetup.o ifparser.o include.o main.o parse.o pr.o
+-	$(CC) $(LDFLAGS) -o makedepend cppsetup.o ifparser.o include.o \
+-		main.o parse.o pr.o $(DEPLIBS) $(LIBS)
++makedepend: cppsetup.o ifparser.o include.o main.o parse.o pr.o $(DEPLIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ clean:
+ 	rm -f *.o Makefile.bak makedepend
+--- cyrus-imapd-2.4.4/master/Makefile.in	2010-11-12 00:15:33.000000000 +0200
++++ cyrus-imapd-2.4.4-makeopt/master/Makefile.in	2010-11-27 17:50:06.291998115 +0200
+@@ -86,7 +86,8 @@
+ 	$<
+ 
+ master: master.o masterconf.o cyrusMasterMIB.o ../lib/lock_@WITH_LOCK@.o
+-	$(CC) $(LDFLAGS) -o master master.o masterconf.o cyrusMasterMIB.o ../lib/lock_@WITH_LOCK@.o $(LIBS) $(DEPLIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS) $(DEPLIBS)
+ 
+ clean:
+ 	rm -f *.o *.a Makefile.bak $(PROGS)
+--- cyrus-imapd-2.4.4/netnews/Makefile.in	2010-11-12 00:15:33.000000000 +0200
++++ cyrus-imapd-2.4.4-makeopt/netnews/Makefile.in	2010-11-27 17:29:33.031532813 +0200
+@@ -77,8 +77,7 @@
+ 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
+ 
+ remotepurge: $(OBJS) $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o remotepurge $(OBJS) \
+-		$(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? $(LIBS)
+ 
+ 
+ clean:
+--- cyrus-imapd-2.4.4/syslog/Makefile.in	2010-11-12 00:15:33.000000000 +0200
++++ cyrus-imapd-2.4.4-makeopt/syslog/Makefile.in	2010-11-27 17:47:32.069899278 +0200
+@@ -74,7 +74,7 @@
+ 	$(RANLIB) libsyslog.a
+ 
+ syslogd: syslogd.o
+-	$(CC) $(LDFLAGS) -o syslogd syslogd.o $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? $(LIBS)
+ 
+ clean:
+ 	rm -f *.o *.a Makefile.bak
+--- cyrus-imapd-2.4.4/timsieved/Makefile.in	2010-11-12 00:15:33.000000000 +0200
++++ cyrus-imapd-2.4.4-makeopt/timsieved/Makefile.in	2010-11-27 17:30:16.995473471 +0200
+@@ -88,12 +88,12 @@
+ 	../imap/proxy.o
+ 
+ timsieved: $(OBJS) $(SERVICE)
+-	$(CC) $(LDFLAGS) -o timsieved \
++	$(CC) $(LDFLAGS) -o $@ \
+ 	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
+ 
+ timsieved.pure: $(OBJS) $(SERVICE)
+ 	$(PURIFY) $(PUREOPT) \
+-	$(CC) $(LDFLAGS) -o timsieved.pure \
++	$(CC) $(LDFLAGS) -o $@ \
+ 	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
+ 
+ clean:
+--- cyrus-imapd-2.4.4/notifyd/Makefile.in	2010-11-12 00:15:33.000000000 +0200
++++ cyrus-imapd-2.4.4-makeopt4/notifyd/Makefile.in	2010-11-29 07:44:19.039527336 +0200
+@@ -88,17 +88,17 @@
+ 	notify_external.o
+ 
+ notifytest: notifytest.o
+-	$(CC) $(LDFLAGS) -o notifytest \
+-	 notifytest.o $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
+ 
+ notifyd: $(OBJS) $(SERVICE)
+-	$(CC) $(LDFLAGS) -o notifyd \
+-	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
+ 
+ notifyd.pure: $(OBJS) $(SERVICE)
+ 	$(PURIFY) $(PUREOPT) \
+-	$(CC) $(LDFLAGS) -o notifyd.pure \
+-	 $(SERVICE) $(OBJS) $(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(DEPLIBS) $(IMAP_LIBS) $(LIBS) $(LIB_WRAP)
+ 
+ clean:
+ 	rm -f notifyd notifytest *.o *.a *~ Makefile.bak makedepend.log
+--- cyrus-imapd-2.4.4/ptclient/Makefile.in	2010-11-12 00:15:33.000000000 +0200
++++ cyrus-imapd-2.4.4-makeopt4/ptclient/Makefile.in	2010-11-29 07:47:21.146089774 +0200
+@@ -97,25 +97,25 @@
+ 	$(CC) -c $(CPPFLAGS) $(LDAP_CPPFLAGS) $(DEFS) $(CFLAGS) $<
+ 
+ ptloader: ptloader.o afskrb.o ldap.o ../imap/mutex_fake.o $(DEPLIBS)
+-	$(CC) $(LDFLAGS) -o $@ ptloader.o afskrb.o ldap.o ../imap/mutex_fake.o $(SERVICETHREAD) ${AFS_LDFLAGS} ${LDAP_LDFLAGS} $(AFS_LIBS) ${LDAP_LIBS} $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
++	$(CC) $(LDFLAGS) -o $@ $? $(SERVICETHREAD) ${AFS_LDFLAGS} ${LDAP_LDFLAGS} $(AFS_LIBS) ${LDAP_LIBS} $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
+ 
+ ptloader.pure: ptloader.o afskrb.o ldap.o ../imap/mutex_fake.o $(DEPLIBS)
+-	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ ptloader.o afskrb.o ldap.o ../imap/mutex_fake.o $(SERVICETHREAD) ${AFS_LDFLAGS} ${LDAP_LDFLAGS} $(AFS_LIBS) ${LDAP_LIBS} $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
++	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ $? $(SERVICETHREAD) ${AFS_LDFLAGS} ${LDAP_LDFLAGS} $(AFS_LIBS) ${LDAP_LIBS} $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
+ 
+ ptexpire: ptexpire.o $(DEPLIBS) $(UTIL_LIBS)
+-	$(CC) $(LDFLAGS) -o $@ ptexpire.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
++	$(CC) $(LDFLAGS) -o $@ $? $(LIB_SASL) $(LIBS) $(LIB_RT)
+ 
+ ptexpire.pure: ptexpire.o $(DEPLIBS) $(UTIL_LIBS)
+-	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ ptexpire.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
++	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ $? $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
+ 
+ ptdump: ptdump.o $(DEPLIBS) $(UTIL_LIBS)
+-	$(CC) $(LDFLAGS) -o $@ ptdump.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_RT)
++	$(CC) $(LDFLAGS) -o $@ $? $(LIB_SASL) $(LIBS) $(LIB_RT)
+ 
+-ptdump.pure: ptexpire.o $(DEPLIBS) $(UTIL_LIBS)
+-	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ ptdump.o $(UTIL_LIBS) $(DEPLIBS) $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
++ptdump.pure: ptdump.o $(DEPLIBS) $(UTIL_LIBS)
++	$(PURIFY) $(PUREARGS) $(CC) $(LDFLAGS) -o $@ $? $(LIB_SASL) $(LIBS) $(LIB_WRAP) $(LIB_RT)
+ 
+ ptextract: ptextract.o $(DEPLIBS) $(UTIL_LIBS)
+-	$(CC) $(LDFLAGS) -o $@ ptextract.o $(UTIL_LIBS) $(DEPLIBS) $(LIBS)
++	$(CC) $(LDFLAGS) -o $@ $? $(LIBS)
+ 
+ clean:
+ 	rm -f *.o Makefile.bak $(PROGS) makedepend.log
+--- cyrus-imapd-2.4.4/sieve/Makefile.in	2010-11-12 00:15:33.000000000 +0200
++++ cyrus-imapd-2.4.4-makeopt4/sieve/Makefile.in	2010-11-29 07:48:28.187095358 +0200
+@@ -84,9 +84,9 @@
+ 	$(srcdir)/../install-sh -c -m 755 sievec $(DESTDIR)$(service_path) || exit
+ 	$(srcdir)/../install-sh -c -m 755 sieved $(DESTDIR)$(service_path) || exit
+ 
+-test: $(DEPLIBS) libsieve.a test.o ../imap/message.o
+-	$(CC) $(LDFLAGS) -o test test.o ../imap/message.o \
+-	libsieve.a $(DEPLIBS) $(LIBS)
++test: libsieve.a test.o ../imap/message.o $(DEPLIBS)
++	$(CC) $(LDFLAGS) -o $@ $? \
++	$(LIBS)
+ 
+ OBJS = sieve_err.o \
+        sieve.o sieve-lex.o comparator.o interp.o message.o \
+@@ -123,11 +123,11 @@
+ 	ar cr libsieve.a $(OBJS)
+ 	$(RANLIB) libsieve.a
+ 
+-sievec: sievec.o libsieve.a
+-	$(CC) $(LDFLAGS) -o sievec sievec.o libsieve.a $(DEPLIBS) $(LIBS)
++sievec: sievec.o libsieve.a $(DEPLIBS)
++	$(CC) $(LDFLAGS) -o $@ $? $(LIBS)
+ 
+-sieved: sieved.o libsieve.a
+-	$(CC) $(LDFLAGS) -o sieved sieved.o libsieve.a $(DEPLIBS) $(LIBS)
++sieved: sieved.o libsieve.a $(DEPLIBS)
++	$(CC) $(LDFLAGS) -o $@ $? $(LIBS)
+ 
+ 
+ sieve_interface.h: sieve_err.h
