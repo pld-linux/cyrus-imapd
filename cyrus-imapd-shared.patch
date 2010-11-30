@@ -32,7 +32,7 @@
 -	rm -f compile_et compile_et.lo error_table.lo 
 -	rm -f libcom_err.la
 -	rm -f $(LIBOBJS)
-+	rm -rf .libs *.la *.lo compile_et $(LIBOBJS)
++	rm -rf .libs *.la *.lo *.o compile_et $(LIBOBJS)
  
  distclean: clean
 -	rm -f compile_et compile_et.lo error_table.lo 
@@ -103,7 +103,7 @@
  
  clean:
 -	rm -f *.lo Makefile.bak makedepend.log
-+	rm -rf .libs *.lo Makefile.bak makedepend.log
++	rm -rf .libs *.lo *.o Makefile.bak makedepend.log
  
  distclean: clean
  	rm -f Makefile
@@ -375,7 +375,7 @@
  
  clean:
 -	rm -f *.lo *.la Makefile.bak makedepend.log \
-+	rm -rf .libs *.a *.lo *.la Makefile.bak makedepend.log \
++	rm -rf .libs *.lo *.o *.la *.a Makefile.bak makedepend.log \
  	$(BUILTSOURCES) $(PROGS) $(SUIDPROGS) cyr_virusscan
  
  distclean: clean
@@ -437,7 +437,7 @@
  
  clean:
 -	rm -f *.lo Makefile.bak makedepend.log imtest
-+	rm -rf .libs *.lo Makefile.bak makedepend.log imtest
++	rm -rf .libs *.lo *.o Makefile.bak makedepend.log imtest
  
  distclean: clean
  	rm -f Makefile
@@ -474,7 +474,7 @@
  
  clean:
 -	rm -f *.lo *.la Makefile.bak makedepend.log
-+	rm -rf .libs *.a *.lo *.la Makefile.bak makedepend.log
++	rm -rf .libs *.lo *.o *.la *.a Makefile.bak makedepend.log
  
  distclean: clean
  	rm -f Makefile installsieve
@@ -543,7 +543,7 @@
  
  clean:
 -	rm -f *.lo *.la chartable.c Makefile.bak makedepend.log \
-+	rm -rf .libs *.lo *.la *.a chartable.c Makefile.bak makedepend.log \
++	rm -rf .libs *.lo *.o *.la *.a chartable.c Makefile.bak makedepend.log \
  	$(BUILTSOURCES)
  
  distclean: clean
@@ -590,7 +590,7 @@
  
  clean:
 -	rm -f *.lo Makefile.bak makedepend
-+	rm -rf .libs *.lo Makefile.bak makedepend
++	rm -rf .libs *.lo *.o Makefile.bak makedepend
  
  distclean: clean
  	rm -f Makefile
@@ -661,7 +661,7 @@
  
  clean:
 -	rm -f *.lo Makefile.bak remotepurge makedepend.log
-+	rm -rf .libs *.lo Makefile.bak remotepurge makedepend.log
++	rm -rf .libs *.lo *.o Makefile.bak remotepurge makedepend.log
  
  distclean: clean
  	rm -f Makefile
@@ -704,7 +704,7 @@
  
  clean:
 -	rm -f notifyd notifytest *.lo *.la *~ Makefile.bak makedepend.log
-+	rm -rf notifyd notifytest .libs *.a *.lo *.la *~ Makefile.bak makedepend.log
++	rm -rf notifyd notifytest .libs *.lo *.o *.la *.a *~ Makefile.bak makedepend.log
  
  distclean: clean
  	rm -f Makefile
@@ -769,7 +769,7 @@
  
  clean:
 -	rm -f *.lo Makefile.bak makedepend.log libisieve.la
-+	rm -rf .libs *.la *.lo Makefile.bak makedepend.log
++	rm -rf .libs *.la *.lo *.o Makefile.bak makedepend.log
  
  distclean: clean
  	rm -f Makefile
@@ -854,7 +854,7 @@
  
  clean:
 -	rm -f *.lo Makefile.bak $(PROGS) makedepend.log
-+	rm -rf .libs *.lo Makefile.bak $(PROGS) makedepend.log
++	rm -rf .libs *.lo *.o Makefile.bak $(PROGS) makedepend.log
  
  distclean: clean
  	rm -f Makefile
@@ -914,7 +914,7 @@
  
  clean:
 -	rm -f sievec sieved test *~ *.lo *.la Makefile.bak makedepend.log
-+	rm -rf .libs sievec sieved test *~ *.lo *.la *.a Makefile.bak makedepend.log
++	rm -rf .libs sievec sieved test *~ *.lo *.o *.la *.a Makefile.bak makedepend.log
  
  distclean: clean
  	rm -f sieve_err.c sieve_err.h
@@ -965,7 +965,7 @@
  
  clean:
 -	rm -f *.lo *.la Makefile.bak
-+	rm -rf .libs *.a *.lo *.la Makefile.bak
++	rm -rf .libs *.lo *.o *.la *.a Makefile.bak
  
  distclean: clean
  	rm -f Makefile
@@ -1004,7 +1004,7 @@
  
  clean:
 -	rm -f timsieved *~ *.lo *.la Makefile.bak makedepend.log
-+	rm -rf timsieved .libs *~ *.lo *.la *.a Makefile.bak makedepend.log
++	rm -rf timsieved .libs *~ *.lo *.o *.la *.a Makefile.bak makedepend.log
  
  distclean: clean
  	rm -f Makefile
