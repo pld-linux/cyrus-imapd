@@ -905,7 +905,7 @@
  
  sieved: sieved.lo libsieve.la $(DEPLIBS)
 -	$(CC) $(LDFLAGS) -o $@ $? $(LIBS)
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ $? $(LIBS)
++	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ sieved.lo libsieve.la $(LIBS) $(DEPLIBS)
  
  
  sieve_interface.h: sieve_err.h

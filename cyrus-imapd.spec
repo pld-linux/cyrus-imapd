@@ -78,9 +78,6 @@ BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %define		_libexecdir	%{_libdir}/cyrus
 
-# mixing .a and .la and .so fails here, blame shared patch?
-%define		filterout_ld	-Wl,--no-copy-dt-needed-entries
-
 %description
 The Cyrus IMAP server is a scalable enterprise mail system designed
 for use from small to large enterprise environments using
