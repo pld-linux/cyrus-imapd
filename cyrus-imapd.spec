@@ -78,6 +78,9 @@ BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %define		_libexecdir	%{_libdir}/cyrus
 
+# mixing .a and .la and .so fails here, blame shared patch?
+%define		filterout_ld	-Wl,--no-copy-dt-needed-entries
+
 %description
 The Cyrus IMAP server is a scalable enterprise mail system designed
 for use from small to large enterprise environments using
@@ -168,6 +171,13 @@ Perl interface to cyrus-imapd library.
 
 %description -n perl-%{name} -l pl.UTF-8
 Perlowy interfejs do biblioteki cyrus-imapd.
+
+%package doc
+Summary:	Cyrus-IMAP documentation
+Group:		Documentation
+
+%description doc
+Cyrus-IMAP HTML documentation.
 
 %prep
 %setup -q
@@ -304,7 +314,7 @@ fi
 %files
 %defattr(644,root,root,755)
 %doc cyrus-README cyrus-procmailrc cyrus-user-procmailrc.template
-%doc cyrus-imapd-procmail+cyrus.mc COPYRIGHT doc/*.html tools
+%doc cyrus-imapd-procmail+cyrus.mc COPYRIGHT tools
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/*.conf
 %attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) /etc/logrotate.d/cyrus-imapd
 %attr(440,cyrus,root) %config(noreplace) %verify(not md5 mtime size) /etc/pam.d/*
@@ -407,3 +417,7 @@ fi
 %attr(755,root,root) %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve/managesieve.so
 %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve/managesieve.bs
 %endif
+
+%files doc
+%defattr(644,root,root,755)
+%doc doc/*.html
