@@ -43,6 +43,7 @@ BuildRequires:	libcom_err-devel >= 1.21
 BuildRequires:	libtool
 BuildRequires:	net-snmp-devel
 BuildRequires:	openssl-devel >= 0.9.7d
+BuildRequires:	patchutils
 %{?with_perl:BuildRequires:	perl-devel >= 1:5.8.0}
 %{?with_perl:BuildRequires:	rpm-perlprov}
 BuildRequires:	rpmbuild(macros) >= 1.268
@@ -181,7 +182,7 @@ Cyrus-IMAP HTML documentation.
 %patch6 -p1
 %patch0 -p1
 %if %{with shared}
-lsdiff --strip 1 %{PATCH1} | xargs %{__sed} -i -e '
+lsdiff --strip 1 %{PATCH1} |grep -E '(configure.in|Makefile.in)'| xargs %{__sed} -i -e '
 	s/\.o/.lo/g
 	s/\.a/.la/g
 '

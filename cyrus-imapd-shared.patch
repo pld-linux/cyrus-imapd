@@ -729,17 +729,6 @@
  
  /*
   * Decrement the refcounts of the Perl SV's in the passed rock, then free the
---- cyrus-imapd-2.4.4/perl/imap/Makefile.PL	2010-11-30 07:53:22.211954414 +0200
-+++ cyrus-imapd-2.4.4-shared-patch//perl/imap/Makefile.PL	2010-11-29 08:40:48.980296564 +0200
-@@ -65,7 +65,7 @@
-     'clean'	=> {'FILES' => 'libcyrperl.la cyradm'},
-     'OBJECT'    => 'IMAP.lo',
-     'MYEXTLIB'  => '../../lib/libcyrus.la ../../lib/libcyrus_min.la',
--    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT $ZLIB -lssl -lcrypto"],
-+    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT $ZLIB -lssl -lcrypto -L../../lib/.libs -lcyrus -lcyrus_min"],
-     'DEFINE'	=> '-DPERL_POLLUTE',    # e.g., '-DHAVE_SOMETHING' 
-     'INC'	=> "-I../../lib -I../.. -I../../com_err/et $SASL_INC $OPENSSL_INC", 
-     'EXE_FILES' => [cyradm],
 --- cyrus-imapd-2.4.4/perl/sieve/lib/Makefile.in	2010-11-30 07:53:22.211954414 +0200
 +++ cyrus-imapd-2.4.4-shared-patch//perl/sieve/lib/Makefile.in	2010-11-29 08:44:40.675056075 +0200
 @@ -49,7 +49,8 @@
@@ -773,19 +762,6 @@
  
  distclean: clean
  	rm -f Makefile
---- cyrus-imapd-2.4.4/perl/sieve/managesieve/Makefile.PL	2010-11-30 07:53:22.211954414 +0200
-+++ cyrus-imapd-2.4.4-shared-patch//perl/sieve/managesieve/Makefile.PL	2010-11-29 08:46:22.825182931 +0200
-@@ -61,8 +61,8 @@
-     'NAME'	=> 'Cyrus::SIEVE::managesieve',
-     'ABSTRACT'  => 'Cyurs Sieve management interface',
-     'VERSION_FROM' => 'managesieve.pm', # finds $VERSION
--    'MYEXTLIB'  => '../lib/isieve.lo ../lib/lex.lo ../lib/mystring.lo ../lib/request.lo ../../../lib/libcyrus.la ../../../lib/libcyrus_min.la',
--    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT $ZLIB -lssl -lcrypto"], 
-+    'MYEXTLIB'  => '../lib/isieve.o ../lib/lex.o ../lib/mystring.o ../lib/request.o',
-+    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT $ZLIB -lssl -lcrypto -L../../../lib/.libs -lcyrus -lcyrus_min"], 
-     'DEFINE'	=> '-DPERL_POLLUTE',     # e.g., '-DHAVE_SOMETHING' 
-     'INC'	=> "-I../lib/ -I../../../lib/ $SASL_INC $OPENSSL_INC",
- );
 --- cyrus-imapd-2.4.4/perl/sieve/managesieve/managesieve.xs	2010-11-30 07:53:22.211954414 +0200
 +++ cyrus-imapd-2.4.4-shared-patch//perl/sieve/managesieve/managesieve.xs	2010-11-29 08:14:14.304704736 +0200
 @@ -72,6 +72,7 @@
@@ -1030,3 +1006,29 @@
       COM_ERR_LIBS="-lcom_err"
       COM_ERR_CPPFLAGS="-I${with_com_err}/include"
       # Ever get the feeling people hide this stuff on purpose?
+--- cyrus-imapd-2.4.10/perl/sieve/managesieve/Makefile.PL.wiget	2011-07-04 17:05:01.000000000 +0200
++++ cyrus-imapd-2.4.10/perl/sieve/managesieve/Makefile.PL	2011-07-31 19:33:33.426399853 +0200
+@@ -61,8 +61,8 @@ WriteMakefile(
+     'NAME'	=> 'Cyrus::SIEVE::managesieve',
+     'ABSTRACT'  => 'Cyurs Sieve management interface',
+     'VERSION_FROM' => 'managesieve.pm', # finds $VERSION
+-    'MYEXTLIB'  => '../lib/isieve.o ../lib/lex.o ../lib/mystring.o ../lib/request.o ../../../lib/libcyrus.a ../../../lib/libcyrus_min.a',
+-    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT $ZLIB -lssl -lcrypto"], 
++    'MYEXTLIB'  => '../lib/isieve.o ../lib/lex.o ../lib/mystring.o ../lib/request.o',
++    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT $ZLIB -lssl -lcrypto -L../../../lib/.libs -lcyrus -lcyrus_min"], 
+     'DEFINE'	=> '-DPERL_POLLUTE',     # e.g., '-DHAVE_SOMETHING' 
+     'INC'	=> "-I../lib/ -I../../../lib/ $SASL_INC $OPENSSL_INC",
+ );
+--- cyrus-imapd-2.4.10/perl/imap/Makefile.PL.wiget	2011-07-04 17:05:01.000000000 +0200
++++ cyrus-imapd-2.4.10/perl/imap/Makefile.PL	2011-07-31 20:20:12.772972475 +0200
+@@ -73,8 +73,8 @@ WriteMakefile(
+     'macro'	=> {'IMCLIENT_LIBS' => ''},	# hack
+     'clean'	=> {'FILES' => 'libcyrperl.a cyradm'},
+     'OBJECT'    => 'IMAP.o',
+-    'MYEXTLIB'  => '../../lib/libcyrus.a ../../lib/libcyrus_min.a',
+-    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT $ZLIB -lssl -lcrypto"],
++    'MYEXTLIB'  => '',
++    'LIBS'	=> ["$BDB_LIB $SASL_LIB $OPENSSL_LIB $LIB_RT $ZLIB -lssl -lcrypto -L../../lib/.libs -lcyrus -lcyrus_min"],
+     'DEFINE'	=> '-DPERL_POLLUTE',    # e.g., '-DHAVE_SOMETHING' 
+     'INC'	=> "-I../../lib -I../.. -I../../com_err/et $SASL_INC $OPENSSL_INC", 
+     'EXE_FILES' => [cyradm],
