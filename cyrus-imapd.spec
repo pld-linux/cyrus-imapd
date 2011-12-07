@@ -194,6 +194,8 @@ lsdiff --strip 1 %{PATCH1} |grep -E '(configure.in|Makefile.in)'| xargs %{__sed}
 
 rm -rf autom4te.cache
 
+cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
+
 %build
 cd makedepend
 %{__libtoolize}
@@ -245,20 +247,19 @@ touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 	CYRUS_GROUP=%(id -g) \
 	INSTALLDIRS=vendor
 
-install deliver-wrapper $RPM_BUILD_ROOT%{_libexecdir}/deliver-wrapper
+install -p deliver-wrapper $RPM_BUILD_ROOT%{_libexecdir}/deliver-wrapper
 
-install %{SOURCE1}	%{SOURCE2} %{SOURCE4} %{SOURCE5} .
-install %{SOURCE6}	$RPM_BUILD_ROOT/etc/logrotate.d/cyrus-imapd
-install %{SOURCE7}	$RPM_BUILD_ROOT%{_sysconfdir}/imapd.conf
-install %{SOURCE9}	$RPM_BUILD_ROOT/etc/pam.d/imap
-install %{SOURCE10}	$RPM_BUILD_ROOT/etc/pam.d/pop
+cp -p %{SOURCE6} $RPM_BUILD_ROOT/etc/logrotate.d/cyrus-imapd
+cp -p %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/imapd.conf
+cp -p %{SOURCE9} $RPM_BUILD_ROOT/etc/pam.d/imap
+cp -p %{SOURCE10} $RPM_BUILD_ROOT/etc/pam.d/pop
 sed -e 's,/''usr/lib/cyrus,%{_libexecdir},' %{SOURCE11} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
 sed -e 's,/''usr/lib/cyrus,%{_libexecdir},' %{SOURCE13} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-sync
-install %{SOURCE12}	$RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
+cp -p %{SOURCE12} $RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 
-mv -f $RPM_BUILD_ROOT%{_libexecdir}/master	$RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
-mv -f $RPM_BUILD_ROOT%{_mandir}/man8/master.8	$RPM_BUILD_ROOT%{_mandir}/man8/cyrus-master.8
-rm -f $RPM_BUILD_ROOT%{_mandir}/man8/idled.8
+mv -f $RPM_BUILD_ROOT%{_libexecdir}/master $RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
+mv -f $RPM_BUILD_ROOT%{_mandir}/man8/master.8 $RPM_BUILD_ROOT%{_mandir}/man8/cyrus-master.8
+%{__rm} $RPM_BUILD_ROOT%{_mandir}/man8/idled.8
 
 touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop3}
 
@@ -272,7 +273,7 @@ done
 
 %if %{with perl}
 find $RPM_BUILD_ROOT%{perl_vendorarch} -name .packlist | xargs rm -v
-rm -f $RPM_BUILD_ROOT%{perl_archlib}/perllocal.pod
+%{__rm} $RPM_BUILD_ROOT%{perl_archlib}/perllocal.pod
 %endif
 
 %clean
