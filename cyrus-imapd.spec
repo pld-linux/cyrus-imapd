@@ -1,3 +1,4 @@
+#
 # Conditional build:
 %bcond_without	perl		# build with perl
 %bcond_without	shared		# build with shared patch (not updated)
@@ -257,8 +258,23 @@ sed -e 's,/''usr/lib/cyrus,%{_libexecdir},' %{SOURCE11} > $RPM_BUILD_ROOT/etc/rc
 sed -e 's,/''usr/lib/cyrus,%{_libexecdir},' %{SOURCE13} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-sync
 cp -p %{SOURCE12} $RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 
-mv -f $RPM_BUILD_ROOT%{_libexecdir}/master $RPM_BUILD_ROOT%{_libexecdir}/cyrus-master
-mv -f $RPM_BUILD_ROOT%{_mandir}/man8/master.8 $RPM_BUILD_ROOT%{_mandir}/man8/cyrus-master.8
+# move lots of admin-only/system-only stuff to sbin and lib
+# but keep compat links as they are used in configs
+for i in master reconstruct quota deliver; do
+	mv $RPM_BUILD_ROOT{%{_libexecdir}/$i,%{_sbindir}/cyr$i}
+	ln -s %{_sbindir}/cyr$i $RPM_BUILD_ROOT%{_libexecdir}/$i
+done
+for i in mbpath ctl_mboxlist ctl_deliver ctl_cyrusdb squatter \
+		 tls_prune ipurge cyrdump cvt_cyrusdb chk_cyrus arbitron \
+	 cyr_expire; do
+	mv $RPM_BUILD_ROOT{%{_libexecdir},%{_sbindir}}/$i
+	ln -s %{_sbindir}/$i $RPM_BUILD_ROOT%{_libexecdir}
+done
+# We rename some utils, so we need to sort out the manpages
+for i in master reconstruct quota deliver; do
+	mv $RPM_BUILD_ROOT%{_mandir}/man8/{,cyr}$i.8
+done
+
 %{__rm} $RPM_BUILD_ROOT%{_mandir}/man8/idled.8
 
 touch $RPM_BUILD_ROOT/etc/security/blacklist.{imap,pop3}
@@ -321,49 +337,79 @@ fi
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-imapd
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-sync
 %attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
-%attr(755,root,root) %{_bindir}/*
+%attr(755,root,root) %{_bindir}/cyradm
+%attr(755,root,root) %{_bindir}/imtest
+%attr(755,root,root) %{_bindir}/installsieve
+%attr(755,root,root) %{_bindir}/lmtptest
+%attr(755,root,root) %{_bindir}/mupdatetest
+%attr(755,root,root) %{_bindir}/nntptest
+%attr(755,root,root) %{_bindir}/pop3test
+%attr(755,root,root) %{_bindir}/sieveshell
+%attr(755,root,root) %{_bindir}/sivtest
+%attr(755,root,root) %{_bindir}/smtptest
+%attr(755,root,root) %{_bindir}/synctest
+
+%attr(4754,cyrus,mail) %{_sbindir}/cyrdeliver
+%attr(755,root,root) %{_sbindir}/arbitron
+%attr(755,root,root) %{_sbindir}/chk_cyrus
+%attr(755,root,root) %{_sbindir}/ctl_cyrusdb
+%attr(755,root,root) %{_sbindir}/ctl_deliver
+%attr(755,root,root) %{_sbindir}/ctl_mboxlist
+%attr(755,root,root) %{_sbindir}/cvt_cyrusdb
+%attr(755,root,root) %{_sbindir}/cyr_expire
+%attr(755,root,root) %{_sbindir}/cyrdump
+%attr(755,root,root) %{_sbindir}/cyrmaster
+%attr(755,root,root) %{_sbindir}/cyrquota
+%attr(755,root,root) %{_sbindir}/cyrreconstruct
+%attr(755,root,root) %{_sbindir}/ipurge
+%attr(755,root,root) %{_sbindir}/mbpath
+%attr(755,root,root) %{_sbindir}/squatter
+%attr(755,root,root) %{_sbindir}/tls_prune
+
 %dir %{_libexecdir}
-%attr(4754,cyrus,mail) %{_libexecdir}/deliver
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
+%attr(755,root,root) %{_libexecdir}/cyr_dbtool
+%attr(755,root,root) %{_libexecdir}/cyr_df
+%attr(755,root,root) %{_libexecdir}/cyr_sequence
+%attr(755,root,root) %{_libexecdir}/cyr_synclog
+%attr(755,root,root) %{_libexecdir}/cyr_userseen
+%attr(755,root,root) %{_libexecdir}/fetchnews
+%attr(755,root,root) %{_libexecdir}/fud
+%attr(755,root,root) %{_libexecdir}/imapd
+%attr(755,root,root) %{_libexecdir}/lmtpd
+%attr(755,root,root) %{_libexecdir}/lmtpproxyd
+%attr(755,root,root) %{_libexecdir}/mbexamine
+%attr(755,root,root) %{_libexecdir}/nntpd
+%attr(755,root,root) %{_libexecdir}/notifyd
+%attr(755,root,root) %{_libexecdir}/pop3d
+%attr(755,root,root) %{_libexecdir}/pop3proxyd
+%attr(755,root,root) %{_libexecdir}/proxyd
+%attr(755,root,root) %{_libexecdir}/sievec
+%attr(755,root,root) %{_libexecdir}/sieved
+%attr(755,root,root) %{_libexecdir}/smmapd
+%attr(755,root,root) %{_libexecdir}/sync_client
+%attr(755,root,root) %{_libexecdir}/sync_reset
+%attr(755,root,root) %{_libexecdir}/sync_server
+%attr(755,root,root) %{_libexecdir}/timsieved
+%attr(755,root,root) %{_libexecdir}/unexpunge
+
+# symlinks
 %attr(755,root,root) %{_libexecdir}/arbitron
 %attr(755,root,root) %{_libexecdir}/chk_cyrus
 %attr(755,root,root) %{_libexecdir}/ctl_cyrusdb
 %attr(755,root,root) %{_libexecdir}/ctl_deliver
 %attr(755,root,root) %{_libexecdir}/ctl_mboxlist
 %attr(755,root,root) %{_libexecdir}/cvt_cyrusdb
-%attr(755,root,root) %{_libexecdir}/cyr_dbtool
-%attr(755,root,root) %{_libexecdir}/cyr_df
 %attr(755,root,root) %{_libexecdir}/cyr_expire
-%attr(755,root,root) %{_libexecdir}/cyr_sequence
-%attr(755,root,root) %{_libexecdir}/cyr_synclog
-%attr(755,root,root) %{_libexecdir}/cyr_userseen
 %attr(755,root,root) %{_libexecdir}/cyrdump
-%attr(755,root,root) %{_libexecdir}/cyrus-master
-%attr(755,root,root) %{_libexecdir}/fetchnews
-%attr(755,root,root) %{_libexecdir}/fud
-%attr(755,root,root) %{_libexecdir}/imapd
+%attr(755,root,root) %{_libexecdir}/deliver
 %attr(755,root,root) %{_libexecdir}/ipurge
-%attr(755,root,root) %{_libexecdir}/lmtpd
-%attr(755,root,root) %{_libexecdir}/lmtpproxyd
-%attr(755,root,root) %{_libexecdir}/mbexamine
+%attr(755,root,root) %{_libexecdir}/master
 %attr(755,root,root) %{_libexecdir}/mbpath
-%attr(755,root,root) %{_libexecdir}/nntpd
-%attr(755,root,root) %{_libexecdir}/notifyd
-%attr(755,root,root) %{_libexecdir}/pop3d
-%attr(755,root,root) %{_libexecdir}/pop3proxyd
-%attr(755,root,root) %{_libexecdir}/proxyd
 %attr(755,root,root) %{_libexecdir}/quota
 %attr(755,root,root) %{_libexecdir}/reconstruct
-%attr(755,root,root) %{_libexecdir}/sievec
-%attr(755,root,root) %{_libexecdir}/sieved
-%attr(755,root,root) %{_libexecdir}/smmapd
 %attr(755,root,root) %{_libexecdir}/squatter
-%attr(755,root,root) %{_libexecdir}/sync_client
-%attr(755,root,root) %{_libexecdir}/sync_reset
-%attr(755,root,root) %{_libexecdir}/sync_server
-%attr(755,root,root) %{_libexecdir}/timsieved
 %attr(755,root,root) %{_libexecdir}/tls_prune
-%attr(755,root,root) %{_libexecdir}/unexpunge
 
 %attr(750,cyrus,mail) /var/spool/imap
 %attr(750,cyrus,mail) %dir /var/lib/imap

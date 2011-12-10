@@ -32,8 +32,8 @@ start() {
 	fi
 
 	msg_starting "Cyrus IMAP Daemon"
-	/usr/lib/cyrus/cyrus-master &
-	if ps -C cyrus-master >/dev/null 2>&1; then
+	/usr/sbin/cyrmaster &
+	if ps -C cyrmaster >/dev/null 2>&1; then
 		RETVAL=$?
 		[ $RETVAL -eq 0 ] && touch /var/lock/subsys/cyrus-imapd
 		ok
@@ -50,7 +50,7 @@ stop() {
 	fi
 
 	msg_stopping "Cyrus IMAP Daemon"
-	killproc cyrus-master
+	killproc cyrmaster
 	rm -f /var/lock/subsys/cyrus-imapd
 }
 
@@ -85,7 +85,7 @@ case "$1" in
 	condrestart 7
 	;;
   status)
-	status cyrus-master
+	status cyrmaster
 	RETVAL=$?
 	;;
   *)
