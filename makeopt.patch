@@ -11,7 +11,7 @@
  TAGS:	et_name.c error_message.c compile_et.c error_table.c \
 --- cyrus-imapd-2.4.4/imap/Makefile.in	2010-11-12 00:15:33.000000000 +0200
 +++ cyrus-imapd-2.4.4-makeopt/imap/Makefile.in	2010-11-27 17:45:48.382799837 +0200
-@@ -181,189 +181,180 @@
+@@ -181,183 +181,172 @@
  
  ### Services
  idled: idled.o mutex_fake.o libimap.a $(DEPLIBS)
@@ -265,16 +265,6 @@
  unexpunge: unexpunge.o $(CLIOBJS) libimap.a $(DEPLIBS)
 -	$(CC) $(LDFLAGS) -o $@ unexpunge.o $(CLIOBJS) \
 -	libimap.a $(DEPLIBS) $(LIBS)
-+	$(CC) $(LDFLAGS) -o $@ $? \
-+	$(LIBS)
- 
- make_md5: make_md5.o libimap.a mutex_fake.o $(DEPLIBS)
--	$(CC) $(LDFLAGS) -o make_md5 make_md5.o libimap.a mutex_fake.o $(DEPLIBS) $(LIBS)
-+	$(CC) $(LDFLAGS) -o $@ $? \
-+	$(LIBS)
- 
- make_sha1: make_sha1.o libimap.a mutex_fake.o $(DEPLIBS)
--	$(CC) $(LDFLAGS) -o make_sha1 make_sha1.o libimap.a mutex_fake.o $(DEPLIBS) $(LIBS)
 +	$(CC) $(LDFLAGS) -o $@ $? \
 +	$(LIBS)
  

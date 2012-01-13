@@ -151,7 +151,7 @@
  
  ### Built Source Files
  
-@@ -181,185 +181,185 @@
+@@ -181,177 +181,177 @@
  
  ### Services
  idled: idled.lo mutex_fake.lo libimap.la $(DEPLIBS)
@@ -345,16 +345,6 @@
  	$(LIBS)
  
  unexpunge: unexpunge.lo $(CLIOBJS) libimap.la $(DEPLIBS)
--	$(CC) $(LDFLAGS) -o $@ $? \
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ $? \
- 	$(LIBS)
- 
- make_md5: make_md5.lo libimap.la mutex_fake.lo $(DEPLIBS)
--	$(CC) $(LDFLAGS) -o $@ $? \
-+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ $? \
- 	$(LIBS)
- 
- make_sha1: make_sha1.lo libimap.la mutex_fake.lo $(DEPLIBS)
 -	$(CC) $(LDFLAGS) -o $@ $? \
 +	$(LIBTOOL) --mode=link --tag=CC $(CC) $(LDFLAGS) -o $@ $? \
  	$(LIBS)

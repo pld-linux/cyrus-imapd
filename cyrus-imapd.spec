@@ -8,12 +8,12 @@ Summary:	High-performance mail store with IMAP and POP3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	2.4.11
+Version:	2.4.13
 Release:	1
 License:	BSD-like
 Group:		Networking/Daemons/POP3
 Source0:	ftp://ftp.cyrusimap.org/cyrus-imapd/%{name}-%{version}.tar.gz
-# Source0-md5:	d4a066e979adbe85679a6e239d64ee74
+# Source0-md5:	7d7c8864863df8a56a9dae5f1d846065
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
