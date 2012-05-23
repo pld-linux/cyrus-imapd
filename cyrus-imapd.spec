@@ -248,6 +248,9 @@ touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 	CYRUS_GROUP=%(id -g) \
 	INSTALLDIRS=vendor
 
+# ensure +x bit for rpm autodeps
+chmod +x $RPM_BUILD_ROOT%{_libdir}/*.so*
+
 install -p deliver-wrapper $RPM_BUILD_ROOT%{_libexecdir}/deliver-wrapper
 
 cp -p %{SOURCE6} $RPM_BUILD_ROOT/etc/logrotate.d/cyrus-imapd
