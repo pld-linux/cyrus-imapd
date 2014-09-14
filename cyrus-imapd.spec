@@ -459,11 +459,9 @@ fi
 %dir %{perl_vendorarch}/auto/Cyrus
 %dir %{perl_vendorarch}/auto/Cyrus/IMAP
 %attr(755,root,root) %{perl_vendorarch}/auto/Cyrus/IMAP/IMAP.so
-%{perl_vendorarch}/auto/Cyrus/IMAP/IMAP.bs
 %dir %{perl_vendorarch}/auto/Cyrus/SIEVE
 %dir %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve
 %attr(755,root,root) %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve/managesieve.so
-%{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve/managesieve.bs
 %endif
 
 %files doc
