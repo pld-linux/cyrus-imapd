@@ -174,6 +174,9 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %package doc
 Summary:	Cyrus-IMAP documentation
 Group:		Documentation
+%if "%{_rpmversion}" >= "5"
+BuildArch:	noarch
+%endif
 
 %description doc
 Cyrus-IMAP HTML documentation.
