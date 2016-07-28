@@ -985,17 +985,6 @@
  	$<
  
  # DO NOT DELETE THIS LINE -- make depend depends on it.
---- cyrus-imapd-2.4.10/configure.in~	2011-07-30 22:17:55.000000000 +0200
-+++ cyrus-imapd-2.4.10/configure.in	2011-07-30 22:21:57.705797231 +0200
-@@ -1078,7 +1078,7 @@
-       ;;
-   *) # use whatever they told us, or whatever we found
-      COMPILE_ET="${with_com_err}/bin/compile_et"
--     COM_ERR_LDFLAGS="-L${with_com_err}/lib"
-+     COM_ERR_LDFLAGS=""
-      COM_ERR_LIBS="-lcom_err"
-      COM_ERR_CPPFLAGS="-I${with_com_err}/include"
-      # Ever get the feeling people hide this stuff on purpose?
 --- cyrus-imapd-2.4.10/perl/sieve/managesieve/Makefile.PL.wiget	2011-07-04 17:05:01.000000000 +0200
 +++ cyrus-imapd-2.4.10/perl/sieve/managesieve/Makefile.PL	2011-07-31 19:33:33.426399853 +0200
 @@ -61,8 +61,8 @@ WriteMakefile(

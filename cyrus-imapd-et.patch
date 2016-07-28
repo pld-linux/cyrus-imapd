@@ -1,11 +1,11 @@
---- cyrus-imapd-2.1.14/configure.in.wiget	Thu Jun 21 20:46:04 2001
-+++ cyrus-imapd-2.1.14/configure.in	Thu Jun 21 23:40:18 2001
-@@ -668,7 +668,8 @@
+--- cyrus-imapd-2.4.18/configure.in~	2015-07-06 06:38:29.000000000 +0300
++++ cyrus-imapd-2.4.18/configure.in	2016-07-28 13:23:41.093544787 +0300
+@@ -1108,7 +1108,8 @@
+ 	COM_ERR_CPPFLAGS=""
        ;;
    *) # use whatever they told us, or whatever we found
-      COMPILE_ET="${with_com_err}/bin/compile_et"
 -     COM_ERR_LIBS="${with_com_err}/lib/libcom_err.a"
-+     COM_ERR_LDFLAGS="-L${with_com_err}/lib"
++     COM_ERR_LDFLAGS=""
 +     COM_ERR_LIBS="-lcom_err"
       COM_ERR_CPPFLAGS="-I${with_com_err}/include"
       # Ever get the feeling people hide this stuff on purpose?
