@@ -824,8 +824,8 @@
  
  distclean: clean
  	rm -f Makefile
---- cyrus-imapd-2.4.4/sieve/Makefile.in	2010-11-30 07:53:22.215288298 +0200
-+++ cyrus-imapd-2.4.4-shared-patch//sieve/Makefile.in	2010-11-29 09:06:25.952918572 +0200
+--- cyrus-imapd-2.4.4-shared-patch//sieve/Makefile.in	2010-11-29 09:06:25.952918572 +0200
++++ cyrus-imapd-2.4.18/sieve/Makefile.in	2016-07-28 13:36:20.937139019 +0300
 @@ -44,6 +44,7 @@
  
  srcdir = @srcdir@
@@ -847,8 +847,14 @@
  COMPILE_ET = @COMPILE_ET@
  
  DEFS = @DEFS@ @LOCALDEFS@
-@@ -85,7 +87,7 @@
- 	$(srcdir)/../install-sh -c -m 755 sieved $(DESTDIR)$(service_path) || exit
+@@ -81,11 +83,11 @@
+ 
+ install: sievec sieved
+ 	$(srcdir)/../install-sh -d ${DESTDIR}$(service_path)
+-	$(srcdir)/../install-sh -c -m 755 sievec $(DESTDIR)$(service_path) || exit
+-	$(srcdir)/../install-sh -c -m 755 sieved $(DESTDIR)$(service_path) || exit
++	$(LIBTOOL) --mode=install $(INSTALL) -m 755 sievec $(DESTDIR)$(service_path)
++	$(LIBTOOL) --mode=install $(INSTALL) -m 755 sieved $(DESTDIR)$(service_path)
  
  test: libsieve.la test.lo ../imap/message.lo $(DEPLIBS)
 -	$(CC) $(LDFLAGS) -o $@ $? \
