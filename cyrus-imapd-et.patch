@@ -1,12 +1,13 @@
---- cyrus-imapd-2.4.18/configure.in~	2015-07-06 06:38:29.000000000 +0300
-+++ cyrus-imapd-2.4.18/configure.in	2016-07-28 13:23:41.093544787 +0300
-@@ -1108,7 +1108,8 @@
- 	COM_ERR_CPPFLAGS=""
+--- cyrus-imapd-3.0.8/configure.ac~	2018-08-10 04:59:00.000000000 +0200
++++ cyrus-imapd-3.0.8/configure.ac	2018-09-16 13:54:40.617032333 +0200
+@@ -1742,8 +1742,8 @@ case "$with_com_err" in
+         COM_ERR_CPPFLAGS=""
        ;;
    *) # use whatever they told us, or whatever we found
 -     COM_ERR_LIBS="${with_com_err}/lib/libcom_err.a"
-+     COM_ERR_LDFLAGS=""
+-     COM_ERR_CPPFLAGS="-I${with_com_err}/include"
 +     COM_ERR_LIBS="-lcom_err"
-      COM_ERR_CPPFLAGS="-I${with_com_err}/include"
++     COM_ERR_CPPFLAGS=""
       # Ever get the feeling people hide this stuff on purpose?
       if test -d "${with_com_err}/include/et" ; then
+        COM_ERR_CPPFLAGS="-I${with_com_err}/include/et"

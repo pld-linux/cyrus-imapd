@@ -1,19 +1,18 @@
 #
 # Conditional build:
 %bcond_without	perl		# build with perl
-%bcond_without	shared		# build with shared patch (not updated)
 
 %{?with_perl:%include	/usr/lib/rpm/macros.perl}
 Summary:	High-performance mail store with IMAP and POP3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	2.4.18
-Release:	6
+Version:	3.0.8
+Release:	1
 License:	BSD-like
 Group:		Networking/Daemons/POP3
 Source0:	ftp://ftp.cyrusimap.org/cyrus-imapd/%{name}-%{version}.tar.gz
-# Source0-md5:	6b5151fbb1619cf1a133f65f55cda619
+# Source0-md5:	7dc5cf7987d146c6df608146087e0c75
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
@@ -27,13 +26,7 @@ Source11:	%{name}.init
 Source12:	cyrus.conf
 Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
-# http://bugzilla.cyrusimap.org/bugzilla3/show_bug.cgi?id=3095
-Patch1:		%{name}-shared.patch
-# http://bugzilla.cyrusimap.org/bugzilla3/show_bug.cgi?id=3094
-Patch2:		%{name}-verifydbver.patch
-Patch3:		gcc44.patch
-Patch4:		glibc.patch
-Patch6:		makeopt.patch
+Patch1:		link.patch
 URL:		http://www.cyrusimap.org/
 BuildRequires:	autoconf >= 2.54
 BuildRequires:	automake
@@ -52,9 +45,8 @@ Requires(post,preun):	/sbin/chkconfig
 Requires(postun):	/usr/sbin/userdel
 Requires(pre):	/bin/id
 Requires(pre):	/usr/sbin/useradd
-%{?with_shared:Requires:	%{name}-libs = %{version}-%{release}}
+Requires:	%{name}-libs = %{version}-%{release}
 Requires:	rc-scripts >= 0.4.0.18
-%{!?with_shared:Obsoletes:	%{name}-libs}
 # needed by scripts from %{_bindir}
 Requires:	pam >= 0.79.0
 %{?with_perl:Requires:	perl-%{name} = %{version}-%{release}}
@@ -79,6 +71,8 @@ Conflicts:	tpop3d
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %define		_libexecdir	%{_libdir}/cyrus
+
+%define		skip_post_check_so	libcyrus(|_min|_imap|_sieve).so.*
 
 %description
 The Cyrus IMAP server is a scalable enterprise mail system designed
@@ -171,51 +165,21 @@ Perl interface to cyrus-imapd library.
 %description -n perl-%{name} -l pl.UTF-8
 Perlowy interfejs do biblioteki cyrus-imapd.
 
-%package doc
-Summary:	Cyrus-IMAP documentation
-Group:		Documentation
-%if "%{_rpmversion}" >= "5"
-BuildArch:	noarch
-%endif
-
-%description doc
-Cyrus-IMAP HTML documentation.
-
 %prep
 %setup -q
-%patch6 -p1
 %patch0 -p1
-%if %{with shared}
-lsdiff --strip 1 %{PATCH1} |grep -E '(configure.in|Makefile.in)'| xargs %{__sed} -i -e '
-	s/\.o/.lo/g
-	s/\.a/.la/g
-'
 %patch1 -p1
-%endif
-%patch2 -p1
-%patch3 -p1
-%patch4 -p1
 
 rm -rf autom4te.cache
 
 cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 
 %build
-cd makedepend
 %{__libtoolize}
 %{__aclocal}
-%{__autoconf}
-cp -f %{_datadir}/automake/config.* .
-%configure
-%{__make}
-PATH=$PATH:$(pwd); export PATH
-cd ..
-%{__libtoolize}
-%{__aclocal} -I cmulocal
 %{__autoheader}
 %{__autoconf}
-cp -f %{_datadir}/automake/config.* .
-cp -f %{_datadir}/automake/install-sh .
+%{__automake}
 %configure \
 	--with-cyrus-prefix=%{_libexecdir} \
 	--with-service-path=%{_libexecdir} \
@@ -223,7 +187,9 @@ cp -f %{_datadir}/automake/install-sh .
 	--%{!?with_perl:without-perl}%{?with_perl:with-perl=%{__perl}} \
 	--without-libwrap \
 	--enable-nntp \
-	--enable-replication
+	--enable-replication \
+	--enable-static
+
 %{__make} -j1 \
 	INSTALLDIRS=vendor \
 	VERSION=%{version}
@@ -264,18 +230,6 @@ sed -e 's,/''usr/lib/cyrus,%{_libexecdir},' %{SOURCE11} > $RPM_BUILD_ROOT/etc/rc
 sed -e 's,/''usr/lib/cyrus,%{_libexecdir},' %{SOURCE13} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-sync
 cp -p %{SOURCE12} $RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 
-# move lots of admin-only/system-only stuff to sbin and lib
-# but keep compat links as they are used in configs
-for i in master reconstruct quota deliver; do
-	mv $RPM_BUILD_ROOT{%{_libexecdir}/$i,%{_sbindir}/cyr$i}
-	ln -s %{_sbindir}/cyr$i $RPM_BUILD_ROOT%{_libexecdir}/$i
-done
-for i in mbpath ctl_mboxlist ctl_deliver ctl_cyrusdb squatter \
-		 tls_prune ipurge cyrdump cvt_cyrusdb chk_cyrus arbitron \
-	 cyr_expire; do
-	mv $RPM_BUILD_ROOT{%{_libexecdir},%{_sbindir}}/$i
-	ln -s %{_sbindir}/$i $RPM_BUILD_ROOT%{_libexecdir}
-done
 # We rename some utils, so we need to sort out the manpages
 for i in master reconstruct quota deliver; do
 	mv $RPM_BUILD_ROOT%{_mandir}/man8/{,cyr}$i.8
@@ -335,7 +289,7 @@ fi
 %files
 %defattr(644,root,root,755)
 %doc cyrus-README cyrus-procmailrc cyrus-user-procmailrc.template
-%doc cyrus-imapd-procmail+cyrus.mc COPYRIGHT tools
+%doc cyrus-imapd-procmail+cyrus.mc COPYING tools
 %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/*.conf
 %attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) /etc/logrotate.d/cyrus-imapd
 %attr(440,cyrus,root) %config(noreplace) %verify(not md5 mtime size) /etc/pam.d/*
@@ -344,6 +298,7 @@ fi
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-sync
 %attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
 %attr(755,root,root) %{_bindir}/cyradm
+%attr(755,root,root) %{_bindir}/httptest
 %attr(755,root,root) %{_bindir}/imtest
 %attr(755,root,root) %{_bindir}/installsieve
 %attr(755,root,root) %{_bindir}/lmtptest
@@ -355,67 +310,55 @@ fi
 %attr(755,root,root) %{_bindir}/smtptest
 %attr(755,root,root) %{_bindir}/synctest
 
-%attr(4754,cyrus,mail) %{_sbindir}/cyrdeliver
-%attr(755,root,root) %{_sbindir}/arbitron
-%attr(755,root,root) %{_sbindir}/chk_cyrus
-%attr(755,root,root) %{_sbindir}/ctl_cyrusdb
-%attr(755,root,root) %{_sbindir}/ctl_deliver
-%attr(755,root,root) %{_sbindir}/ctl_mboxlist
-%attr(755,root,root) %{_sbindir}/cvt_cyrusdb
-%attr(755,root,root) %{_sbindir}/cyr_expire
-%attr(755,root,root) %{_sbindir}/cyrdump
-%attr(755,root,root) %{_sbindir}/cyrmaster
-%attr(755,root,root) %{_sbindir}/cyrquota
-%attr(755,root,root) %{_sbindir}/cyrreconstruct
-%attr(755,root,root) %{_sbindir}/ipurge
-%attr(755,root,root) %{_sbindir}/mbpath
-%attr(755,root,root) %{_sbindir}/squatter
-%attr(755,root,root) %{_sbindir}/tls_prune
-
 %dir %{_libexecdir}
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
-%attr(755,root,root) %{_libexecdir}/cyr_dbtool
-%attr(755,root,root) %{_libexecdir}/cyr_df
-%attr(755,root,root) %{_libexecdir}/cyr_sequence
-%attr(755,root,root) %{_libexecdir}/cyr_synclog
-%attr(755,root,root) %{_libexecdir}/cyr_userseen
-%attr(755,root,root) %{_libexecdir}/fetchnews
 %attr(755,root,root) %{_libexecdir}/fud
 %attr(755,root,root) %{_libexecdir}/imapd
 %attr(755,root,root) %{_libexecdir}/lmtpd
 %attr(755,root,root) %{_libexecdir}/lmtpproxyd
-%attr(755,root,root) %{_libexecdir}/mbexamine
+%attr(755,root,root) %{_libexecdir}/master
 %attr(755,root,root) %{_libexecdir}/nntpd
 %attr(755,root,root) %{_libexecdir}/notifyd
 %attr(755,root,root) %{_libexecdir}/pop3d
 %attr(755,root,root) %{_libexecdir}/pop3proxyd
 %attr(755,root,root) %{_libexecdir}/proxyd
-%attr(755,root,root) %{_libexecdir}/sievec
-%attr(755,root,root) %{_libexecdir}/sieved
 %attr(755,root,root) %{_libexecdir}/smmapd
-%attr(755,root,root) %{_libexecdir}/sync_client
-%attr(755,root,root) %{_libexecdir}/sync_reset
 %attr(755,root,root) %{_libexecdir}/sync_server
 %attr(755,root,root) %{_libexecdir}/timsieved
-%attr(755,root,root) %{_libexecdir}/unexpunge
-
-# symlinks
-%attr(755,root,root) %{_libexecdir}/arbitron
-%attr(755,root,root) %{_libexecdir}/chk_cyrus
-%attr(755,root,root) %{_libexecdir}/ctl_cyrusdb
-%attr(755,root,root) %{_libexecdir}/ctl_deliver
-%attr(755,root,root) %{_libexecdir}/ctl_mboxlist
-%attr(755,root,root) %{_libexecdir}/cvt_cyrusdb
-%attr(755,root,root) %{_libexecdir}/cyr_expire
-%attr(755,root,root) %{_libexecdir}/cyrdump
-%attr(755,root,root) %{_libexecdir}/deliver
-%attr(755,root,root) %{_libexecdir}/ipurge
-%attr(755,root,root) %{_libexecdir}/master
-%attr(755,root,root) %{_libexecdir}/mbpath
-%attr(755,root,root) %{_libexecdir}/quota
-%attr(755,root,root) %{_libexecdir}/reconstruct
-%attr(755,root,root) %{_libexecdir}/squatter
-%attr(755,root,root) %{_libexecdir}/tls_prune
+%attr(755,root,root) %{_sbindir}/arbitron
+%attr(755,root,root) %{_sbindir}/chk_cyrus
+%attr(755,root,root) %{_sbindir}/ctl_conversationsdb
+%attr(755,root,root) %{_sbindir}/ctl_cyrusdb
+%attr(755,root,root) %{_sbindir}/ctl_deliver
+%attr(755,root,root) %{_sbindir}/ctl_mboxlist
+%attr(755,root,root) %{_sbindir}/cvt_cyrusdb
+%attr(755,root,root) %{_sbindir}/cvt_xlist_specialuse
+%attr(755,root,root) %{_sbindir}/cyr_buildinfo
+%attr(755,root,root) %{_sbindir}/cyr_dbtool
+%attr(755,root,root) %{_sbindir}/cyr_deny
+%attr(755,root,root) %{_sbindir}/cyr_df
+%attr(755,root,root) %{_sbindir}/cyrdump
+%attr(755,root,root) %{_sbindir}/cyr_expire
+%attr(755,root,root) %{_sbindir}/cyr_info
+%attr(755,root,root) %{_sbindir}/cyr_sequence
+%attr(755,root,root) %{_sbindir}/cyr_synclog
+%attr(755,root,root) %{_sbindir}/cyr_userseen
+%attr(755,root,root) %{_sbindir}/cyr_virusscan
+%attr(755,root,root) %{_sbindir}/deliver
+%attr(755,root,root) %{_sbindir}/fetchnews
+%attr(755,root,root) %{_sbindir}/ipurge
+%attr(755,root,root) %{_sbindir}/mbexamine
+%attr(755,root,root) %{_sbindir}/mbpath
+%attr(755,root,root) %{_sbindir}/mbtool
+%attr(755,root,root) %{_sbindir}/quota
+%attr(755,root,root) %{_sbindir}/reconstruct
+%attr(755,root,root) %{_sbindir}/sievec
+%attr(755,root,root) %{_sbindir}/sieved
+%attr(755,root,root) %{_sbindir}/squatter
+%attr(755,root,root) %{_sbindir}/sync_client
+%attr(755,root,root) %{_sbindir}/sync_reset
+%attr(755,root,root) %{_sbindir}/tls_prune
+%attr(755,root,root) %{_sbindir}/unexpunge
 
 %attr(750,cyrus,mail) /var/spool/imap
 %attr(750,cyrus,mail) %dir /var/lib/imap
@@ -433,27 +376,38 @@ fi
 
 %{_mandir}/man*/*
 
-%if %{with shared}
 %files libs
 %defattr(644,root,root,755)
-%attr(755,root,root) %{_libdir}/libcyrus-%{version}.so
-%attr(755,root,root) %{_libdir}/libcyrus_min-%{version}.so
-%endif
+%attr(755,root,root) %{_libdir}/libcyrus.so.0
+%attr(755,root,root) %ghost %{_libdir}/libcyrus.so.*.*
+%attr(755,root,root) %{_libdir}/libcyrus_min.so.0
+%attr(755,root,root) %ghost %{_libdir}/libcyrus_min.so.*.*
+%attr(755,root,root) %{_libdir}/libcyrus_imap.so.0
+%attr(755,root,root) %ghost %{_libdir}/libcyrus_imap.so.*.*
+%attr(755,root,root) %{_libdir}/libcyrus_sieve.so.0
+%attr(755,root,root) %ghost %{_libdir}/libcyrus_sieve.so.*.*
 
 %files devel
 %defattr(644,root,root,755)
 %{_includedir}/cyrus
-%if %{with shared}
 %attr(755,root,root) %{_libdir}/libcyrus.so
 %attr(755,root,root) %{_libdir}/libcyrus_min.so
+%attr(755,root,root) %{_libdir}/libcyrus_imap.so
+%attr(755,root,root) %{_libdir}/libcyrus_sieve.so
 %{_libdir}/libcyrus.la
 %{_libdir}/libcyrus_min.la
+%{_libdir}/libcyrus_imap.la
+%{_libdir}/libcyrus_sieve.la
+%{_pkgconfigdir}/libcyrus.pc
+%{_pkgconfigdir}/libcyrus_min.pc
+%{_pkgconfigdir}/libcyrus_sieve.pc
 
 %files static
 %defattr(644,root,root,755)
-%endif
 %{_libdir}/libcyrus.a
+%{_libdir}/libcyrus_imap.a
 %{_libdir}/libcyrus_min.a
+%{_libdir}/libcyrus_sieve.a
 
 %if %{with perl}
 %files -n perl-%{name}
@@ -466,7 +420,3 @@ fi
 %dir %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve
 %attr(755,root,root) %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve/managesieve.so
 %endif
-
-%files doc
-%defattr(644,root,root,755)
-%doc doc/*.html
