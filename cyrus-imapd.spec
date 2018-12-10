@@ -8,7 +8,7 @@ Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	3.0.8
-Release:	1
+Release:	2
 License:	BSD-like
 Group:		Networking/Daemons/POP3
 Source0:	ftp://ftp.cyrusimap.org/cyrus-imapd/%{name}-%{version}.tar.gz
@@ -27,6 +27,7 @@ Source12:	cyrus.conf
 Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
 Patch1:		link.patch
+Patch2:		%{name}-clamav-0.101.patch
 URL:		http://www.cyrusimap.org/
 BuildRequires:	autoconf >= 2.54
 BuildRequires:	automake
@@ -169,6 +170,7 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %setup -q
 %patch0 -p1
 %patch1 -p1
+%patch2 -p1
 
 rm -rf autom4te.cache
 
