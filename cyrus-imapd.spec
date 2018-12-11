@@ -183,8 +183,6 @@ cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 %{__autoconf}
 %{__automake}
 %configure \
-	--with-cyrus-prefix=%{_libexecdir} \
-	--with-service-path=%{_libexecdir} \
 	--with-com_err=/usr \
 	--%{!?with_perl:without-perl}%{?with_perl:with-perl=%{__perl}} \
 	--without-libwrap \
