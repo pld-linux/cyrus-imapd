@@ -221,7 +221,7 @@ cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 	--without-libwrap \
 	%{__with_without lmdb} \
 	%{__with_without mysql} \
-	--%{!?with_perl:without-perl}%{?with_perl:with-perl=%{__perl}} \
+	%{__with_without perl perl %{__perl}} \
 	%{__with_without pgsql} \
 	%{__with_without docs sphinx-build}
 
