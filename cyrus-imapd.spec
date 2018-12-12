@@ -1,5 +1,6 @@
 #
 # Conditional build:
+%bcond_without	http		# build without http support
 %bcond_without	perl		# build with perl
 
 %{?with_perl:%include	/usr/lib/rpm/macros.perl}
@@ -34,14 +35,20 @@ BuildRequires:	automake
 BuildRequires:	cyrus-sasl-devel >= 1.5.27
 BuildRequires:	db-devel >= 4.1.25
 BuildRequires:	flex
+%{?with_http:BuildRequires:	libbrotli-devel}
 BuildRequires:	libcom_err-devel >= 1.21
+%{?with_http:BuildRequires:	libical-devel}
 BuildRequires:	libtool
+%{?with_http:BuildRequires:	libxml2-devel >= 2.7.3}
 BuildRequires:	net-snmp-devel
+%{?with_http:BuildRequires:	nghttp2-devel >= 1.5}
 BuildRequires:	openssl-devel >= 0.9.7d
 BuildRequires:	patchutils
 %{?with_perl:BuildRequires:	perl-devel >= 1:5.8.0}
 %{?with_perl:BuildRequires:	rpm-perlprov}
-BuildRequires:	rpmbuild(macros) >= 1.268
+%{?with_http:BuildRequires:	shapelib-devel >= 1.4.1}
+%{?with_http:BuildRequires:	sqlite3-devel}
+BuildRequires:	rpmbuild(macros) >= 1.527
 Requires(post,preun):	/sbin/chkconfig
 Requires(postun):	/usr/sbin/userdel
 Requires(pre):	/bin/id
@@ -186,6 +193,7 @@ cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 	--with-com_err=/usr \
 	--%{!?with_perl:without-perl}%{?with_perl:with-perl=%{__perl}} \
 	--without-libwrap \
+	%{__enable_disable http} \
 	--enable-nntp \
 	--enable-replication \
 	--enable-static
@@ -313,6 +321,7 @@ fi
 %dir %{_libexecdir}
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
 %attr(755,root,root) %{_libexecdir}/fud
+%{?with_http:%attr(755,root,root) %{_libexecdir}/httpd}
 %attr(755,root,root) %{_libexecdir}/imapd
 %attr(755,root,root) %{_libexecdir}/lmtpd
 %attr(755,root,root) %{_libexecdir}/lmtpproxyd
@@ -331,6 +340,7 @@ fi
 %attr(755,root,root) %{_sbindir}/ctl_cyrusdb
 %attr(755,root,root) %{_sbindir}/ctl_deliver
 %attr(755,root,root) %{_sbindir}/ctl_mboxlist
+%{?with_http:%attr(755,root,root) %{_sbindir}/ctl_zoneinfo}
 %attr(755,root,root) %{_sbindir}/cvt_cyrusdb
 %attr(755,root,root) %{_sbindir}/cvt_xlist_specialuse
 %attr(755,root,root) %{_sbindir}/cyr_buildinfo
@@ -344,6 +354,7 @@ fi
 %attr(755,root,root) %{_sbindir}/cyr_synclog
 %attr(755,root,root) %{_sbindir}/cyr_userseen
 %attr(755,root,root) %{_sbindir}/cyr_virusscan
+%{?with_http:%attr(755,root,root) %{_sbindir}/dav_reconstruct}
 %attr(755,root,root) %{_sbindir}/deliver
 %attr(755,root,root) %{_sbindir}/fetchnews
 %attr(755,root,root) %{_sbindir}/ipurge
