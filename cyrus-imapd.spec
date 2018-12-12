@@ -1,9 +1,17 @@
 #
 # Conditional build:
+%bcond_without	docs		# don't regenerate docs
 %bcond_without	http		# build without http support
-%bcond_without	perl		# build with perl
-
+%bcond_without	ldap		# build without ldap support
+%bcond_without	lmdb		# build without lmdb backend support
+%bcond_without	mysql		# build without mysql backend support
+%bcond_without	perl		# build without perl support
+%bcond_without	pgsql		# build without postgresql backend support
+%bcond_with	sphinx		# build with sphinx search engine support (broken)
+%bcond_without	xapian		# build without xapian search engine support
+#
 %{?with_perl:%include	/usr/lib/rpm/macros.perl}
+#
 Summary:	High-performance mail store with IMAP and POP3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
@@ -40,14 +48,21 @@ BuildRequires:	libcom_err-devel >= 1.21
 %{?with_http:BuildRequires:	libical-devel}
 BuildRequires:	libtool
 %{?with_http:BuildRequires:	libxml2-devel >= 2.7.3}
+%{?with_lmdb:BuildRequires:	lmdb-devel}
+%{?with_mysql:BuildRequires:	mysql-devel}
 BuildRequires:	net-snmp-devel
 %{?with_http:BuildRequires:	nghttp2-devel >= 1.5}
+%{?with_ldap:BuildRequires:	openldap-devel}
 BuildRequires:	openssl-devel >= 0.9.7d
 BuildRequires:	patchutils
+%{?with_docs:BuildRequires:	perl-Pod-POM-View-Restructured}
 %{?with_perl:BuildRequires:	perl-devel >= 1:5.8.0}
+%{?with_pgsql:BuildRequires:	postgresql-devel}
 %{?with_perl:BuildRequires:	rpm-perlprov}
 %{?with_http:BuildRequires:	shapelib-devel >= 1.4.1}
 %{?with_http:BuildRequires:	sqlite3-devel}
+%{?with_docs:BuildRequires:	sphinx-pdg-3}
+%{?with_xapian:BuildRequires:	xapian-core-devel}
 BuildRequires:	rpmbuild(macros) >= 1.527
 Requires(post,preun):	/sbin/chkconfig
 Requires(postun):	/usr/sbin/userdel
@@ -194,9 +209,21 @@ cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 	--%{!?with_perl:without-perl}%{?with_perl:with-perl=%{__perl}} \
 	--without-libwrap \
 	%{__enable_disable http} \
+	%{__with_without docs sphinx-build} \
+	%{__with_without ldap} \
+	%{__with_without lmdb} \
+	%{__with_without mysql} \
+	--enable-autocreate \
+	--enable-backup \
+	--enable-calalarmd \
+	--enable-idled \
+	--enable-murder \
 	--enable-nntp \
+	%{__with_without pgsql} \
 	--enable-replication \
-	--enable-static
+	%{__enable_disable sphinx} \
+	--enable-static \
+	%{__enable_disable xapian}
 
 %{__make} -j1 \
 	INSTALLDIRS=vendor \
@@ -320,14 +347,19 @@ fi
 
 %dir %{_libexecdir}
 %attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
+%attr(755,root,root) %{_libexecdir}/backupd
+%attr(755,root,root) %{_libexecdir}/calalarmd
 %attr(755,root,root) %{_libexecdir}/fud
 %{?with_http:%attr(755,root,root) %{_libexecdir}/httpd}
+%attr(755,root,root) %{_libexecdir}/idled
 %attr(755,root,root) %{_libexecdir}/imapd
 %attr(755,root,root) %{_libexecdir}/lmtpd
 %attr(755,root,root) %{_libexecdir}/lmtpproxyd
 %attr(755,root,root) %{_libexecdir}/master
+%attr(755,root,root) %{_libexecdir}/mupdate
 %attr(755,root,root) %{_libexecdir}/nntpd
 %attr(755,root,root) %{_libexecdir}/notifyd
+%attr(755,root,root) %{_libexecdir}/ptloader
 %attr(755,root,root) %{_libexecdir}/pop3d
 %attr(755,root,root) %{_libexecdir}/pop3proxyd
 %attr(755,root,root) %{_libexecdir}/proxyd
@@ -336,6 +368,7 @@ fi
 %attr(755,root,root) %{_libexecdir}/timsieved
 %attr(755,root,root) %{_sbindir}/arbitron
 %attr(755,root,root) %{_sbindir}/chk_cyrus
+%attr(755,root,root) %{_sbindir}/ctl_backups
 %attr(755,root,root) %{_sbindir}/ctl_conversationsdb
 %attr(755,root,root) %{_sbindir}/ctl_cyrusdb
 %attr(755,root,root) %{_sbindir}/ctl_deliver
@@ -348,6 +381,7 @@ fi
 %attr(755,root,root) %{_sbindir}/cyr_deny
 %attr(755,root,root) %{_sbindir}/cyr_df
 %attr(755,root,root) %{_sbindir}/cyrdump
+%attr(755,root,root) %{_sbindir}/cyr_backup
 %attr(755,root,root) %{_sbindir}/cyr_expire
 %attr(755,root,root) %{_sbindir}/cyr_info
 %attr(755,root,root) %{_sbindir}/cyr_sequence
@@ -362,7 +396,10 @@ fi
 %attr(755,root,root) %{_sbindir}/mbpath
 %attr(755,root,root) %{_sbindir}/mbtool
 %attr(755,root,root) %{_sbindir}/quota
+%attr(755,root,root) %{_sbindir}/ptdump
+%attr(755,root,root) %{_sbindir}/ptexpire
 %attr(755,root,root) %{_sbindir}/reconstruct
+%attr(755,root,root) %{_sbindir}/restore
 %attr(755,root,root) %{_sbindir}/sievec
 %attr(755,root,root) %{_sbindir}/sieved
 %attr(755,root,root) %{_sbindir}/squatter
