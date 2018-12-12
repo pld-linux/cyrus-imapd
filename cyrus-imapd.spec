@@ -467,4 +467,9 @@ fi
 %dir %{perl_vendorarch}/auto/Cyrus/SIEVE
 %dir %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve
 %attr(755,root,root) %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve/managesieve.so
+%dir %{perl_vendorlib}/Cyrus
+%dir %{perl_vendorlib}/Cyrus/Annotator
+%{perl_vendorlib}/Cyrus/Annotator/AnnotateInlinedCIDs.pm
+%{perl_vendorlib}/Cyrus/Annotator/Daemon.pm
+%{perl_vendorlib}/Cyrus/Annotator/Message.pm
 %endif
