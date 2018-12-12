@@ -205,25 +205,25 @@ cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 %{__autoconf}
 %{__automake}
 %configure \
-	--with-com_err=/usr \
-	--%{!?with_perl:without-perl}%{?with_perl:with-perl=%{__perl}} \
-	--without-libwrap \
-	%{__enable_disable http} \
-	%{__with_without docs sphinx-build} \
-	%{__with_without ldap} \
-	%{__with_without lmdb} \
-	%{__with_without mysql} \
 	--enable-autocreate \
 	--enable-backup \
 	--enable-calalarmd \
+	%{__enable_disable http} \
 	--enable-idled \
 	--enable-murder \
 	--enable-nntp \
-	%{__with_without pgsql} \
 	--enable-replication \
 	%{__enable_disable sphinx} \
 	--enable-static \
-	%{__enable_disable xapian}
+	%{__enable_disable xapian} \
+	--with-com_err=/usr \
+	%{__with_without ldap} \
+	--without-libwrap \
+	%{__with_without lmdb} \
+	%{__with_without mysql} \
+	--%{!?with_perl:without-perl}%{?with_perl:with-perl=%{__perl}} \
+	%{__with_without pgsql} \
+	%{__with_without docs sphinx-build}
 
 %{__make} -j1 \
 	INSTALLDIRS=vendor \
