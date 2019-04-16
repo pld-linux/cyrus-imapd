@@ -1,34 +1,14 @@
-Support clamav >= 0.101.0, based on changes introduced in:
-
-https://github.com/Cisco-Talos/clamav-devel/commit/048a88e61558726bd9ba66ec3195b63d61d8a430
-
---- cyrus-imapd-3.0.8/imap/cyr_virusscan.c.orig	2018-08-10 04:59:00.000000000 +0200
-+++ cyrus-imapd-3.0.8/imap/cyr_virusscan.c	2018-12-10 10:51:08.776406893 +0100
-@@ -193,8 +193,17 @@
-     int r;
+--- cyrus-imapd-3.0.9/imap/cyr_virusscan.c.orig	2019-03-15 01:31:20.000000000 +0100
++++ cyrus-imapd-3.0.9/imap/cyr_virusscan.c	2019-04-16 18:46:50.316701915 +0200
+@@ -126,6 +126,11 @@
+ /* ClamAV implementation */
+ #include <clamav.h>
  
-     /* scan file */
-+#if LIBCLAMAV_MAJORVER < 9
-     r = cl_scanfile(fname, virname, NULL, st->av_engine,
-                     CL_SCAN_STDOPT);
-+#else 
-+    static struct cl_scan_options options;
-+    
-+    memset(&options, 0, sizeof(struct cl_scan_options));
-+    options.parse |= ~0; /* enable all parsers */
-+
-+    r = cl_scanfile(fname, virname, NULL, st->av_engine, &options);
++#ifndef __CLAMAV_CONFIG_H
++/* clamav 0.101.2 dropped installing clamav-config.h, assume it's major 9 for now */
++#define LIBCLAMAV_MAJORVER 9
 +#endif
- 
-     switch (r) {
-     case CL_CLEAN:
---- cyrus-imapd-3.0.8/Makefile.am.orig	2018-12-10 12:15:51.580494168 +0100
-+++ cyrus-imapd-3.0.8/Makefile.am	2018-12-10 12:14:59.394460523 +0100
-@@ -879,6 +879,7 @@
- imap_cyr_sphinxmgr_LDADD = $(LD_UTILITY_ADD)
- 
- imap_cyr_virusscan_SOURCES = imap/cli_fatal.c imap/cyr_virusscan.c imap/mutex_fake.c
-+imap_cyr_virusscan_CFLAGS = $(AM_CFLAGS) $(CLAMAV_CFLAGS) $(CFLAG_VISIBILITY)
- imap_cyr_virusscan_LDADD = $(LD_UTILITY_ADD) $(CLAMAV_LIBS)
- 
- imap_ctl_zoneinfo_SOURCES = imap/cli_fatal.c imap/ctl_zoneinfo.c imap/mutex_fake.c imap/zoneinfo_db.c
++
+ struct clamav_state {
+     struct cl_engine *av_engine;
+ };

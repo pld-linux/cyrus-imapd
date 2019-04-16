@@ -1,3 +1,5 @@
+# TODO: zephyr notification?
+
 #
 # Conditional build:
 %bcond_without	docs		# don't regenerate docs
@@ -16,12 +18,12 @@ Summary:	High-performance mail store with IMAP and POP3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	3.0.8
-Release:	2
+Version:	3.0.9
+Release:	1
 License:	BSD-like
 Group:		Networking/Daemons/POP3
-Source0:	ftp://ftp.cyrusimap.org/cyrus-imapd/%{name}-%{version}.tar.gz
-# Source0-md5:	7dc5cf7987d146c6df608146087e0c75
+Source0:	https://www.cyrusimap.org/releases/%{name}-%{version}.tar.gz
+# Source0-md5:	8452f81e3c30fa9af6f456e143e98576
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
@@ -37,17 +39,21 @@ Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
 Patch1:		link.patch
 Patch2:		%{name}-clamav-0.101.patch
+Patch3:		%{name}-icu.patch
 URL:		http://www.cyrusimap.org/
-BuildRequires:	autoconf >= 2.54
+BuildRequires:	autoconf >= 2.63
 BuildRequires:	automake
-BuildRequires:	cyrus-sasl-devel >= 1.5.27
+BuildRequires:	cyrus-sasl-devel >= 2.1.7
 BuildRequires:	db-devel >= 4.1.25
 BuildRequires:	flex
+BuildRequires:	jansson-devel >= 2.3
 %{?with_http:BuildRequires:	libbrotli-devel}
+BuildRequires:	libcap-devel
 BuildRequires:	libcom_err-devel >= 1.21
-%{?with_http:BuildRequires:	libical-devel}
-BuildRequires:	libtool
-%{?with_http:BuildRequires:	libxml2-devel >= 2.7.3}
+%{?with_http:BuildRequires:	libical-devel >= 2.0}
+BuildRequires:	libicu-devel
+BuildRequires:	libtool >= 2:2.2.6
+%{?with_http:BuildRequires:	libxml2-devel >= 1:2.7.3}
 %{?with_lmdb:BuildRequires:	lmdb-devel}
 %{?with_mysql:BuildRequires:	mysql-devel}
 BuildRequires:	net-snmp-devel
@@ -59,11 +65,12 @@ BuildRequires:	patchutils
 %{?with_perl:BuildRequires:	perl-devel >= 1:5.8.0}
 %{?with_pgsql:BuildRequires:	postgresql-devel}
 %{?with_perl:BuildRequires:	rpm-perlprov}
+BuildRequires:	rpmbuild(macros) >= 1.527
 %{?with_http:BuildRequires:	shapelib-devel >= 1.4.1}
-%{?with_http:BuildRequires:	sqlite3-devel}
+%{?with_http:BuildRequires:	sqlite3-devel >= 3}
 %{?with_docs:BuildRequires:	sphinx-pdg-3}
 %{?with_xapian:BuildRequires:	xapian-core-devel}
-BuildRequires:	rpmbuild(macros) >= 1.527
+BuildRequires:	zlib-devel
 Requires(post,preun):	/sbin/chkconfig
 Requires(postun):	/usr/sbin/userdel
 Requires(pre):	/bin/id
@@ -93,7 +100,7 @@ Conflicts:	solid-pop3d
 Conflicts:	tpop3d
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
-%define		_libexecdir	%{_libdir}/cyrus
+%define		pkglibexecdir	%{_libexecdir}/cyrus
 
 %define		skip_post_check_so	libcyrus(|_min|_imap|_sieve).so.*
 
@@ -143,6 +150,8 @@ IMAP, POP3 ou KPOP.
 Summary:	Shared cyrus-imapd libraries
 Summary(pl.UTF-8):	Współdzielone biblioteki cyrus-imapd
 Group:		Libraries
+Requires:	cyrus-sasl-libs >= 2.1.7
+Requires:	jansson >= 2.3
 
 %description libs
 Shared cyrus-imapd libraries.
@@ -155,6 +164,8 @@ Summary:	Header files for developing with cyrus-imapd libraries
 Summary(pl.UTF-8):	Pliki nagłówkowe do programowania z użyciem bibliotek cyrus-imapd
 Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
+Requires:	cyrus-sasl-devel >= 2.1.7
+Requires:	jansson-devel >= 2.3
 
 %description devel
 This package provides the necessary header files files to allow you to
@@ -193,18 +204,18 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %patch0 -p1
 %patch1 -p1
 %patch2 -p1
-
-rm -rf autom4te.cache
+%patch3 -p1
 
 cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 
 %build
 %{__libtoolize}
-%{__aclocal}
-%{__autoheader}
+%{__aclocal} -I cmulocal
 %{__autoconf}
+%{__autoheader}
 %{__automake}
 %configure \
+	--libexecdir=%{pkglibexecdir} \
 	--enable-autocreate \
 	--enable-backup \
 	--enable-calalarmd \
@@ -218,6 +229,7 @@ cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 	%{__enable_disable xapian} \
 	--with-com_err=/usr \
 	%{__with_without ldap} \
+	--with-libcap \
 	--without-libwrap \
 	%{__with_without lmdb} \
 	%{__with_without mysql} \
@@ -230,12 +242,12 @@ cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 	VERSION=%{version}
 
 %{__cc} %{rpmcflags} \
-	-DLIBEXECDIR="\"%{_libexecdir}\"" %{rpmldflags} -Wall -o deliver-wrapper %{SOURCE3}
+	-DLIBEXECDIR="\"%{pkglibexecdir}\"" %{rpmldflags} -Wall -o deliver-wrapper %{SOURCE3}
 
 %install
 rm -rf $RPM_BUILD_ROOT
 install -d \
-	$RPM_BUILD_ROOT{%{_sbindir},%{_libexecdir},%{_mandir}} \
+	$RPM_BUILD_ROOT{%{_sbindir},%{pkglibexecdir},%{_mandir}} \
 	$RPM_BUILD_ROOT%{_sysconfdir}/{logrotate.d,sysconfig/rc-inetd} \
 	$RPM_BUILD_ROOT/var/spool/imap/stage. \
 	$RPM_BUILD_ROOT/var/lib/imap/{user,quota,proc,log,msg,deliverdb/db,sieve,db,socket} \
@@ -255,14 +267,14 @@ touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 # ensure +x bit for rpm autodeps
 chmod +x $RPM_BUILD_ROOT%{_libdir}/*.so*
 
-install -p deliver-wrapper $RPM_BUILD_ROOT%{_libexecdir}/deliver-wrapper
+install -p deliver-wrapper $RPM_BUILD_ROOT%{pkglibexecdir}/deliver-wrapper
 
 cp -p %{SOURCE6} $RPM_BUILD_ROOT/etc/logrotate.d/cyrus-imapd
 cp -p %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/imapd.conf
 cp -p %{SOURCE9} $RPM_BUILD_ROOT/etc/pam.d/imap
 cp -p %{SOURCE10} $RPM_BUILD_ROOT/etc/pam.d/pop
-sed -e 's,/''usr/lib/cyrus,%{_libexecdir},' %{SOURCE11} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
-sed -e 's,/''usr/lib/cyrus,%{_libexecdir},' %{SOURCE13} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-sync
+sed -e 's,/''usr/lib/cyrus,%{pkglibexecdir},' %{SOURCE11} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
+sed -e 's,/''usr/lib/cyrus,%{pkglibexecdir},' %{SOURCE13} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-sync
 cp -p %{SOURCE12} $RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 
 # We rename some utils, so we need to sort out the manpages
@@ -345,27 +357,27 @@ fi
 %attr(755,root,root) %{_bindir}/smtptest
 %attr(755,root,root) %{_bindir}/synctest
 
-%dir %{_libexecdir}
-%attr(2755,cyrus,mail) %{_libexecdir}/deliver-wrapper
-%attr(755,root,root) %{_libexecdir}/backupd
-%attr(755,root,root) %{_libexecdir}/calalarmd
-%attr(755,root,root) %{_libexecdir}/fud
-%{?with_http:%attr(755,root,root) %{_libexecdir}/httpd}
-%attr(755,root,root) %{_libexecdir}/idled
-%attr(755,root,root) %{_libexecdir}/imapd
-%attr(755,root,root) %{_libexecdir}/lmtpd
-%attr(755,root,root) %{_libexecdir}/lmtpproxyd
-%attr(755,root,root) %{_libexecdir}/master
-%attr(755,root,root) %{_libexecdir}/mupdate
-%attr(755,root,root) %{_libexecdir}/nntpd
-%attr(755,root,root) %{_libexecdir}/notifyd
-%attr(755,root,root) %{_libexecdir}/ptloader
-%attr(755,root,root) %{_libexecdir}/pop3d
-%attr(755,root,root) %{_libexecdir}/pop3proxyd
-%attr(755,root,root) %{_libexecdir}/proxyd
-%attr(755,root,root) %{_libexecdir}/smmapd
-%attr(755,root,root) %{_libexecdir}/sync_server
-%attr(755,root,root) %{_libexecdir}/timsieved
+%dir %{pkglibexecdir}
+%attr(2755,cyrus,mail) %{pkglibexecdir}/deliver-wrapper
+%attr(755,root,root) %{pkglibexecdir}/backupd
+%attr(755,root,root) %{pkglibexecdir}/calalarmd
+%attr(755,root,root) %{pkglibexecdir}/fud
+%{?with_http:%attr(755,root,root) %{pkglibexecdir}/httpd}
+%attr(755,root,root) %{pkglibexecdir}/idled
+%attr(755,root,root) %{pkglibexecdir}/imapd
+%attr(755,root,root) %{pkglibexecdir}/lmtpd
+%attr(755,root,root) %{pkglibexecdir}/lmtpproxyd
+%attr(755,root,root) %{pkglibexecdir}/master
+%attr(755,root,root) %{pkglibexecdir}/mupdate
+%attr(755,root,root) %{pkglibexecdir}/nntpd
+%attr(755,root,root) %{pkglibexecdir}/notifyd
+%attr(755,root,root) %{pkglibexecdir}/ptloader
+%attr(755,root,root) %{pkglibexecdir}/pop3d
+%attr(755,root,root) %{pkglibexecdir}/pop3proxyd
+%attr(755,root,root) %{pkglibexecdir}/proxyd
+%attr(755,root,root) %{pkglibexecdir}/smmapd
+%attr(755,root,root) %{pkglibexecdir}/sync_server
+%attr(755,root,root) %{pkglibexecdir}/timsieved
 %attr(755,root,root) %{_sbindir}/arbitron
 %attr(755,root,root) %{_sbindir}/chk_cyrus
 %attr(755,root,root) %{_sbindir}/ctl_backups

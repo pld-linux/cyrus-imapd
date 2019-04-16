@@ -1,0 +1,39 @@
+--- cyrus-imapd-3.0.9/lib/charset.h.orig	2019-03-15 01:31:20.000000000 +0100
++++ cyrus-imapd-3.0.9/lib/charset.h	2019-04-16 18:25:58.340151121 +0200
+@@ -60,6 +60,10 @@
+ 
+ #include "unicode/ucnv.h"
+ 
++#ifdef __cplusplus
++extern "C" {
++#endif
++
+ #include "util.h"
+ 
+ typedef int comp_pat;
+@@ -127,4 +131,8 @@
+                            charset_t charset, int encoding,
+                            const char *subtype, int flags);
+ 
++#ifdef __cplusplus
++}
++#endif
++
+ #endif /* INCLUDED_CHARSET_H */
+--- cyrus-imapd-3.0.9/imap/xapian_wrap.cpp.orig	2019-03-15 01:31:20.000000000 +0100
++++ cyrus-imapd-3.0.9/imap/xapian_wrap.cpp	2019-04-16 18:30:21.718724277 +0200
+@@ -14,13 +14,13 @@
+ #include "search_part.h"
+ #include "xmalloc.h"
+ #include "xapian_wrap.h"
+-#include "charset.h"
+ #include "ptrarray.h"
+ 
+ 
+ /* generated headers are not necessarily in current directory */
+ #include "imap/imap_err.h"
+ };
++#include "charset.h"
+ 
+ #include <xapian.h>
+ 
