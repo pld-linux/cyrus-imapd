@@ -83,6 +83,7 @@ Requires:	pam >= 0.79.0
 Provides:	imapdaemon
 Provides:	pop3daemon
 Provides:	user(cyrus)
+Obsoletes:	cyrus-imapd-doc < 3
 Obsoletes:	imap
 Obsoletes:	imapd
 Obsoletes:	imapdaemon
