@@ -12,7 +12,6 @@
 %bcond_with	sphinx		# build with sphinx search engine support (broken)
 %bcond_without	xapian		# build without xapian search engine support
 #
-%{?with_perl:%include	/usr/lib/rpm/macros.perl}
 #
 Summary:	High-performance mail store with IMAP and POP3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
