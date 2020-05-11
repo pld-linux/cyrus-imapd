@@ -2,7 +2,7 @@
 
 #
 # Conditional build:
-%bcond_without	docs		# don't regenerate docs
+%bcond_without	doc		# don't regenerate docs
 %bcond_without	http		# build without http support
 %bcond_without	ldap		# build without ldap support
 %bcond_without	lmdb		# build without lmdb backend support
@@ -60,14 +60,14 @@ BuildRequires:	net-snmp-devel
 %{?with_ldap:BuildRequires:	openldap-devel}
 BuildRequires:	openssl-devel >= 0.9.7d
 BuildRequires:	patchutils
-%{?with_docs:BuildRequires:	perl-Pod-POM-View-Restructured}
+%{?with_doc:BuildRequires:	perl-Pod-POM-View-Restructured}
 %{?with_perl:BuildRequires:	perl-devel >= 1:5.8.0}
 %{?with_pgsql:BuildRequires:	postgresql-devel}
 %{?with_perl:BuildRequires:	rpm-perlprov}
 BuildRequires:	rpmbuild(macros) >= 1.527
 %{?with_http:BuildRequires:	shapelib-devel >= 1.4.1}
 %{?with_http:BuildRequires:	sqlite3-devel >= 3}
-%{?with_docs:BuildRequires:	sphinx-pdg-3}
+%{?with_doc:BuildRequires:	sphinx-pdg-3}
 %{?with_xapian:BuildRequires:	xapian-core-devel}
 BuildRequires:	zlib-devel
 Requires(post,preun):	/sbin/chkconfig
@@ -235,7 +235,7 @@ cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 	%{__with_without mysql} \
 	%{__with_without perl perl %{__perl}} \
 	%{__with_without pgsql} \
-	%{__with_without docs sphinx-build}
+	%{__with_without doc sphinx-build}
 
 %{__make} -j1 \
 	INSTALLDIRS=vendor \
