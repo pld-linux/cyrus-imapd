@@ -39,6 +39,7 @@ Patch0:		%{name}-et.patch
 Patch1:		link.patch
 Patch2:		%{name}-clamav-0.101.patch
 Patch3:		%{name}-icu.patch
+Patch4:		%{name}-libcap.patch
 URL:		http://www.cyrusimap.org/
 BuildRequires:	autoconf >= 2.63
 BuildRequires:	automake
@@ -205,6 +206,7 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 
 cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 

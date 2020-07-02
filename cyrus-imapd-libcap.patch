@@ -1,0 +1,63 @@
+From c3fb78f2e62be9761abd7bb39bb8be4a47b0cfd0 Mon Sep 17 00:00:00 2001
+From: Jakob Gahde <j5lx@fmail.co.uk>
+Date: Sat, 15 Feb 2020 17:18:16 +0100
+Subject: [PATCH] Add compatibility with recent versions of libcap
+
+---
+ lib/util.c      | 6 +++---
+ master/master.c | 4 ++--
+ 2 files changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/lib/util.c b/lib/util.c
+index 50e809ed1..531cb94fa 100644
+--- a/lib/util.c
++++ b/lib/util.c
+@@ -666,7 +666,7 @@ EXPORTED int set_caps(int stage __attribute__((unused)),
+ }
+ #endif
+ 
+-static int cap_setuid(int uid, int is_master)
++static int cyrus_cap_setuid(int uid, int is_master)
+ {
+     int r;
+ 
+@@ -686,7 +686,7 @@ EXPORTED int become_cyrus(int is_master)
+     int result;
+     static uid_t uid = 0;
+ 
+-    if (uid) return cap_setuid(uid, is_master);
++    if (uid) return cyrus_cap_setuid(uid, is_master);
+ 
+     const char *cyrus = cyrus_user();
+     const char *mail = cyrus_group();
+@@ -732,7 +732,7 @@ EXPORTED int become_cyrus(int is_master)
+         return -1;
+     }
+ 
+-    result = cap_setuid(newuid, is_master);
++    result = cyrus_cap_setuid(newuid, is_master);
+ 
+     /* Only set static uid if successful, else future calls won't reset gid */
+     if (result == 0)
+diff --git a/master/master.c b/master/master.c
+index 354026a96..b65959884 100644
+--- a/master/master.c
++++ b/master/master.c
+@@ -297,7 +297,7 @@ static void get_statsock(int filedes[2])
+         fatalf(1, "unable to set close-on-exec: %m");
+ }
+ 
+-static int cap_bind(int socket, struct sockaddr *addr, socklen_t length)
++static int cyrus_cap_bind(int socket, struct sockaddr *addr, socklen_t length)
+ {
+     int r;
+ 
+@@ -663,7 +663,7 @@ static void service_create(struct service *s, int is_startup)
+ #endif
+ 
+         oldumask = umask((mode_t) 0); /* for linux */
+-        r = cap_bind(s->socket, res->ai_addr, res->ai_addrlen);
++        r = cyrus_cap_bind(s->socket, res->ai_addr, res->ai_addrlen);
+         umask(oldumask);
+         if (r < 0) {
+             int e = errno;
