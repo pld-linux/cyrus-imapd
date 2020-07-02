@@ -1,0 +1,37 @@
+From 817449994d4acae0023c34ab045649c38a6d37eb Mon Sep 17 00:00:00 2001
+From: Bron Gondwana <brong@fastmail.fm>
+Date: Sun, 15 Jul 2018 03:34:46 +1000
+Subject: [PATCH] conversations: move open_conversationsdb to conversations.c
+
+Thanks Chris Newman
+---
+ imap/conversations.c | 2 ++
+ imap/conversations.h | 2 +-
+ 2 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/imap/conversations.c b/imap/conversations.c
+index 620486afc..5c96eb1bb 100644
+--- a/imap/conversations.c
++++ b/imap/conversations.c
+@@ -100,6 +100,8 @@
+ 
+ #define CONVERSATIONS_VERSION 0
+ 
++struct conversations_open *open_conversations;
++
+ static conv_status_t NULLSTATUS = { 0, 0, 0};
+ 
+ static char *convdir = NULL;
+diff --git a/imap/conversations.h b/imap/conversations.h
+index 179969f0a..cd77df856 100644
+--- a/imap/conversations.h
++++ b/imap/conversations.h
+@@ -78,7 +78,7 @@ struct conversations_open {
+     struct conversations_open *next;
+ };
+ 
+-struct conversations_open *open_conversations;
++extern struct conversations_open *open_conversations;
+ 
+ typedef struct conversation conversation_t;
+ typedef struct conv_folder  conv_folder_t;
