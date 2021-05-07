@@ -1,18 +1,7 @@
-From c3fb78f2e62be9761abd7bb39bb8be4a47b0cfd0 Mon Sep 17 00:00:00 2001
-From: Jakob Gahde <j5lx@fmail.co.uk>
-Date: Sat, 15 Feb 2020 17:18:16 +0100
-Subject: [PATCH] Add compatibility with recent versions of libcap
-
----
- lib/util.c      | 6 +++---
- master/master.c | 4 ++--
- 2 files changed, 5 insertions(+), 5 deletions(-)
-
-diff --git a/lib/util.c b/lib/util.c
-index 50e809ed1..531cb94fa 100644
---- a/lib/util.c
-+++ b/lib/util.c
-@@ -666,7 +666,7 @@ EXPORTED int set_caps(int stage __attribute__((unused)),
+diff -urNp -x '*.orig' cyrus-imapd-3.0.9.org/lib/util.c cyrus-imapd-3.0.9/lib/util.c
+--- cyrus-imapd-3.0.9.org/lib/util.c	2019-03-15 01:31:20.000000000 +0100
++++ cyrus-imapd-3.0.9/lib/util.c	2021-05-07 22:56:04.721472003 +0200
+@@ -579,7 +579,7 @@ EXPORTED int set_caps(int stage __attrib
  }
  #endif
  
@@ -21,7 +10,7 @@ index 50e809ed1..531cb94fa 100644
  {
      int r;
  
-@@ -686,7 +686,7 @@ EXPORTED int become_cyrus(int is_master)
+@@ -599,7 +599,7 @@ EXPORTED int become_cyrus(int is_master)
      int result;
      static uid_t uid = 0;
  
@@ -30,7 +19,7 @@ index 50e809ed1..531cb94fa 100644
  
      const char *cyrus = cyrus_user();
      const char *mail = cyrus_group();
-@@ -732,7 +732,7 @@ EXPORTED int become_cyrus(int is_master)
+@@ -645,7 +645,7 @@ EXPORTED int become_cyrus(int is_master)
          return -1;
      }
  
@@ -39,11 +28,10 @@ index 50e809ed1..531cb94fa 100644
  
      /* Only set static uid if successful, else future calls won't reset gid */
      if (result == 0)
-diff --git a/master/master.c b/master/master.c
-index 354026a96..b65959884 100644
---- a/master/master.c
-+++ b/master/master.c
-@@ -297,7 +297,7 @@ static void get_statsock(int filedes[2])
+diff -urNp -x '*.orig' cyrus-imapd-3.0.9.org/master/master.c cyrus-imapd-3.0.9/master/master.c
+--- cyrus-imapd-3.0.9.org/master/master.c	2019-03-15 01:31:20.000000000 +0100
++++ cyrus-imapd-3.0.9/master/master.c	2021-05-07 22:56:04.721472003 +0200
+@@ -285,7 +285,7 @@ static void get_statsock(int filedes[2])
          fatalf(1, "unable to set close-on-exec: %m");
  }
  
@@ -52,7 +40,7 @@ index 354026a96..b65959884 100644
  {
      int r;
  
-@@ -663,7 +663,7 @@ static void service_create(struct service *s, int is_startup)
+@@ -643,7 +643,7 @@ static void service_create(struct servic
  #endif
  
          oldumask = umask((mode_t) 0); /* for linux */
@@ -60,4 +48,4 @@ index 354026a96..b65959884 100644
 +        r = cyrus_cap_bind(s->socket, res->ai_addr, res->ai_addrlen);
          umask(oldumask);
          if (r < 0) {
-             int e = errno;
+             syslog(LOG_ERR, "unable to bind to %s/%s socket: %m",
