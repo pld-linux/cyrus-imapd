@@ -1,0 +1,37 @@
+--- cyrus-imapd-3.0.9/docsrc/exts/sphinxlocal/builders/manpage.py~	2021-05-09 11:36:01.000000000 +0200
++++ cyrus-imapd-3.0.9/docsrc/exts/sphinxlocal/builders/manpage.py	2021-05-09 11:41:39.266179918 +0200
+@@ -21,7 +21,6 @@
+ from sphinx import addnodes
+ from sphinx.errors import SphinxError
+ from sphinx.builders import Builder
+-from sphinx.environment import NoUri
+ from sphinx.util.nodes import inline_all_toctrees
+ from sphinx.util.console import bold, darkgreen
+ from sphinx.writers.manpage import ManualPageWriter
+--- cyrus-imapd-3.0.9/docsrc/exts/sphinxlocal/writers/manpage.py~	2021-05-09 11:36:01.000000000 +0200
++++ cyrus-imapd-3.0.9/docsrc/exts/sphinxlocal/writers/manpage.py	2021-05-09 11:48:57.416148611 +0200
+@@ -14,6 +14,7 @@
+ 
+ import docutils
+ from docutils import nodes
++from time import strftime
+ from sphinx.writers.manpage import (
+     ManualPageWriter,
+     ManualPageTranslator as BaseTranslator
+@@ -26,7 +27,6 @@
+ 
+ from sphinx import addnodes
+ from sphinx.locale import admonitionlabels, _
+-from sphinx.util.osutil import ustrftime
+ 
+ class CyrusManualPageWriter(ManualPageWriter):
+ 
+@@ -71,7 +71,7 @@
+         if builder.config.today:
+             self._docinfo['date'] = builder.config.today
+         else:
+-            self._docinfo['date'] = ustrftime(builder.config.today_fmt
++            self._docinfo['date'] = strftime(builder.config.today_fmt
+                                               or _('%B %d, %Y'))
+         self._docinfo['copyright'] = builder.config.copyright
+         self._docinfo['version'] = builder.config.version
