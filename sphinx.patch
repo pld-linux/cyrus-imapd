@@ -1,0 +1,22 @@
+--- cyrus-imapd-3.0.16/docsrc/exts/sphinxlocal/writers/manpage.py.orig	2022-06-07 10:16:14.013713399 +0200
++++ cyrus-imapd-3.0.16/docsrc/exts/sphinxlocal/writers/manpage.py	2022-06-07 10:23:44.408058016 +0200
+@@ -38,7 +38,7 @@
+         self.builder = builder
+ 
+     def translate(self):
+-        visitor = CyrusManualPageTranslator(self.builder, self.document)
++        visitor = CyrusManualPageTranslator(self.document, self.builder)
+         self.visitor = visitor
+         self.document.walkabout(visitor)
+         self.output = visitor.astext()
+@@ -49,8 +49,8 @@
+     Custom translator.
+     """
+ 
+-    def __init__(self, builder, *args, **kwds):
+-        BaseTranslator.__init__(self, builder, *args, **kwds)
++    def __init__(self, document, builder, *args, **kwds):
++        BaseTranslator.__init__(self, document, builder, *args, **kwds)
+         self.builder = builder
+ 
+         self.in_productionlist = 0
