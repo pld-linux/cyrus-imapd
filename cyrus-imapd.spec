@@ -41,6 +41,7 @@ Patch2:		%{name}-clamav-0.101.patch
 Patch3:		%{name}-sphinx3.patch
 Patch4:		openssl3.patch
 Patch5:		sphinx.patch
+Patch6:		assert.patch
 URL:		http://www.cyrusimap.org/
 BuildRequires:	autoconf >= 2.63
 BuildRequires:	automake
@@ -209,6 +210,7 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
+%patch6 -p1
 
 cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 

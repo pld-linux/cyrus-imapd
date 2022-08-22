@@ -1,0 +1,131 @@
+From e6c8208a38cfcbe21209965f9793e8d0558a7294 Mon Sep 17 00:00:00 2001
+From: ellie timoney <ellie@fastmail.com>
+Date: Fri, 17 Jun 2022 14:12:09 +1000
+Subject: [PATCH 1/2] assert: assert() must be an expression, not a statement
+
+Note that while this is now syntactically compatible with the
+C standard assert macro(), it is still not semantically compatible.
+
+Specifically, the C standard assert() macro can be compiled out
+entirely by defining NDEBUG during compilation, and thus is a
+debugging aid only.
+
+Ours cannot be compiled out, and therefore can be relied upon as
+a run-time safety -- which we do, extensively!
+---
+ lib/assert.h | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/lib/assert.h b/lib/assert.h
+index d7e251245b..1be6c51479 100644
+--- a/lib/assert.h
++++ b/lib/assert.h
+@@ -43,11 +43,11 @@
+ #ifndef INCLUDED_ASSERT_H
+ #define INCLUDED_ASSERT_H
+ 
+-#ifdef __STDC__
+-#define assert(ex)      {if (!(ex))assertionfailed(__FILE__, __LINE__, #ex);}
+ void assertionfailed(const char *file, int line, const char *expr);
+-#else
+-#define assert(ex)      {if (!(ex))assertionfailed(__FILE__, __LINE__, (char*)0);}
+-#endif
++
++#define assert(expr)                                                \
++    ((expr)                                                         \
++     ? (void)(0)                                                    \
++     : assertionfailed(__FILE__, __LINE__, #expr))
+ 
+ #endif /* INCLUDED_ASSERT_H */
+
+From 30472acc9f6a899a143590d01989f6cbde434ff5 Mon Sep 17 00:00:00 2001
+From: ellie timoney <ellie@fastmail.com>
+Date: Fri, 17 Jun 2022 14:18:33 +1000
+Subject: [PATCH 2/2] misc: fix missing semicolons
+
+bad behaviour that was enabled by the bad assert() definition... /sigh
+---
+ imap/mailbox.c |  2 +-
+ imap/message.c | 16 ++++++++--------
+ 2 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/imap/mailbox.c b/imap/mailbox.c
+index 37014400e2..c427a9280f 100644
+--- a/imap/mailbox.c
++++ b/imap/mailbox.c
+@@ -4492,7 +4492,7 @@ EXPORTED int mailbox_append_index_record(struct mailbox *mailbox,
+     assert(mailbox_index_islocked(mailbox, 1));
+ 
+     /* Append MUST be a higher UID than any we've yet seen */
+-    assert(record->uid > mailbox->i.last_uid)
++    assert(record->uid > mailbox->i.last_uid);
+ 
+     /* Append MUST have a message with data */
+     assert(record->size);
+diff --git a/imap/message.c b/imap/message.c
+index 37146c2beb..0db52a6cf0 100644
+--- a/imap/message.c
++++ b/imap/message.c
+@@ -5070,7 +5070,7 @@ EXPORTED int message_get_priority(message_t *m, struct buf *buf)
+ 
+ EXPORTED const struct index_record *msg_record(const message_t *m)
+ {
+-    assert(!message_need(m, M_RECORD))
++    assert(!message_need(m, M_RECORD));
+     return &m->record;
+ }
+ 
+@@ -5096,7 +5096,7 @@ EXPORTED int message_get_size(message_t *m, uint32_t *sizep)
+ 
+ EXPORTED uint32_t msg_size(const message_t *m)
+ {
+-    assert(!message_need(m, M_RECORD))
++    assert(!message_need(m, M_RECORD));
+     return m->record.size;
+ }
+ 
+@@ -5110,7 +5110,7 @@ EXPORTED int message_get_uid(message_t *m, uint32_t *uidp)
+ 
+ EXPORTED uint32_t msg_uid(const message_t *m)
+ {
+-    assert(!message_need(m, M_RECORD))
++    assert(!message_need(m, M_RECORD));
+     return m->record.uid;
+ }
+ 
+@@ -5124,7 +5124,7 @@ EXPORTED int message_get_cid(message_t *m, conversation_id_t *cidp)
+ 
+ EXPORTED conversation_id_t msg_cid(const message_t *m)
+ {
+-    assert(!message_need(m, M_RECORD))
++    assert(!message_need(m, M_RECORD));
+     return m->record.cid;
+ }
+ 
+@@ -5138,7 +5138,7 @@ EXPORTED int message_get_modseq(message_t *m, modseq_t *modseqp)
+ 
+ EXPORTED modseq_t msg_modseq(const message_t *m)
+ {
+-    assert(!message_need(m, M_RECORD))
++    assert(!message_need(m, M_RECORD));
+     return m->record.modseq;
+ }
+ 
+@@ -5152,7 +5152,7 @@ EXPORTED int message_get_msgno(message_t *m, uint32_t *msgnop)
+ 
+ EXPORTED int msg_msgno(const message_t *m)
+ {
+-    assert(!message_need(m, M_INDEX))
++    assert(!message_need(m, M_INDEX));
+     return m->msgno;
+ }
+ 
+@@ -5174,7 +5174,7 @@ EXPORTED int message_get_guid(message_t *m, const struct message_guid **guidp)
+ 
+ EXPORTED const struct message_guid *msg_guid(const message_t *m)
+ {
+-    assert(!message_need(m, M_RECORD))
++    assert(!message_need(m, M_RECORD));
+     return &m->record.guid;
+ }
+ 
