@@ -17,12 +17,12 @@ Summary:	High-performance mail store with IMAP and POP3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	3.0.16
-Release:	9
+Version:	3.8.1
+Release:	0.1
 License:	BSD-like
 Group:		Networking/Daemons/POP3
 Source0:	https://github.com/cyrusimap/cyrus-imapd/releases/download/%{name}-%{version}/%{name}-%{version}.tar.gz
-# Source0-md5:	f93394d3bf981d558a8d7e2cb989b568
+# Source0-md5:	87d9092f94b88289f8a4949b3f2afa82
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
@@ -36,12 +36,8 @@ Source11:	%{name}.init
 Source12:	cyrus.conf
 Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
-Patch1:		link.patch
+Patch1:		libxml2.patch
 Patch2:		%{name}-clamav-0.101.patch
-Patch3:		%{name}-sphinx3.patch
-Patch4:		openssl3.patch
-Patch5:		sphinx.patch
-Patch6:		assert.patch
 URL:		http://www.cyrusimap.org/
 BuildRequires:	autoconf >= 2.63
 BuildRequires:	automake
@@ -207,10 +203,6 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %patch0 -p1
 %patch1 -p1
 %patch2 -p1
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
-%patch6 -p1
 
 cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 
@@ -382,6 +374,7 @@ fi
 %attr(755,root,root) %{pkglibexecdir}/ptloader
 %attr(755,root,root) %{pkglibexecdir}/pop3d
 %attr(755,root,root) %{pkglibexecdir}/pop3proxyd
+%attr(755,root,root) %{pkglibexecdir}/promstatsd
 %attr(755,root,root) %{pkglibexecdir}/proxyd
 %attr(755,root,root) %{pkglibexecdir}/smmapd
 %attr(755,root,root) %{pkglibexecdir}/sync_server
@@ -397,6 +390,7 @@ fi
 %attr(755,root,root) %{_sbindir}/cvt_cyrusdb
 %attr(755,root,root) %{_sbindir}/cvt_xlist_specialuse
 %attr(755,root,root) %{_sbindir}/cyr_buildinfo
+%attr(755,root,root) %{_sbindir}/cyr_cd.sh
 %attr(755,root,root) %{_sbindir}/cyr_dbtool
 %attr(755,root,root) %{_sbindir}/cyr_deny
 %attr(755,root,root) %{_sbindir}/cyr_df
@@ -404,7 +398,8 @@ fi
 %attr(755,root,root) %{_sbindir}/cyr_backup
 %attr(755,root,root) %{_sbindir}/cyr_expire
 %attr(755,root,root) %{_sbindir}/cyr_info
-%attr(755,root,root) %{_sbindir}/cyr_sequence
+%attr(755,root,root) %{_sbindir}/cyr_ls
+%attr(755,root,root) %{_sbindir}/cyr_pwd
 %attr(755,root,root) %{_sbindir}/cyr_synclog
 %attr(755,root,root) %{_sbindir}/cyr_userseen
 %attr(755,root,root) %{_sbindir}/cyr_virusscan
@@ -419,6 +414,7 @@ fi
 %attr(755,root,root) %{_sbindir}/ptdump
 %attr(755,root,root) %{_sbindir}/ptexpire
 %attr(755,root,root) %{_sbindir}/reconstruct
+%attr(755,root,root) %{_sbindir}/relocate_by_id
 %attr(755,root,root) %{_sbindir}/restore
 %attr(755,root,root) %{_sbindir}/sievec
 %attr(755,root,root) %{_sbindir}/sieved
