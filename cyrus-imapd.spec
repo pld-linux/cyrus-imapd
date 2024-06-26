@@ -2,27 +2,28 @@
 
 #
 # Conditional build:
-%bcond_without	doc		# don't regenerate docs
-%bcond_without	http		# build without http support
-%bcond_without	ldap		# build without ldap support
-%bcond_without	lmdb		# build without lmdb backend support
-%bcond_without	mysql		# build without mysql backend support
-%bcond_without	perl		# build without perl support
-%bcond_without	pgsql		# build without postgresql backend support
-%bcond_with	sphinx		# build with sphinx search engine support (broken)
-%bcond_without	xapian		# build without xapian search engine support
+%bcond_without	doc		# documentation regeneration
+%bcond_without	http		# HTTP support
+%bcond_without	ldap		# LDAP support
+%bcond_without	lmdb		# LMDB backend support
+%bcond_without	mysql		# MySQL backend support
+%bcond_without	perl		# Perl support
+%bcond_without	pgsql		# PostgreSQL backend support
+%bcond_with	sphinx		# Sphinx search engine support (broken)
+%bcond_without	xapian		# Xapian search engine support
 #
 #
 Summary:	High-performance mail store with IMAP and POP3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	3.8.1
+Version:	3.8.3
 Release:	1
 License:	BSD-like
 Group:		Networking/Daemons/POP3
+#Source0Download: https://github.com/cyrusimap/cyrus-imapd/releases
 Source0:	https://github.com/cyrusimap/cyrus-imapd/releases/download/%{name}-%{version}/%{name}-%{version}.tar.gz
-# Source0-md5:	87d9092f94b88289f8a4949b3f2afa82
+# Source0-md5:	e1ac07711036e4fccebe49082592fecf
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
