@@ -17,13 +17,13 @@ Summary:	High-performance mail store with IMAP and POP3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	3.8.5
-Release:	4
+Version:	3.12.1
+Release:	1
 License:	BSD-like
 Group:		Networking/Daemons/POP3
 #Source0Download: https://github.com/cyrusimap/cyrus-imapd/releases
 Source0:	https://github.com/cyrusimap/cyrus-imapd/releases/download/%{name}-%{version}/%{name}-%{version}.tar.gz
-# Source0-md5:	3eca3a7253d5a960fedc874e47996c98
+# Source0-md5:	1936a0e871dc9f8e269b4192c9cf0764
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
@@ -37,7 +37,7 @@ Source11:	%{name}.init
 Source12:	cyrus.conf
 Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
-Patch1:		libxml2.patch
+
 Patch2:		%{name}-clamav-0.101.patch
 URL:		http://www.cyrusimap.org/
 BuildRequires:	autoconf >= 2.63
@@ -48,6 +48,7 @@ BuildRequires:	flex
 BuildRequires:	jansson-devel >= 2.3
 %{?with_http:BuildRequires:	libbrotli-devel}
 BuildRequires:	libcap-devel
+BuildRequires:	libchardet-devel
 BuildRequires:	libcom_err-devel >= 1.21
 %{?with_http:BuildRequires:	libical-devel >= 2.0}
 BuildRequires:	libicu-devel
@@ -202,7 +203,7 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %prep
 %setup -q
 %patch -P0 -p1
-%patch -P1 -p1
+
 %patch -P2 -p1
 
 cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
@@ -222,6 +223,7 @@ find docsrc/ -name '*.pyc' -print0 | xargs --null %{__rm}
 	--enable-calalarmd \
 	%{__enable_disable http} \
 	--enable-idled \
+	--enable-jmap \
 	--enable-murder \
 	--enable-nntp \
 	--enable-replication \
@@ -360,7 +362,7 @@ fi
 
 %dir %{pkglibexecdir}
 %attr(2755,cyrus,mail) %{pkglibexecdir}/deliver-wrapper
-%attr(755,root,root) %{pkglibexecdir}/backupd
+#%attr(755,root,root) %{pkglibexecdir}/backupd
 %attr(755,root,root) %{pkglibexecdir}/calalarmd
 %attr(755,root,root) %{pkglibexecdir}/fud
 %{?with_http:%attr(755,root,root) %{pkglibexecdir}/httpd}
@@ -382,7 +384,6 @@ fi
 %attr(755,root,root) %{pkglibexecdir}/timsieved
 %attr(755,root,root) %{_sbindir}/arbitron
 %attr(755,root,root) %{_sbindir}/chk_cyrus
-%attr(755,root,root) %{_sbindir}/ctl_backups
 %attr(755,root,root) %{_sbindir}/ctl_conversationsdb
 %attr(755,root,root) %{_sbindir}/ctl_cyrusdb
 %attr(755,root,root) %{_sbindir}/ctl_deliver
@@ -396,7 +397,6 @@ fi
 %attr(755,root,root) %{_sbindir}/cyr_deny
 %attr(755,root,root) %{_sbindir}/cyr_df
 %attr(755,root,root) %{_sbindir}/cyrdump
-%attr(755,root,root) %{_sbindir}/cyr_backup
 %attr(755,root,root) %{_sbindir}/cyr_expire
 %attr(755,root,root) %{_sbindir}/cyr_info
 %attr(755,root,root) %{_sbindir}/cyr_ls
@@ -404,6 +404,7 @@ fi
 %attr(755,root,root) %{_sbindir}/cyr_synclog
 %attr(755,root,root) %{_sbindir}/cyr_userseen
 %attr(755,root,root) %{_sbindir}/cyr_virusscan
+%attr(755,root,root) %{_sbindir}/cyr_withlock_run
 %{?with_http:%attr(755,root,root) %{_sbindir}/dav_reconstruct}
 %attr(755,root,root) %{_sbindir}/deliver
 %attr(755,root,root) %{_sbindir}/fetchnews
@@ -416,7 +417,6 @@ fi
 %attr(755,root,root) %{_sbindir}/ptexpire
 %attr(755,root,root) %{_sbindir}/reconstruct
 %attr(755,root,root) %{_sbindir}/relocate_by_id
-%attr(755,root,root) %{_sbindir}/restore
 %attr(755,root,root) %{_sbindir}/sievec
 %attr(755,root,root) %{_sbindir}/sieved
 %attr(755,root,root) %{_sbindir}/squatter
