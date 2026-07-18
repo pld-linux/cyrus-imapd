@@ -1,29 +1,38 @@
-# TODO: zephyr notification?
+# TODO:
+# - zephyr notification?
+# - zeroskip support? (BR: zeroskip-devel, x86_64 only)
 
 #
 # Conditional build:
 %bcond_without	doc		# documentation regeneration
+%bcond_without	clamav		# ClamAV support
 %bcond_without	http		# HTTP support
 %bcond_without	ldap		# LDAP support
+%bcond_without	pgsql		# PostgreSQL backend support
+%bcond_without	perl		# Perl support
+%bcond_without	srs		# Sender Rewriting Scheme support
+%bcond_without	wslay		# WebSockets support
 %bcond_without	lmdb		# LMDB backend support
 %bcond_without	mysql		# MySQL backend support
-%bcond_without	perl		# Perl support
-%bcond_without	pgsql		# PostgreSQL backend support
 %bcond_with	sphinx		# Sphinx search engine support (broken)
 %bcond_without	xapian		# Xapian search engine support
+%bcond_without	cld2		# CLD2 language detection in Xapian indexer
 #
-#
+%if %{without xapian}
+# CLD2 used only in Xapian code, without Xapian it's irrelevant
+%undefine	with_cld2
+%endif
 Summary:	High-performance mail store with IMAP and POP3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	3.12.1
-Release:	2
+Version:	3.12.3
+Release:	1
 License:	BSD-like
 Group:		Networking/Daemons/POP3
 #Source0Download: https://github.com/cyrusimap/cyrus-imapd/releases
 Source0:	https://github.com/cyrusimap/cyrus-imapd/releases/download/%{name}-%{version}/%{name}-%{version}.tar.gz
-# Source0-md5:	1936a0e871dc9f8e269b4192c9cf0764
+# Source0-md5:	d2fc077b5cd0cd4254b7a204ee4d095e
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
@@ -37,40 +46,54 @@ Source11:	%{name}.init
 Source12:	cyrus.conf
 Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
-
+Patch1:		%{name}-libical.patch
 Patch2:		%{name}-clamav-0.101.patch
 URL:		http://www.cyrusimap.org/
 BuildRequires:	autoconf >= 2.63
 BuildRequires:	automake
+%{?with_clamav:BuildRequires:	clamav-devel >= 0.73}
+%{?with_cld2:BuildRequires:	cld2-devel}
+BuildRequires:	cyrus-guesstz-devel
 BuildRequires:	cyrus-sasl-devel >= 2.1.7
 BuildRequires:	db-devel >= 4.1.25
 BuildRequires:	flex
-BuildRequires:	jansson-devel >= 2.3
+BuildRequires:	heimdal-devel
+BuildRequires:	jansson-devel >= 2.10
 %{?with_http:BuildRequires:	libbrotli-devel}
 BuildRequires:	libcap-devel
-BuildRequires:	libchardet-devel
+BuildRequires:	libchardet-devel >= 1.0.5
 BuildRequires:	libcom_err-devel >= 1.21
-%{?with_http:BuildRequires:	libical-devel >= 2.0}
-BuildRequires:	libicu-devel
+%{?with_http:BuildRequires:	libical-devel >= 4}
+BuildRequires:	libicu-devel >= 55
+%{?with_srs:BuildRequires:	libsrs2-devel}
+%{?with_xapian:BuildRequires:	libstdc++-devel >= 6:4.7}
 BuildRequires:	libtool >= 2:2.2.6
+BuildRequires:	libuuid-devel
 %{?with_http:BuildRequires:	libxml2-devel >= 1:2.7.3}
 %{?with_lmdb:BuildRequires:	lmdb-devel}
 %{?with_mysql:BuildRequires:	mysql-devel}
 BuildRequires:	net-snmp-devel
-%{?with_http:BuildRequires:	nghttp2-devel >= 1.5}
+%{?with_http:BuildRequires:	nghttp2-devel >= 1.34.0}
 %{?with_ldap:BuildRequires:	openldap-devel}
 BuildRequires:	openssl-devel >= 0.9.7d
 BuildRequires:	patchutils
+BuildRequires:	pcre2-8-devel
+BuildRequires:	pcre2-posix-devel
 %{?with_doc:BuildRequires:	perl-Pod-POM-View-Restructured}
 %{?with_perl:BuildRequires:	perl-devel >= 1:5.8.0}
+BuildRequires:	pkgconfig
 %{?with_pgsql:BuildRequires:	postgresql-devel}
+%{?with_doc:BuildRequires:	python3-git}
+%{?with_doc:BuildRequires:	python3-sphinx_rtd_theme}
 %{?with_perl:BuildRequires:	rpm-perlprov}
 BuildRequires:	rpmbuild(macros) >= 1.527
 %{?with_http:BuildRequires:	shapelib-devel >= 1.4.1}
 %{?with_http:BuildRequires:	sqlite3-devel >= 3}
-%{?with_doc:BuildRequires:	sphinx-pdg-3}
-%{?with_xapian:BuildRequires:	xapian-core-devel}
+%{?with_doc:BuildRequires:	sphinx-pdg >= 2}
+%{?with_wslay:BuildRequires:	wslay-devel >= 1.1.1}
+%{?with_xapian:BuildRequires:	xapian-core-devel >= 1.4}
 BuildRequires:	zlib-devel
+BuildRequires:	zstd-devel >= 1.4.0
 Requires(post,preun):	/sbin/chkconfig
 Requires(postun):	/usr/sbin/userdel
 Requires(pre):	/bin/id
@@ -152,7 +175,8 @@ Summary:	Shared cyrus-imapd libraries
 Summary(pl.UTF-8):	Współdzielone biblioteki cyrus-imapd
 Group:		Libraries
 Requires:	cyrus-sasl-libs >= 2.1.7
-Requires:	jansson >= 2.3
+Requires:	jansson >= 2.10
+Requires:	libcom_err >= 1.21
 
 %description libs
 Shared cyrus-imapd libraries.
@@ -166,7 +190,16 @@ Summary(pl.UTF-8):	Pliki nagłówkowe do programowania z użyciem bibliotek cyru
 Group:		Development/Libraries
 Requires:	%{name}-libs = %{version}-%{release}
 Requires:	cyrus-sasl-devel >= 2.1.7
-Requires:	jansson-devel >= 2.3
+Requires:	heimdal-devel
+Requires:	libcom_err-devel >= 1.21
+%{?with_http:Requires:	libical-devel >= 4}
+%{?with_http:Requires:	libxml2-devel >= 1:2.7.3}
+%{?with_mysql:Requires:	mysql-devel}
+Requires:	openssl-devel
+Requires:	pcre2-8-devel
+Requires:	pcre2-posix-devel
+%{?with_pgsql:Requires:	postgresql-devel}
+%{?with_http:Requires:	sqlite3-devel >= 3}
 
 %description devel
 This package provides the necessary header files files to allow you to
@@ -203,7 +236,7 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %prep
 %setup -q
 %patch -P0 -p1
-
+%patch -P1 -p1
 %patch -P2 -p1
 
 cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
@@ -227,10 +260,15 @@ find docsrc/ -name '*.pyc' -print0 | xargs --null %{__rm}
 	--enable-murder \
 	--enable-nntp \
 	--enable-replication \
+	--disable-silent-rules \
 	%{__enable_disable sphinx} \
+	%{?with_srs:--enable-srs} \
 	--enable-static \
 	%{__enable_disable xapian} \
+	%{!?with_clamav:--without-clamav} \
+	%{!?with_cld2:--without-cld2} \
 	--with-com_err=/usr \
+	%{__with_without doc sphinx-build} \
 	%{__with_without ldap} \
 	--with-libcap \
 	--without-libwrap \
@@ -238,7 +276,8 @@ find docsrc/ -name '*.pyc' -print0 | xargs --null %{__rm}
 	%{__with_without mysql} \
 	%{__with_without perl perl %{__perl}} \
 	%{__with_without pgsql} \
-	%{__with_without doc sphinx-build}
+	%{__with_without wslay} \
+	--with-zoneinfo-dir=%{_datadir}/cyrus-timezones/zoneinfo
 
 %{__make} -j1 \
 	INSTALLDIRS=vendor \
@@ -251,10 +290,9 @@ find docsrc/ -name '*.pyc' -print0 | xargs --null %{__rm}
 rm -rf $RPM_BUILD_ROOT
 install -d \
 	$RPM_BUILD_ROOT{%{_sbindir},%{pkglibexecdir},%{_mandir}} \
-	$RPM_BUILD_ROOT%{_sysconfdir}/{logrotate.d,sysconfig/rc-inetd} \
 	$RPM_BUILD_ROOT/var/spool/imap/stage. \
 	$RPM_BUILD_ROOT/var/lib/imap/{user,quota,proc,log,msg,deliverdb/db,sieve,db,socket} \
-	$RPM_BUILD_ROOT/etc/{security,pam.d,rc.d/init.d}
+	$RPM_BUILD_ROOT/etc/{logrotate.d,security,pam.d,rc.d/init.d}
 
 touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 	$RPM_BUILD_ROOT/var/lib/imap/faillog \
@@ -269,6 +307,8 @@ touch $RPM_BUILD_ROOT/var/lib/imap/mailboxes \
 
 # ensure +x bit for rpm autodeps
 chmod +x $RPM_BUILD_ROOT%{_libdir}/*.so*
+# obsoleted by pkg-config
+%{__rm} $RPM_BUILD_ROOT%{_libdir}/libcyrus*.la
 
 install -p deliver-wrapper $RPM_BUILD_ROOT%{pkglibexecdir}/deliver-wrapper
 
@@ -340,10 +380,13 @@ fi
 %defattr(644,root,root,755)
 %doc cyrus-README cyrus-procmailrc cyrus-user-procmailrc.template
 %doc cyrus-imapd-procmail+cyrus.mc COPYING tools
-%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/*.conf
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/cyrus.conf
+%config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/imapd.conf
 %attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) /etc/logrotate.d/cyrus-imapd
-%attr(440,cyrus,root) %config(noreplace) %verify(not md5 mtime size) /etc/pam.d/*
-%attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) /etc/security/blacklist.*
+%attr(440,cyrus,root) %config(noreplace) %verify(not md5 mtime size) /etc/pam.d/imap
+%attr(440,cyrus,root) %config(noreplace) %verify(not md5 mtime size) /etc/pam.d/pop
+%attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) /etc/security/blacklist.imap
+%attr(640,root,root) %config(noreplace) %verify(not md5 mtime size) /etc/security/blacklist.pop3
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-imapd
 %attr(754,root,root) /etc/rc.d/init.d/cyrus-sync
 %attr(640,cyrus,mail) %ghost /var/lib/imap/faillog
@@ -365,7 +408,9 @@ fi
 #%attr(755,root,root) %{pkglibexecdir}/backupd
 %attr(755,root,root) %{pkglibexecdir}/calalarmd
 %attr(755,root,root) %{pkglibexecdir}/fud
-%{?with_http:%attr(755,root,root) %{pkglibexecdir}/httpd}
+%if %{with http}
+%attr(755,root,root) %{pkglibexecdir}/httpd
+%endif
 %attr(755,root,root) %{pkglibexecdir}/idled
 %attr(755,root,root) %{pkglibexecdir}/imapd
 %attr(755,root,root) %{pkglibexecdir}/lmtpd
@@ -388,7 +433,9 @@ fi
 %attr(755,root,root) %{_sbindir}/ctl_cyrusdb
 %attr(755,root,root) %{_sbindir}/ctl_deliver
 %attr(755,root,root) %{_sbindir}/ctl_mboxlist
-%{?with_http:%attr(755,root,root) %{_sbindir}/ctl_zoneinfo}
+%if %{with http}
+%attr(755,root,root) %{_sbindir}/ctl_zoneinfo
+%endif
 %attr(755,root,root) %{_sbindir}/cvt_cyrusdb
 %attr(755,root,root) %{_sbindir}/cvt_xlist_specialuse
 %attr(755,root,root) %{_sbindir}/cyr_buildinfo
@@ -405,7 +452,9 @@ fi
 %attr(755,root,root) %{_sbindir}/cyr_userseen
 %attr(755,root,root) %{_sbindir}/cyr_virusscan
 %attr(755,root,root) %{_sbindir}/cyr_withlock_run
-%{?with_http:%attr(755,root,root) %{_sbindir}/dav_reconstruct}
+%if %{with http}
+%attr(755,root,root) %{_sbindir}/dav_reconstruct
+%endif
 %attr(755,root,root) %{_sbindir}/deliver
 %attr(755,root,root) %{_sbindir}/fetchnews
 %attr(755,root,root) %{_sbindir}/ipurge
@@ -439,34 +488,107 @@ fi
 %attr(750,cyrus,mail) /var/lib/imap/socket
 %attr(750,cyrus,mail) %config(noreplace) %verify(not md5 mtime size) /var/lib/imap/mailboxes
 
-%{_mandir}/man*/*
+%{_mandir}/man1/cyradm.1p*
+%if %{with http}
+%{_mandir}/man1/dav_reconstruct.1*
+%endif
+%{_mandir}/man1/httptest.1*
+%{_mandir}/man1/imtest.1*
+%{_mandir}/man1/installsieve.1*
+%{_mandir}/man1/lmtptest.1*
+%{_mandir}/man1/mupdatetest.1*
+%{_mandir}/man1/nntptest.1*
+%{_mandir}/man1/pop3test.1*
+%{_mandir}/man1/sieveshell.1*
+%{_mandir}/man1/sivtest.1*
+%{_mandir}/man1/smtptest.1*
+%{_mandir}/man1/synctest.1*
+%{_mandir}/man5/cyrus.conf.5*
+%{_mandir}/man5/imapd.conf.5*
+%{_mandir}/man8/arbitron.8*
+%{_mandir}/man8/calalarmd.8*
+%{_mandir}/man8/chk_cyrus.8*
+%{_mandir}/man8/ctl_conversationsdb.8*
+%{_mandir}/man8/ctl_cyrusdb.8*
+%{_mandir}/man8/ctl_deliver.8*
+%{_mandir}/man8/ctl_mboxlist.8*
+%if %{with http}
+%{_mandir}/man8/ctl_zoneinfo.8*
+%endif
+%{_mandir}/man8/cvt_cyrusdb.8*
+%{_mandir}/man8/cvt_xlist_specialuse.8*
+%{_mandir}/man8/cyr_buildinfo.8*
+%{_mandir}/man8/cyr_dbtool.8*
+%{_mandir}/man8/cyr_deny.8*
+%{_mandir}/man8/cyr_df.8*
+%{_mandir}/man8/cyr_expire.8*
+%{_mandir}/man8/cyr_info.8*
+%{_mandir}/man8/cyr_ls.8*
+%{_mandir}/man8/cyr_synclog.8*
+%{_mandir}/man8/cyr_userseen.8*
+%{_mandir}/man8/cyr_virusscan.8*
+%{_mandir}/man8/cyr_withlock_run.8*
+%{_mandir}/man8/cyradm.8*
+%{_mandir}/man8/cyrdeliver.8*
+%{_mandir}/man8/cyrdump.8*
+%{_mandir}/man8/cyrmaster.8*
+%{_mandir}/man8/cyrquota.8*
+%{_mandir}/man8/cyrreconstruct.8*
+%{_mandir}/man8/fetchnews.8*
+%{_mandir}/man8/fud.8*
+%{_mandir}/man8/httpd.8*
+%{_mandir}/man8/imapd.8*
+%{_mandir}/man8/ipurge.8*
+%{_mandir}/man8/lmtpd.8*
+%{_mandir}/man8/lmtpproxyd.8*
+%{_mandir}/man8/mbexamine.8*
+%{_mandir}/man8/mbpath.8*
+%{_mandir}/man8/mbtool.8*
+%{_mandir}/man8/mupdate.8*
+%{_mandir}/man8/nntpd.8*
+%{_mandir}/man8/notifyd.8*
+%{_mandir}/man8/pop3d.8*
+%{_mandir}/man8/pop3proxyd.8*
+%{_mandir}/man8/promstatsd.8*
+%{_mandir}/man8/proxyd.8*
+%{_mandir}/man8/ptdump.8*
+%{_mandir}/man8/ptexpire.8*
+%{_mandir}/man8/ptloader.8*
+%{_mandir}/man8/relocate_by_id.8*
+%{_mandir}/man8/sievec.8*
+%{_mandir}/man8/sieved.8*
+%{_mandir}/man8/smmapd.8*
+%{_mandir}/man8/squatter.8*
+%{_mandir}/man8/sync_client.8*
+%{_mandir}/man8/sync_reset.8*
+%{_mandir}/man8/sync_server.8*
+%{_mandir}/man8/timsieved.8*
+%{_mandir}/man8/tls_prune.8*
+%{_mandir}/man8/unexpunge.8*
 
 %files libs
 %defattr(644,root,root,755)
-%attr(755,root,root) %{_libdir}/libcyrus.so.0
-%attr(755,root,root) %ghost %{_libdir}/libcyrus.so.*.*
-%attr(755,root,root) %{_libdir}/libcyrus_min.so.0
-%attr(755,root,root) %ghost %{_libdir}/libcyrus_min.so.*.*
-%attr(755,root,root) %{_libdir}/libcyrus_imap.so.0
-%attr(755,root,root) %ghost %{_libdir}/libcyrus_imap.so.*.*
-%attr(755,root,root) %{_libdir}/libcyrus_sieve.so.0
-%attr(755,root,root) %ghost %{_libdir}/libcyrus_sieve.so.*.*
+%{_libdir}/libcyrus.so.0
+%ghost %{_libdir}/libcyrus.so.*.*
+%{_libdir}/libcyrus_min.so.0
+%ghost %{_libdir}/libcyrus_min.so.*.*
+%{_libdir}/libcyrus_imap.so.0
+%ghost %{_libdir}/libcyrus_imap.so.*.*
+%{_libdir}/libcyrus_sieve.so.0
+%ghost %{_libdir}/libcyrus_sieve.so.*.*
 
 %files devel
 %defattr(644,root,root,755)
 %{_includedir}/cyrus
-%attr(755,root,root) %{_libdir}/libcyrus.so
-%attr(755,root,root) %{_libdir}/libcyrus_min.so
-%attr(755,root,root) %{_libdir}/libcyrus_imap.so
-%attr(755,root,root) %{_libdir}/libcyrus_sieve.so
-%{_libdir}/libcyrus.la
-%{_libdir}/libcyrus_min.la
-%{_libdir}/libcyrus_imap.la
-%{_libdir}/libcyrus_sieve.la
+%{_libdir}/libcyrus.so
+%{_libdir}/libcyrus_imap.so
+%{_libdir}/libcyrus_min.so
+%{_libdir}/libcyrus_sieve.so
 %{_pkgconfigdir}/libcyrus.pc
 %{_pkgconfigdir}/libcyrus_imap.pc
 %{_pkgconfigdir}/libcyrus_min.pc
 %{_pkgconfigdir}/libcyrus_sieve.pc
+%{_mandir}/man3/imclient.3*
 
 %files static
 %defattr(644,root,root,755)
@@ -481,13 +603,16 @@ fi
 %{perl_vendorarch}/Cyrus
 %dir %{perl_vendorarch}/auto/Cyrus
 %dir %{perl_vendorarch}/auto/Cyrus/IMAP
-%attr(755,root,root) %{perl_vendorarch}/auto/Cyrus/IMAP/IMAP.so
+%{perl_vendorarch}/auto/Cyrus/IMAP/IMAP.so
 %dir %{perl_vendorarch}/auto/Cyrus/SIEVE
 %dir %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve
-%attr(755,root,root) %{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve/managesieve.so
+%{perl_vendorarch}/auto/Cyrus/SIEVE/managesieve/managesieve.so
 %dir %{perl_vendorlib}/Cyrus
 %dir %{perl_vendorlib}/Cyrus/Annotator
 %{perl_vendorlib}/Cyrus/Annotator/AnnotateInlinedCIDs.pm
 %{perl_vendorlib}/Cyrus/Annotator/Daemon.pm
 %{perl_vendorlib}/Cyrus/Annotator/Message.pm
+%{_mandir}/man3/Cyrus::Annotator::*.3pm*
+%{_mandir}/man3/Cyrus::IMAP*.3pm*
+%{_mandir}/man3/Cyrus::SIEVE::managesieve.3pm*
 %endif

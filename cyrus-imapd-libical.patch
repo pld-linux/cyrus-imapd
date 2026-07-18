@@ -1,0 +1,1219 @@
+From 2734e8e48bca9918947719c794a3231ec7a0d5e7 Mon Sep 17 00:00:00 2001
+From: Robert Stepanek <rsto@fastmailteam.com>
+Date: Thu, 10 Jul 2025 16:02:51 +0200
+Subject: [PATCH] libical v4: support multivalued iCalendar parameters
+
+---
+ imap/carddav_db.c    |  3 ++-
+ imap/ical_support.c  | 22 ++++++++--------------
+ imap/jmap_contact.c  |  8 +++++---
+ imap/jmap_ical.c     |  8 ++++----
+ imap/vcard_support.c | 18 ------------------
+ imap/vcard_support.h |  2 --
+ 6 files changed, 19 insertions(+), 42 deletions(-)
+
+diff --git a/imap/carddav_db.c b/imap/carddav_db.c
+index 38ac36b2b9..44b7f724af 100644
+--- a/imap/carddav_db.c
++++ b/imap/carddav_db.c
+@@ -1482,7 +1482,8 @@ EXPORTED int carddav_writecard_x(struct carddav_db *carddavdb,
+                                                         VCARD_TYPE_PARAMETER))) {
+                 vcardenumarray *types = vcardparameter_get_type(param);
+                 vcardenumarray_element pref = { .val = VCARD_TYPE_PREF };
+-                if (vcardenumarray_find(types, &pref) >= 0) ispref = 1;
++                if (vcardenumarray_find(types, &pref) < vcardenumarray_size(types))
++                    ispref = 1;
+             }
+             strarray_appendm(&emails, propval);
+             strarray_append(&emails, ispref ? "1" : "");
+diff --git a/imap/ical_support.c b/imap/ical_support.c
+index 5202ca6793..fc2b93877c 100644
+--- a/imap/ical_support.c
++++ b/imap/ical_support.c
+@@ -1826,20 +1826,14 @@ static void apply_patch_parameter(struct path_segment_t *path_seg,
+         case ICAL_MEMBER_PARAMETER:
+             /* Multi-valued parameter */
+             if (path_seg->data) {
+-                /* Check if entire parameter value == single value */
+-                const char *single = (const char *) path_seg->data;
+-                const char *param_val = icalparameter_get_value_as_string(param);
+-
+-                if (strcmp(param_val, single)) {
+-                    /* Not an exact match, try to remove single value */
+-                    char *newval = remove_single_value(param_val, single);
+-                    if (newval) {
+-                        *num_changes += 1;
+-                        icalparameter_set_member(param, newval);
+-                        free(newval);
+-                    }
+-                    continue;
+-                }
++                icalstrarray *member = icalparameter_get_member(param);
++                size_t old_size = icalstrarray_size(member);
++                icalstrarray_remove(member, path_seg->data);
++                size_t new_size = icalstrarray_size(member);
++                if (old_size != new_size) *num_changes += 1;
++                if (!icalstrarray_size(member))
++                    icalproperty_remove_parameter_by_ref(parent, param);
++                continue;
+             }
+             break;
+ 
+diff --git a/imap/jmap_contact.c b/imap/jmap_contact.c
+index 24ec3c69e5..f041116e5e 100644
+--- a/imap/jmap_contact.c
++++ b/imap/jmap_contact.c
+@@ -6658,7 +6658,9 @@ static void jscomps_from_vcard(json_t *obj, vcardproperty *prop,
+                 /* Skip values that appear in other fields */
+                 if (ckind->flags & FIELD_EXT) {
+                     vcardstrarray *alt_sa = st->field[ckind->alt_idx];
+-                    if (alt_sa && vcardstrarray_find(alt_sa, val) >= 0)
++                    if (alt_sa
++                        && vcardstrarray_find(alt_sa, val)
++                               < vcardstrarray_size(alt_sa))
+                         continue;
+                 }
+ 
+@@ -9725,7 +9727,7 @@ static unsigned _jsname_to_vcard(struct jmap_parser *parser, json_t *jval,
+             }
+ 
+             /* Add SORT-AS parameter */
+-            vcardproperty_add_parameter(prop, vcardparameter_new_sortas(sortas));
++            vcardproperty_add_parameter(prop, vcardparameter_new_sortas_list(sortas));
+ 
+             jmap_parser_pop(parser);
+         }
+@@ -9895,7 +9897,7 @@ static vcardproperty *_jsorg_to_vcard(struct jmap_parser *parser, json_t *obj,
+ 
+         prop =  vcardproperty_new_org(units);
+         if (sortas) {
+-            vcardproperty_add_parameter(prop, vcardparameter_new_sortas(sortas));
++            vcardproperty_add_parameter(prop, vcardparameter_new_sortas_list(sortas));
+         }
+ 
+         if (!props) {
+diff --git a/imap/jmap_ical.c b/imap/jmap_ical.c
+index ae0d256a56..e46d88816d 100644
+--- a/imap/jmap_ical.c
++++ b/imap/jmap_ical.c
+@@ -2609,7 +2609,7 @@ static json_t *participant_from_ical(icalproperty *prop,
+              param;
+              param = icalproperty_get_next_parameter(prop, ICAL_DELEGATEDTO_PARAMETER)) {
+ 
+-            char *uri = normalized_uri(icalparameter_get_delegatedto(param));
++            char *uri = normalized_uri(icalparameter_get_delegatedto_nth(param, 0));
+             const char *to_id = hash_lookup(uri, id_by_uri);
+             free(uri);
+             if (to_id) json_object_set_new(delegatedTo, to_id, json_true());
+@@ -2627,7 +2627,7 @@ static json_t *participant_from_ical(icalproperty *prop,
+              param;
+              param = icalproperty_get_next_parameter(prop, ICAL_DELEGATEDFROM_PARAMETER)) {
+ 
+-            char *uri = normalized_uri(icalparameter_get_delegatedfrom(param));
++            char *uri = normalized_uri(icalparameter_get_delegatedfrom_nth(param, 0));
+             const char *from_id = hash_lookup(uri, id_by_uri);
+             free(uri);
+             if (from_id) json_object_set_new(delegatedFrom, from_id, json_true());
+@@ -2645,7 +2645,7 @@ static json_t *participant_from_ical(icalproperty *prop,
+              param;
+              param = icalproperty_get_next_parameter(prop, ICAL_MEMBER_PARAMETER)) {
+ 
+-            char *uri = normalized_uri(icalparameter_get_member(param));
++            char *uri = normalized_uri(icalparameter_get_member_nth(param, 0));
+             const char *id = hash_lookup(uri, id_by_uri);
+             char keybuf[JMAPICAL_SHA1HEXSTR_LEN];
+             if (!id) id = sha1hexstr(uri, keybuf);
+@@ -3341,7 +3341,7 @@ virtuallocations_from_ical(icalcomponent *comp)
+              param;
+              param = icalproperty_get_next_parameter(prop, ICAL_FEATURE_PARAMETER)) {
+ 
+-            switch (icalparameter_get_feature(param)) {
++            switch (icalparameter_get_feature_nth(param, 0)) {
+             case ICAL_FEATURE_AUDIO:
+                 json_object_set_new(features, "audio", json_true());
+                 break;
+diff --git a/imap/vcard_support.c b/imap/vcard_support.c
+index 0ccadc1b64..ed7062b502 100644
+--- a/imap/vcard_support.c
++++ b/imap/vcard_support.c
+@@ -799,22 +799,4 @@ EXPORTED const char *vcardproperty_get_xparam_value(vcardproperty *prop,
+     return NULL;
+ }
+ 
+-EXPORTED void vcardproperty_add_type_parameter(vcardproperty *prop,
+-                                               vcardenumarray_element *type)
+-{
+-    vcardenumarray *types;
+-    vcardparameter *param =
+-        vcardproperty_get_first_parameter(prop, VCARD_TYPE_PARAMETER);
+-
+-    if (param) {
+-        types = vcardparameter_get_type(param);
+-    }
+-    else {
+-        types = vcardenumarray_new(1);
+-        param = vcardparameter_new_type(types);
+-        vcardproperty_add_parameter(prop, param);
+-    }
+-    vcardenumarray_append(types, type);
+-}
+-
+ #endif /* HAVE_LIBVCARDVCARD */
+diff --git a/imap/vcard_support.h b/imap/vcard_support.h
+index 105fdfafba..8d168efeb3 100644
+--- a/imap/vcard_support.h
++++ b/imap/vcard_support.h
+@@ -87,8 +87,6 @@ extern size_t vcard_prop_decode_value_x(vcardproperty *prop,
+ extern const char *vcardproperty_get_xparam_value(vcardproperty *prop,
+                                                   const char *name);
+ 
+-extern void vcardproperty_add_type_parameter(vcardproperty *prop,
+-                                             vcardenumarray_element *type);
+ #endif /* HAVE_LIBICALVCARD */
+ 
+ #endif /* VCARD_SUPPORT_H */
+#From 4148707141f5bd788089adc0f72daa87ecb7ab80 Mon Sep 17 00:00:00 2001
+#From: Robert Stepanek <rsto@fastmailteam.com>
+#Date: Tue, 11 Nov 2025 22:09:46 +0100
+#Subject: [PATCH] ical_support.c: configure libical to allow empty properties
+#
+#This was the CMake build option ICAL_ALLOW_EMPTY_PROPERTIES in
+#libical v3 but now is configured at runtime.
+#---
+# imap/ical_support.c | 1 +
+# 1 file changed, 1 insertion(+)
+#
+#diff --git a/imap/ical_support.c b/imap/ical_support.c
+#index 7770fa23a8..8e814000f3 100644
+#--- a/imap/ical_support.c
+#+++ b/imap/ical_support.c
+#@@ -82,6 +82,7 @@ EXPORTED void ical_support_init(void)
+#     /* Initialize libicalvcard extended property values */
+#     vcardparser_set_xprop_value_kind(vcard_xprop_value_func, NULL);
+# #endif /* HAVE_LIBICALVCARD_XPROP_VALUE */
+#+    icalproperty_set_allow_empty_properties(true);
+# 
+#     initialized = 1;
+# }
+From 0aecffac5e72b20dbae5f0301fc8f5f70d080193 Mon Sep 17 00:00:00 2001
+From: Robert Stepanek <rsto@fastmailteam.com>
+Date: Tue, 11 Nov 2025 22:35:40 +0100
+Subject: [PATCH] ical_support.h: remove icaltimezone_set_zone_directory macro
+
+Libical v4 now defines this function.
+---
+ imap/ical_support.h | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/imap/ical_support.h b/imap/ical_support.h
+index 6784d24f73..f0a7200ad2 100644
+--- a/imap/ical_support.h
++++ b/imap/ical_support.h
+@@ -257,7 +257,6 @@ extern void icalcomponent_set_jmapid(icalcomponent *comp, const char *id);
+ #endif
+ 
+ /* Functions that should be declared in libical */
+-#define icaltimezone_set_zone_directory set_zone_directory
+ 
+ #define icalcomponent_get_tzuntil_property(comp) \
+     icalcomponent_get_first_property(comp, ICAL_TZUNTIL_PROPERTY)
+From c965f01bc1c7feaa67ca31054a589853fc9ab2ff Mon Sep 17 00:00:00 2001
+From: Robert Stepanek <rsto@fastmailteam.com>
+Date: Tue, 11 Nov 2025 22:18:03 +0100
+Subject: [PATCH] Rename icaldurationtype_{from|as}_int to _seconds
+
+These got renamed in libical v4.
+---
+ imap/http_caldav.c       | 2 +-
+ imap/http_caldav_sched.c | 2 +-
+ imap/ical_support.c      | 4 ++--
+ imap/itip_support.c      | 4 ++--
+ imap/jmap_backup.c       | 2 +-
+ imap/xcal.c              | 4 ++--
+ 6 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/imap/http_caldav.c b/imap/http_caldav.c
+index c793f72035..f1fc999fa1 100644
+--- a/imap/http_caldav.c
++++ b/imap/http_caldav.c
+@@ -3787,7 +3787,7 @@ static int validate_dtend_duration(icalcomponent *comp, struct error_t *error)
+         if (prop) {
+             struct icaldurationtype duration = icalproperty_get_duration(prop);
+ 
+-            if (icaldurationtype_as_int(duration) < 0) {
++            if (icaldurationtype_as_seconds(duration) < 0) {
+                 /* NOTE: Per RFC 5545, Section 3.8.2.5, DURATION > 0,
+                    but DURATION == 0 occurs frequently enough in the wild
+                    for us to allow it */
+diff --git a/imap/http_caldav_sched.c b/imap/http_caldav_sched.c
+index 86f1e16cc4..6442442914 100644
+--- a/imap/http_caldav_sched.c
++++ b/imap/http_caldav_sched.c
+@@ -1473,7 +1473,7 @@ static unsigned propcmp(icalcomponent *oldical, icalcomponent *newical,
+         struct icaldurationtype olddur = icalproperty_get_duration(oldprop);
+         struct icaldurationtype newdur = icalproperty_get_duration(newprop);
+ 
+-        return (icaldurationtype_as_int(olddur) != icaldurationtype_as_int(newdur));
++        return (icaldurationtype_as_seconds(olddur) != icaldurationtype_as_seconds(newdur));
+     }
+     else if ((kind == ICAL_RDATE_PROPERTY) || (kind == ICAL_EXDATE_PROPERTY) ||
+              (kind == ICAL_ATTACH_PROPERTY)) {
+diff --git a/imap/ical_support.c b/imap/ical_support.c
+index 8e814000f3..832b9bd6a9 100644
+--- a/imap/ical_support.c
++++ b/imap/ical_support.c
+@@ -629,7 +629,7 @@ EXPORTED int icalcomponent_myforeach(icalcomponent *ical,
+         event_length = icalcomponent_get_duration(mastercomp);
+         if (icaldurationtype_is_null_duration(event_length) &&
+             icaltime_is_date(dtstart)) {
+-            event_length = icaldurationtype_from_int(60 * 60 * 24);  /* P1D */
++            event_length = icaldurationtype_from_seconds(60 * 60 * 24);  /* P1D */
+         }
+ 
+         /* add any RDATEs first, since EXDATE items can override them */
+@@ -1376,7 +1376,7 @@ icalcomponent_get_utc_timespan(icalcomponent *comp,
+                 /* DTSTART is not DATE-TIME */
+                 struct icaldurationtype dur;
+ 
+-                dur = icaldurationtype_from_int(60*60*24 - 1);  /* P1D */
++                dur = icaldurationtype_from_seconds(60*60*24 - 1);  /* P1D */
+                 icaltime_add(period.end, dur);
+             }
+         }
+diff --git a/imap/itip_support.c b/imap/itip_support.c
+index adefcec255..7d35a201da 100644
+--- a/imap/itip_support.c
++++ b/imap/itip_support.c
+@@ -970,8 +970,8 @@ static int deliver_merge_add(icalcomponent *ical,  // current iCalendar
+     };
+ 
+     if (!icaldurationtype_is_null_duration(duration) &&
+-        icaldurationtype_as_int(duration) !=
+-        icaldurationtype_as_int(icalcomponent_get_duration(master_comp))) {
++        icaldurationtype_as_seconds(duration) !=
++        icaldurationtype_as_seconds(icalcomponent_get_duration(master_comp))) {
+         /* Change in event duration */
+         rdate.period.start = dtstart;
+         rdate.period.duration = duration;
+diff --git a/imap/jmap_backup.c b/imap/jmap_backup.c
+index 279d439e8b..53feb98243 100644
+--- a/imap/jmap_backup.c
++++ b/imap/jmap_backup.c
+@@ -157,7 +157,7 @@ static void jmap_restore_parse(jmap_req_t *req,
+                 icaldurationtype_from_string(json_string_value(arg));
+ 
+             if (!icaldurationtype_is_bad_duration(dur)) {
+-                restore->cutoff = time(0) - icaldurationtype_as_int(dur);
++                restore->cutoff = time(0) - icaldurationtype_as_seconds(dur);
+             }
+         }
+ 
+diff --git a/imap/xcal.c b/imap/xcal.c
+index 6775184a65..4f8a37efbd 100644
+--- a/imap/xcal.c
++++ b/imap/xcal.c
+@@ -645,7 +645,7 @@ static icalvalue *xml_element_to_icalvalue(xmlNodePtr xtype,
+         struct icalperiodtype p;
+ 
+         p.start = p.end = icaltime_null_time();
+-        p.duration = icaldurationtype_from_int(0);
++        p.duration = icaldurationtype_from_seconds(0);
+ 
+         node = xmlFirstElementChild(xtype);
+         if (!node) {
+@@ -677,7 +677,7 @@ static icalvalue *xml_element_to_icalvalue(xmlNodePtr xtype,
+             xmlFree(content);
+             content = xmlNodeGetContent(node);
+             p.duration = icaldurationtype_from_string((const char *) content);
+-            if (icaldurationtype_as_int(p.duration) == 0) break;
++            if (icaldurationtype_as_seconds(p.duration) == 0) break;
+         }
+         else {
+             syslog(LOG_WARNING,
+From 74b139fccf1e08eaab64a5df375e1145566c12d3 Mon Sep 17 00:00:00 2001
+From: Robert Stepanek <rsto@fastmailteam.com>
+Date: Tue, 11 Nov 2025 22:29:53 +0100
+Subject: [PATCH] Replace icalenum macro invocations with actual function calls
+
+The icalenum macros get removed in libical v4.
+---
+ imap/caldav_alarm.c | 2 +-
+ imap/itip_support.c | 2 +-
+ imap/jcal.c         | 6 +++---
+ imap/jmap_ical.c    | 4 ++--
+ imap/xcal.c         | 6 +++---
+ 5 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/imap/caldav_alarm.c b/imap/caldav_alarm.c
+index bce4ad9d0e..622c4c5de0 100644
+--- a/imap/caldav_alarm.c
++++ b/imap/caldav_alarm.c
+@@ -807,7 +807,7 @@ static int is_supported_component(icalcomponent *ical)
+ 
+     if (!is_supported) {
+         xsyslog(LOG_DEBUG, "alarms are not supported for iCalendar component",
+-                "kind=<%s>", icalenum_component_kind_to_string(kind));
++                "kind=<%s>", icalcomponent_kind_to_string(kind));
+     }
+ 
+     return is_supported;
+diff --git a/imap/itip_support.c b/imap/itip_support.c
+index 7d35a201da..73a88c655d 100644
+--- a/imap/itip_support.c
++++ b/imap/itip_support.c
+@@ -1402,7 +1402,7 @@ HIDDEN enum sched_deliver_outcome sched_deliver_local(const char *userid,
+     default:
+         /* Unknown METHOD -- ignore it */
+         syslog(LOG_ERR, "Unknown iTIP method: %s",
+-               icalenum_method_to_string(method));
++               icalproperty_method_to_string(method));
+ 
+         sched_data->flags &= ~SCHEDFLAG_IS_REPLY;
+         goto inbox;
+diff --git a/imap/jcal.c b/imap/jcal.c
+index c3359531e5..f98709413f 100644
+--- a/imap/jcal.c
++++ b/imap/jcal.c
+@@ -644,7 +644,7 @@ static icalproperty *json_array_to_icalproperty(json_t *jprop)
+ 
+     /* Get the property type */
+     propname = ucase(icalmemory_tmp_copy(json_string_value(jtype)));
+-    kind = icalenum_string_to_property_kind(propname);
++    kind = icalproperty_string_to_kind(propname);
+     if (kind == ICAL_NO_PROPERTY) {
+         syslog(LOG_WARNING, "Unknown jCal property type: %s", propname);
+         return NULL;
+@@ -653,7 +653,7 @@ static icalproperty *json_array_to_icalproperty(json_t *jprop)
+     /* Get the value type */
+     typestr = json_string_value(jvaltype);
+     valkind = !strcmp(typestr, "unknown") ? ICAL_X_VALUE :
+-        icalenum_string_to_value_kind(ucase(icalmemory_tmp_copy(typestr)));
++        icalvalue_string_to_kind(ucase(icalmemory_tmp_copy(typestr)));
+     if (valkind == ICAL_NO_VALUE) {
+         syslog(LOG_WARNING, "Unknown jCal value type for %s property: %s",
+                propname, typestr);
+@@ -752,7 +752,7 @@ EXPORTED icalcomponent *jcal_array_as_icalcomponent(json_t *jobj)
+     }
+ 
+     type = json_string_value(jtype);
+-    kind = icalenum_string_to_component_kind(ucase(icalmemory_tmp_copy(type)));
++    kind = icalcomponent_string_to_kind(ucase(icalmemory_tmp_copy(type)));
+     if (kind == ICAL_NO_COMPONENT) {
+         syslog(LOG_WARNING, "Unknown jCal component type: %s", type);
+         return NULL;
+diff --git a/imap/jmap_ical.c b/imap/jmap_ical.c
+index 709e4de7d5..e87429f720 100644
+--- a/imap/jmap_ical.c
++++ b/imap/jmap_ical.c
+@@ -3909,7 +3909,7 @@ calendarevent_from_ical(icalcomponent *comp,
+         if (ical) {
+             icalproperty_method icalmethod = icalcomponent_get_method(ical);
+             if (icalmethod != ICAL_METHOD_NONE) {
+-                char *method = xstrdupsafe(icalenum_method_to_string(icalmethod));
++                char *method = xstrdupsafe(icalproperty_method_to_string(icalmethod));
+                 lcase(method);
+                 json_object_set_new(event, "method", json_string(method));
+                 free(method);
+@@ -7936,7 +7936,7 @@ static void calendarevent_to_ical(icalcomponent *comp,
+     jprop = json_object_get(event, "method");
+     if (json_is_string(jprop) && !is_exc) {
+         const char *val = json_string_value(jprop);
+-        icalproperty_method method = icalenum_string_to_method(val);
++        icalproperty_method method = icalproperty_string_to_method(val);
+         if (method == ICAL_METHOD_NONE) {
+             jmap_parser_invalid(parser, "method");
+         }
+diff --git a/imap/xcal.c b/imap/xcal.c
+index 4f8a37efbd..ef79196d94 100644
+--- a/imap/xcal.c
++++ b/imap/xcal.c
+@@ -852,7 +852,7 @@ static icalproperty *xml_element_to_icalproperty(xmlNodePtr xprop)
+ 
+     /* Get the property type */
+     propname = ucase(icalmemory_tmp_copy((const char *) xprop->name));
+-    kind = icalenum_string_to_property_kind(propname);
++    kind = icalproperty_string_to_kind(propname);
+     if (kind == ICAL_NO_PROPERTY) {
+         syslog(LOG_WARNING, "Unknown xCal property type: %s", propname);
+         return NULL;
+@@ -896,7 +896,7 @@ static icalproperty *xml_element_to_icalproperty(xmlNodePtr xprop)
+     }
+     typestr = ucase(icalmemory_tmp_copy((const char *) node->name));
+     valkind = !strcmp(typestr, "UNKNOWN") ? ICAL_X_VALUE :
+-        icalenum_string_to_value_kind(typestr);
++        icalvalue_string_to_kind(typestr);
+     if (valkind == ICAL_NO_VALUE) {
+         syslog(LOG_WARNING, "Unknown xCal value type for %s property: %s",
+                propname, typestr);
+@@ -974,7 +974,7 @@ static icalcomponent *xml_element_to_icalcomponent(xmlNodePtr xcomp)
+ 
+     /* Get component type */
+     kind =
+-        icalenum_string_to_component_kind(
++        icalcomponent_string_to_kind(
+             ucase(icalmemory_tmp_copy((const char *) xcomp->name)));
+     if (kind == ICAL_NO_COMPONENT) {
+         syslog(LOG_WARNING, "Unknown xCal component type: %s", xcomp->name);
+From 8f48b2f101766f0fcc7be0779a98cb16cf398c8a Mon Sep 17 00:00:00 2001
+From: Robert Stepanek <rsto@fastmailteam.com>
+Date: Tue, 11 Nov 2025 22:33:04 +0100
+Subject: [PATCH] Rename icaltime_{add|subtract} to
+ icalduration_{extend|from_times}
+
+These got renamed in libical v4.
+---
+ imap/caldav_alarm.c  |  2 +-
+ imap/http_caldav.c   | 18 +++++++++---------
+ imap/http_tzdist.c   |  6 +++---
+ imap/ical_support.c  | 20 ++++++++++----------
+ imap/itip_support.c  |  4 ++--
+ imap/jmap_calendar.c |  2 +-
+ imap/jmap_ical.c     |  8 ++++----
+ 7 files changed, 30 insertions(+), 30 deletions(-)
+
+diff --git a/imap/caldav_alarm.c b/imap/caldav_alarm.c
+index 622c4c5de0..c3c71a280f 100644
+--- a/imap/caldav_alarm.c
++++ b/imap/caldav_alarm.c
+@@ -554,7 +554,7 @@ static int process_alarm_cb(icalcomponent *comp,
+                 base = end;
+             }
+             base.is_date = 0; /* need an actual time for triggers */
+-            alarmtime = icaltime_add(base, trigger.duration);
++            alarmtime = icalduration_extend(base, trigger.duration);
+         }
+         else {
+             /* absolute */
+diff --git a/imap/http_caldav.c b/imap/http_caldav.c
+index f1fc999fa1..5bf1171cea 100644
+--- a/imap/http_caldav.c
++++ b/imap/http_caldav.c
+@@ -4778,7 +4778,7 @@ static int apply_prop_timerange(struct icalperiodtype *range,
+ 
+     if (!icaldurationtype_is_null_duration(period.duration)) {
+         /* Calculate end time from duration */
+-        period.end = icaltime_add(period.start, period.duration);
++        period.end = icalduration_extend(period.start, period.duration);
+     }
+     else if (icaltime_is_null_time(period.end)) period.end = period.start;
+ 
+@@ -5364,7 +5364,7 @@ static int expand_cb(icalcomponent *comp,
+             
+         case ICAL_DURATION_PROPERTY:
+             /* Set DURATION to be for this occurrence */
+-            icalproperty_set_duration(prop, icaltime_subtract(end, start));
++            icalproperty_set_duration(prop, icalduration_from_times(end, start));
+             break;
+             
+         case ICAL_RECURRENCEID_PROPERTY:
+@@ -5455,7 +5455,7 @@ static void limit_caldata(icalcomponent *ical, struct icalperiodtype *limit)
+             /* Calculate duration of master component */
+             dtstart = icalcomponent_get_dtstart(comp);
+             dtend = icalcomponent_get_dtend(comp);
+-            dtduration = icaltime_subtract(dtend, dtstart);
++            dtduration = icalduration_from_times(dtend, dtstart);
+             break;
+         }
+     }
+@@ -5480,7 +5480,7 @@ static void limit_caldata(icalcomponent *ical, struct icalperiodtype *limit)
+ 
+         /* Check span of original occurrence */
+         dtstart = recurid;
+-        dtend = icaltime_add(dtstart, dtduration);
++        dtend = icalduration_extend(dtstart, dtduration);
+         recurspan = icaltime_span_new(dtstart, dtend, 1);
+         if (icaltime_span_overlaps(&recurspan, &limitspan)) continue;
+ 
+@@ -7288,7 +7288,7 @@ static void add_freebusy(struct icaltimetype *recurid,
+     if (recurid) newfb->recurid = *recurid;
+ 
+     if (icaltime_is_date(*start)) {
+-        newfb->per.duration = icaltime_subtract(*end, *start);
++        newfb->per.duration = icalduration_from_times(*end, *start);
+         newfb->per.end = icaltime_null_time();
+         start->is_date = 0;  /* MUST be DATE-TIME */
+         newfb->per.start = icaltime_convert_to_zone(*start, utc_zone);
+@@ -7787,7 +7787,7 @@ HIDDEN icalcomponent *busytime_to_ical(struct freebusy_filter *fbfilter,
+ 
+         isdur = !icaldurationtype_is_null_duration(fb->per.duration);
+         end = !isdur ? fb->per.end :
+-            icaltime_add(fb->per.start, fb->per.duration);
++            icalduration_extend(fb->per.start, fb->per.duration);
+ 
+         /* Skip periods of different type or that don't overlap */
+         if ((fb->type != next_fb->type) ||
+@@ -7796,7 +7796,7 @@ HIDDEN icalcomponent *busytime_to_ical(struct freebusy_filter *fbfilter,
+         /* Coalesce into next busytime */
+         next_isdur = !icaldurationtype_is_null_duration(next_fb->per.duration);
+         next_end = !next_isdur ? next_fb->per.end :
+-            icaltime_add(next_fb->per.start, next_fb->per.duration);
++            icalduration_extend(next_fb->per.start, next_fb->per.duration);
+ 
+         if (icaltime_compare(end, next_end) >= 0) {
+             /* Current period subsumes next */
+@@ -7806,7 +7806,7 @@ HIDDEN icalcomponent *busytime_to_ical(struct freebusy_filter *fbfilter,
+         else if (isdur && next_isdur) {
+             /* Both periods are durations */
+             struct icaldurationtype overlap =
+-                icaltime_subtract(end, next_fb->per.start);
++                icalduration_from_times(end, next_fb->per.start);
+ 
+             next_fb->per.duration.days += fb->per.duration.days - overlap.days;
+         }
+@@ -8190,7 +8190,7 @@ static int meth_get_head_fb(struct transaction_t *txn, void *params)
+     }
+     else {
+         /* Set end based on period */
+-        fbfilter.end = icaltime_add(fbfilter.start, period);
++        fbfilter.end = icalduration_extend(fbfilter.start, period);
+     }
+ 
+ 
+diff --git a/imap/http_tzdist.c b/imap/http_tzdist.c
+index 9bc02e5a2d..08bc8956e6 100644
+--- a/imap/http_tzdist.c
++++ b/imap/http_tzdist.c
+@@ -1521,10 +1521,10 @@ static int action_expand(struct transaction_t *txn)
+ 
+                 /* UT and local time 1 second before onset */
+                 off.seconds = -1;
+-                ut = icaltime_add(obs->onset, off);
++                ut = icalduration_extend(obs->onset, off);
+ 
+                 off.seconds = obs->offset_from;
+-                local = icaltime_add(ut, off);
++                local = icalduration_extend(ut, off);
+ 
+                 buf_printf(body,
+                            "%s  " CTIME_FMT " UT = " CTIME_FMT " %s"
+@@ -1536,7 +1536,7 @@ static int action_expand(struct transaction_t *txn)
+                 icaltime_adjust(&ut, 0, 0, 0, 1);
+ 
+                 off.seconds = obs->offset_to;
+-                local = icaltime_add(ut, off);
++                local = icalduration_extend(ut, off);
+ 
+                 buf_printf(body,
+                            "%s  " CTIME_FMT " UT = " CTIME_FMT " %s"
+diff --git a/imap/ical_support.c b/imap/ical_support.c
+index 832b9bd6a9..176f0fe03e 100644
+--- a/imap/ical_support.c
++++ b/imap/ical_support.c
+@@ -287,7 +287,7 @@ static icaltimetype icalcomponent_get_mydtend(icalcomponent *comp)
+         } else {
+             duration = icaldurationtype_null_duration();
+         }
+-        dtend = icaltime_add(dtstart, duration);
++        dtend = icalduration_extend(dtstart, duration);
+     }
+     else dtend = dtstart;
+ 
+@@ -589,7 +589,7 @@ EXPORTED int icalcomponent_myforeach(icalcomponent *ical,
+     if (!range_span.start) range_span.start = epoch;
+     if (!range_span.end) {
+         if (!icaldurationtype_is_null_duration(range.duration)) {
+-            icaltimetype end = icaltime_add(range.start, range.duration);
++            icaltimetype end = icalduration_extend(range.start, range.duration);
+             range_span.end = icaltime_to_timet(end, NULL);
+         }
+         else range_span.end = eternity;
+@@ -644,14 +644,14 @@ EXPORTED int icalcomponent_myforeach(icalcomponent *ical,
+             icaltimetype mystart, myend;
+             if (icalperiodtype_is_null_period(rdate.period)) {
+                 mystart = rdate.time;
+-                myend = icaltime_add(mystart, event_length);
++                myend = icalduration_extend(mystart, event_length);
+             }
+             else {
+                 mystart = rdate.period.start;
+                 if (icaldurationtype_is_null_duration(rdate.period.duration))
+                     myend = rdate.period.end;
+                 else
+-                    myend = icaltime_add(mystart, rdate.period.duration);
++                    myend = icalduration_extend(mystart, rdate.period.duration);
+             }
+             if (icaltime_is_null_time(mystart))
+                 continue;
+@@ -746,7 +746,7 @@ EXPORTED int icalcomponent_myforeach(icalcomponent *ical,
+             }
+             if (icaltime_compare(xitem, ritem)) {
+                 /* not excluded - process this recurrence-id */
+-                struct icaltimetype thisend = icaltime_add(ritem, event_length);
++                struct icaltimetype thisend = icalduration_extend(ritem, event_length);
+                 icaltime_span this_span = {
+                     rtime, icaltime_to_timet(thisend, floatingtz), 0 /* is_busy */
+                 };
+@@ -1297,7 +1297,7 @@ icalcomponent_get_utc_timespan(icalcomponent *comp,
+                 struct icaldurationtype dur = icaldurationtype_null_duration();
+ 
+                 dur.days = 1;
+-                period.end = icaltime_add(period.start, dur);
++                period.end = icalduration_extend(period.start, dur);
+             }
+             else
+                 memcpy(&period.end, &period.start, sizeof(struct icaltimetype));
+@@ -1377,7 +1377,7 @@ icalcomponent_get_utc_timespan(icalcomponent *comp,
+                 struct icaldurationtype dur;
+ 
+                 dur = icaldurationtype_from_seconds(60*60*24 - 1);  /* P1D */
+-                icaltime_add(period.end, dur);
++                icalduration_extend(period.end, dur);
+             }
+         }
+         else {
+@@ -1492,9 +1492,9 @@ icalrecurrenceset_get_utc_timespan(icalcomponent *ical,
+                     struct icaldurationtype duration;
+                     icaltimezone *utc = icaltimezone_get_utc_timezone();
+ 
+-                    duration = icaltime_subtract(period.end, period.start);
++                    duration = icalduration_from_times(period.end, period.start);
+                     icaltimetype end =
+-                        icaltime_add(icaltime_convert_to_zone(recur->until, utc),
++                        icalduration_extend(icaltime_convert_to_zone(recur->until, utc),
+                                      duration);
+ 
+                     if (icaltime_compare(period.end, end) < 0)
+@@ -2187,7 +2187,7 @@ static void apply_patch_component(struct path_segment_t *path_seg,
+                     icalcomponent *override = NULL;
+                     struct icaltimetype start = path_seg->match.comp.rid;
+                     struct icaltimetype end =
+-                        icaltime_add(start, icalcomponent_get_duration(master));
++                        icalduration_extend(start, icalcomponent_get_duration(master));
+                     icalcomponent_foreach_recurrence(master, start, end,
+                                                      &create_override,
+                                                      &override);
+diff --git a/imap/itip_support.c b/imap/itip_support.c
+index 73a88c655d..724446a535 100644
+--- a/imap/itip_support.c
++++ b/imap/itip_support.c
+@@ -365,8 +365,8 @@ HIDDEN icalcomponent *master_to_recurrence(icalcomponent *master,
+         struct icaltimetype end = _get_datetime(master, endprop);
+ 
+         // calculate and re-apply the diff
+-        struct icaldurationtype diff = icaltime_subtract(end, start);
+-        struct icaltimetype newend = icaltime_add(newstart, diff);
++        struct icaldurationtype diff = icalduration_from_times(end, start);
++        struct icaltimetype newend = icalduration_extend(newstart, diff);
+ 
+         icaltimezone *endzone = (icaltimezone *)icaltime_get_timezone(end);
+         icalproperty_set_dtend(endprop,
+diff --git a/imap/jmap_calendar.c b/imap/jmap_calendar.c
+index c2b0fbaa0d..17976ae871 100644
+--- a/imap/jmap_calendar.c
++++ b/imap/jmap_calendar.c
+@@ -2771,7 +2771,7 @@ static void getcalendarevents_get_utctimes_internal(json_t *jsevent,
+     struct jmapical_datetime enddt = JMAPICAL_DATETIME_INITIALIZER;
+     icaltimetype startical = jmapical_datetime_to_icaltime(&startdt, tz);
+     struct icaldurationtype durical = jmapical_duration_to_icalduration(&dur);
+-    icaltimetype endical = icaltime_add(startical, durical);
++    icaltimetype endical = icalduration_extend(startical, durical);
+     jmapical_datetime_from_icaltime(endical, &enddt);
+ 
+     /* Convert start and end to UTC */
+diff --git a/imap/jmap_ical.c b/imap/jmap_ical.c
+index e87429f720..96e590b6f7 100644
+--- a/imap/jmap_ical.c
++++ b/imap/jmap_ical.c
+@@ -1413,7 +1413,7 @@ HIDDEN void jmapical_duration_between_unixtime(time_t t1, bit64 t1nanos,
+ 
+     icaltimetype icaltx = icaltime_from_timet_with_zone(tx, 0, utc);
+     icaltimetype icalty = icaltime_from_timet_with_zone(ty, 0, utc);
+-    struct icaldurationtype icaldur = icaltime_subtract(icalty, icaltx);
++    struct icaldurationtype icaldur = icalduration_from_times(icalty, icaltx);
+     icaldur.is_neg = is_neg;
+     jmapical_duration_from_icalduration(icaldur, dur);
+     dur->nanos = nanos;
+@@ -1592,7 +1592,7 @@ static struct icaltimetype dtend_from_ical(icalcomponent *comp,
+         } else {
+             duration = icaldurationtype_null_duration();
+         }
+-        dtend = icaltime_add(dtstart, duration);
++        dtend = icalduration_extend(dtstart, duration);
+     }
+     else dtend = dtstart;
+ 
+@@ -1952,7 +1952,7 @@ override_rdate_from_ical(icalproperty *prop)
+         /* Determine duration */
+         struct icaldurationtype icaldur;
+         if (!icaltime_is_null_time(rdate.period.end)) {
+-            icaldur = icaltime_subtract(rdate.period.end, rdate.period.start);
++            icaldur = icalduration_from_times(rdate.period.end, rdate.period.start);
+         } else {
+             icaldur = rdate.period.duration;
+         }
+@@ -4838,7 +4838,7 @@ startend_to_ical(icalcomponent *comp, struct jmap_parser *parser,
+     if (tzstart != tzend) {
+         /* Add DTEND */
+         struct icaldurationtype icaldur = jmapical_duration_to_icalduration(&dur);
+-        icaltimetype dtend = icaltime_add(dtstart, icaldur);
++        icaltimetype dtend = icalduration_extend(dtstart, icaldur);
+         dtend = icaltime_convert_to_zone(dtend, tzend);
+         icalproperty *prop = insert_icaltimeprop(comp, dtend, 1, ICAL_DTEND_PROPERTY);
+         if (prop) xjmapid_to_ical(prop, endzone_location_id);
+From b02631ad4b0cd560e20f95763d51f1ecbd60a271 Mon Sep 17 00:00:00 2001
+From: Robert Stepanek <rsto@fastmailteam.com>
+Date: Fri, 20 Feb 2026 11:41:46 +0100
+Subject: [PATCH] index.c: refactor for redefined vcardstructuredtype
+
+---
+ imap/index.c | 35 ++++++++++++++++++-----------------
+ 1 file changed, 18 insertions(+), 17 deletions(-)
+
+diff --git a/imap/index.c b/imap/index.c
+index 95b50a79f0..66dbc4f6d2 100644
+--- a/imap/index.c
++++ b/imap/index.c
+@@ -4692,8 +4692,6 @@ static int extract_vcardbuf(struct buf *raw, charset_t charset, int encoding,
+     for (prop = vcardcomponent_get_first_property(vcard, VCARD_ANY_PROPERTY);
+          prop;
+          prop = vcardcomponent_get_next_property(vcard, VCARD_ANY_PROPERTY)) {
+-        vcardstructuredtype *stp = NULL;
+-        vcardstructuredtype st = { 1, { 0 } };
+         const char *val;
+ 
+         switch (vcardproperty_isa(prop)) {
+@@ -4724,23 +4722,26 @@ static int extract_vcardbuf(struct buf *raw, charset_t charset, int encoding,
+             break;
+ 
+         case VCARD_ORG_PROPERTY: {
+-            unsigned f;
+-            size_t v;
+-
+-            st.field[0] = vcardproperty_get_org(prop);
+-            stp = &st;
+-
+-            GCC_FALLTHROUGH
++            vcardstrarray *sa = vcardproperty_get_org(prop);
++            for (size_t i = 0; i < vcardstrarray_size(sa); i++) {
++                val = vcardstrarray_element_at(sa, i);
++                if (val && val[0]) {
++                    if (buf_len(&buf)) buf_putc(&buf, ' ');
++                    buf_appendcstr(&buf, val);
++                }
++            }
++            break;
++        }
+ 
+         case VCARD_N_PROPERTY:
+-        case VCARD_ADR_PROPERTY:
+-            if (!stp) stp = vcardproperty_get_adr(prop);
+-
+-            for (f = 0; f < stp->num_fields; f++) {
+-                vcardstrarray *vals = stp->field[f];
+-
+-                for (v = 0; vals && v < vcardstrarray_size(vals); v++) {
+-                    val = vcardstrarray_element_at(vals, v);
++        case VCARD_ADR_PROPERTY: {
++            vcardstructuredtype *stt =
++                vcardvalue_get_structured(vcardproperty_get_value(prop));
++
++            for (size_t i = 0; i < vcardstructured_num_fields(stt); i++) {
++                vcardstrarray *sa = vcardstructured_field_at(stt, i);
++                for (size_t j = 0; j < vcardstrarray_size(sa); j++) {
++                    val = vcardstrarray_element_at(sa, j);
+                     if (val && val[0]) {
+                         if (buf_len(&buf)) buf_putc(&buf, ' ');
+                         buf_appendcstr(&buf, val);
+From 89595af2fc27b4ef48633bebbeb2af8fdb926fb5 Mon Sep 17 00:00:00 2001
+From: Robert Stepanek <rsto@fastmailteam.com>
+Date: Fri, 20 Feb 2026 13:17:11 +0100
+Subject: [PATCH] jmap_contact.c: refactor for redefined vcardstructuredtype
+
+---
+ imap/jmap_contact.c | 158 +++++++++++++++++++++-----------------------
+ 1 file changed, 76 insertions(+), 82 deletions(-)
+
+diff --git a/imap/jmap_contact.c b/imap/jmap_contact.c
+index ac669af9c9..5bb6f8fb71 100644
+--- a/imap/jmap_contact.c
++++ b/imap/jmap_contact.c
+@@ -6882,7 +6882,7 @@ static void jscomps_from_vcard(json_t *obj, vcardproperty *prop,
+ 
+         json_object_set_new(obj, "isOrdered", json_true());
+ 
+-        sa = jscomps->field[0];
++        sa = vcardstructured_field_at(jscomps, 0);
+         if (sa) {
+             /* add default separator, if not " " */
+             val = vcardstrarray_element_at(sa, 1);
+@@ -6891,10 +6891,10 @@ static void jscomps_from_vcard(json_t *obj, vcardproperty *prop,
+             }
+         }
+ 
+-        for (i = 1; i < jscomps->num_fields; i++) {
++        for (i = 1; i < vcardstructured_num_fields(jscomps); i++) {
+             const char *kind;
+ 
+-            sa = jscomps->field[i];
++            sa = vcardstructured_field_at(jscomps, i);
+             val = vcardstrarray_element_at(sa, 0);
+             if (*val == 's') {
+                 kind = "separator";
+@@ -6904,14 +6904,14 @@ static void jscomps_from_vcard(json_t *obj, vcardproperty *prop,
+                 int field_idx = atoi(val);
+                 int val_idx = 0;
+ 
+-                if (field_idx >= (int) st->num_fields) continue;
++                if (field_idx >= (int) vcardstructured_num_fields(st)) continue;
+ 
+                 kind = comp_kinds[field_idx].name;
+ 
+                 if (vcardstrarray_size(sa) > 1)
+                     val_idx = atoi(vcardstrarray_element_at(sa, 1));
+ 
+-                val = vcardstrarray_element_at(st->field[field_idx], val_idx);
++                val = vcardstrarray_element_at(vcardstructured_field_at(st, field_idx), val_idx);
+             }
+ 
+             if (*val) {
+@@ -6938,18 +6938,18 @@ static void jscomps_from_vcard(json_t *obj, vcardproperty *prop,
+ 
+     /* Iterate through all components and values */
+     for (const struct comp_kind *ckind = comp_kinds;
+-         ckind->name && ckind->idx < st->num_fields; ckind++) {
+-        if ((ckind->flags & FIELD_SKIP) && st->num_fields > ckind->alt_idx)
++         ckind->name && ckind->idx < vcardstructured_num_fields(st); ckind++) {
++        if ((ckind->flags & FIELD_SKIP) && vcardstructured_num_fields(st) > ckind->alt_idx)
+             continue;
+ 
+-        sa = st->field[ckind->idx];
++        sa = vcardstructured_field_at(st, ckind->idx);
+         for (i = 0; sa && i < vcardstrarray_size(sa); i++) {
+             val = vcardstrarray_element_at(sa, i);
+ 
+             if (*val) {
+                 /* Skip values that appear in other fields */
+                 if (ckind->flags & FIELD_EXT) {
+-                    vcardstrarray *alt_sa = st->field[ckind->alt_idx];
++                    vcardstrarray *alt_sa = vcardstructured_field_at(st, ckind->alt_idx);
+                     if (alt_sa
+                         && vcardstrarray_find(alt_sa, val)
+                                < vcardstrarray_size(alt_sa))
+#@@ -7048,30 +7048,30 @@ static json_t *_jsonline_from_vcard(vcardproperty *prop,
+#         const char *val = vcardproperty_get_value_as_string(prop);
+#         if (!val) goto done;
+# 
+#-        vcardstructuredtype *stt = vcardstructured_from_string(val);
+#+        vcardstructuredtype *stt = vcardstructured_new_from_string(val);
+#         if (!stt) goto done;
+# 
+#         // At least one of user and uri must be set.
+#         const char *user = NULL, *uri = NULL;
+#-        if (stt->num_fields == 2) {
+#-            if (vcardstrarray_size(stt->field[0]) == 1) {
+#-                user = vcardstrarray_element_at(stt->field[0], 0);
+#+        if (vcardstructured_num_fields(stt) == 2) {
+#+            if (vcardstrarray_size(vcardstructured_field_at(stt, 0)) == 1) {
+#+                user = vcardstrarray_element_at(vcardstructured_field_at(stt, 0), 0);
+#                 if (!strlen(user)) user = NULL;
+#             }
+#-            if (vcardstrarray_size(stt->field[1]) == 1) {
+#-                uri = vcardstrarray_element_at(stt->field[1], 0);
+#+            if (vcardstrarray_size(vcardstructured_field_at(stt, 1)) == 1) {
+#+                uri = vcardstrarray_element_at(vcardstructured_field_at(stt, 1), 0);
+#                 if (!strlen(uri)) uri = NULL;
+#             }
+#         }
+# 
+#         if (!user && !uri) {
+#-            vcardstructured_free(stt);
+#+            vcardstructured_unref(stt);
+#             goto done;
+#         }
+# 
+#         // Convert OnlineService object.
+#         jprop = json_pack("{s:s* s:s*}", "user", user, "uri", uri);
+#-        vcardstructured_free(stt);
+#+        vcardstructured_unref(stt);
+# 
+#         *param_flags =
+#             ALLOW_TYPE_PARAM | ALLOW_PREF_PARAM | ALLOW_LABEL_PARAM |
+#@@ -7458,7 +7458,7 @@ static void jsprop_from_vcard(vcardproperty *prop, json_t *obj,
+#             vcardstrarray *sorts = vcardparameter_get_sortas(param);
+#             json_t *sortas = json_object();
+# 
+#-            if (vcardstrarray_size(sorts) <= n->num_fields) {
+#+            if (vcardstrarray_size(sorts) <= vcardstructured_num_fields(n)) {
+#                 const struct comp_kind *ckind;
+#                 for (ckind = n_comp_kinds; ckind->name; ckind++) {
+#                     if (ckind->idx < vcardstrarray_size(sorts)) {
+#@@ -7472,8 +7472,8 @@ static void jsprop_from_vcard(vcardproperty *prop, json_t *obj,
+#                         // component must also be set in the N property.
+#                         bool have_ncomp = false;
+# 
+#-                        if (ckind->idx < n->num_fields) {
+#-                            vcardstrarray *ncomp = n->field[ckind->idx];
+#+                        if (ckind->idx < vcardstructured_num_fields(n)) {
+#+                            vcardstrarray *ncomp = vcardstructured_field_at(n, ckind->idx);
+#                             const char *nval = vcardstrarray_element_at(ncomp, 0);
+#                             if (nval && *nval) {
+#                                 have_ncomp = true;
+@@ -9968,8 +9968,8 @@ static vcardproperty *_jscomps_to_vcard(struct jmap_parser *parser, json_t *obj,
+         return 0;
+     }
+ 
+-    vcardstructuredtype vals = { args->num_comps, { 0 } };
+-    vcardstructuredtype ph = { args->num_comps, { 0 } };
++    vcardstructuredtype *vals = vcardstructured_new(args->num_comps);
++    vcardstructuredtype *ph = vcardstructured_new(args->num_comps);
+     size_t i, size = json_array_size(comps);
+     vcardstructuredtype *jscomps = NULL;
+     vcardproperty *prop = NULL;
+@@ -9999,9 +9999,7 @@ static vcardproperty *_jscomps_to_vcard(struct jmap_parser *parser, json_t *obj,
+     }
+ 
+     if (isordered) {
+-        jscomps = xzmalloc(sizeof(vcardstructuredtype));
+-
+-        jscomps->num_fields = 1; // for separator, regardless if specified
++        jscomps = vcardstructured_new(1); // for separator, regardless if specified
+ 
+         jprop = json_object_get(obj, "defaultSeparator");
+         if (json_is_string(jprop)) {
+@@ -10012,7 +10010,7 @@ static vcardproperty *_jscomps_to_vcard(struct jmap_parser *parser, json_t *obj,
+                 entry = vcardstrarray_new(2);
+                 vcardstrarray_append(entry, "s");
+                 vcardstrarray_append(entry, defsep);
+-                jscomps->field[0] = entry;
++                vcardstructured_set_field_at(jscomps, 0, entry);
+             }
+         }
+         else if (jprop) {
+@@ -10074,7 +10072,8 @@ static vcardproperty *_jscomps_to_vcard(struct jmap_parser *parser, json_t *obj,
+                 entry = vcardstrarray_new(2);
+                 vcardstrarray_append(entry, "s");
+                 vcardstrarray_append(entry, buf_cstring(&buf));
+-                jscomps->field[jscomps->num_fields++] = entry;
++                vcardstructured_set_field_at(jscomps,
++                        vcardstructured_num_fields(jscomps), entry);
+             }
+             else {
+                 jmap_parser_invalid(parser, "kind");
+@@ -10084,7 +10083,7 @@ static vcardproperty *_jscomps_to_vcard(struct jmap_parser *parser, json_t *obj,
+         else {
+             const struct comp_kind *ckind =
+                 _field_name_to_kind(kind, args->comp_kinds);
+-            vcardstrarray **field;
++            vcardstrarray *field;
+ 
+             if (!ckind) {
+                 jmap_parser_pop(parser);
+@@ -10094,15 +10093,21 @@ static vcardproperty *_jscomps_to_vcard(struct jmap_parser *parser, json_t *obj,
+ 
+             /* Add phonetic to proper field */
+             if (phonetic) {
+-                field = &ph.field[ckind->idx];
+-                if (!*field) *field = vcardstrarray_new(1);
+-                vcardstrarray_append(*field, phonetic);
++                field = vcardstructured_field_at(ph, ckind->idx);
++                if (!field) {
++                    field = vcardstrarray_new(1);
++                    vcardstructured_set_field_at(ph, ckind->idx, field);
++                }
++                vcardstrarray_append(field, phonetic);
+             }
+ 
+             /* Add value to proper field */
+-            field = &vals.field[ckind->idx];
+-            if (!*field) *field = vcardstrarray_new(1);
+-            vcardstrarray_append(*field, val);
++            field = vcardstructured_field_at(vals, ckind->idx);
++            if (!field) {
++                field = vcardstrarray_new(1);
++                vcardstructured_set_field_at(vals, ckind->idx, field);
++            }
++            vcardstrarray_append(field, val);
+ 
+             if (isordered) {
+                 /* Add positional entry (field idx [value idx]) to JSCOMPS */
+@@ -10110,12 +10115,13 @@ static vcardproperty *_jscomps_to_vcard(struct jmap_parser *parser, json_t *obj,
+                 buf_reset(&buf);
+                 buf_printf(&buf, "%d", ckind->idx);
+                 vcardstrarray_append(entry, buf_cstring(&buf));
+-                if (vcardstrarray_size(*field) > 1) {
++                if (vcardstrarray_size(field) > 1) {
+                     buf_reset(&buf);
+-                    buf_printf(&buf, "%lu", vcardstrarray_size(*field) - 1);
++                    buf_printf(&buf, "%lu", vcardstrarray_size(field) - 1);
+                     vcardstrarray_append(entry, buf_cstring(&buf));
+                 }
+-                jscomps->field[jscomps->num_fields++] = entry;
++                vcardstructured_set_field_at(jscomps,
++                        vcardstructured_num_fields(jscomps), entry);
+             }
+ 
+             if (args->derived) {
+@@ -10127,9 +10133,12 @@ static vcardproperty *_jscomps_to_vcard(struct jmap_parser *parser, json_t *obj,
+ 
+             /* Also add values from ext fields to backward-compat fields */
+             if (ckind->flags & FIELD_BWD) {
+-                field = &vals.field[ckind->alt_idx];
+-                if (!*field) *field = vcardstrarray_new(1);
+-                vcardstrarray_append(*field, val);
++                field = vcardstructured_field_at(vals, ckind->alt_idx);
++                if (!field) {
++                    field = vcardstrarray_new(1);
++                    vcardstructured_set_field_at(vals, ckind->alt_idx, field);
++                }
++                vcardstrarray_append(field, val);
+             }
+         }
+ 
+@@ -10141,7 +10150,7 @@ static vcardproperty *_jscomps_to_vcard(struct jmap_parser *parser, json_t *obj,
+         goto fail;
+     }
+ 
+-    prop = args->vanew_prop(&vals,
++    prop = args->vanew_prop(vals,
+                             jscomps ? vcardparameter_new_jscomps(jscomps) : NULL,
+                             NULL);
+ 
+@@ -10153,7 +10162,7 @@ static vcardproperty *_jscomps_to_vcard(struct jmap_parser *parser, json_t *obj,
+ 
+         vcardparameter_set_value_from_string(param, ph_system);
+         vcardcomponent_add_property(card,
+-                                    args->vanew_prop(&ph,
++                                    args->vanew_prop(ph,
+                                                      vcardparameter_new_altid(args->id),
+                                                      param,
+                                                      NULL));
+@@ -10166,29 +10175,17 @@ static vcardproperty *_jscomps_to_vcard(struct jmap_parser *parser, json_t *obj,
+ 
+     buf_free(&buf);
+ 
++    vcardstructured_unref(vals);
++    vcardstructured_unref(ph);
++    vcardstructured_unref(jscomps);
++
+     return prop;
+ 
+   fail:
+-    for (unsigned i = 0; i < vals.num_fields; i++) {
+-        vcardstrarray *sa = vals.field[i];
+-
+-        if (sa) vcardstrarray_free(sa);
+-    }
+-    if (ph_system) {
+-        for (unsigned i = 0; i < ph.num_fields; i++) {
+-            vcardstrarray *sa = ph.field[i];
++    vcardstructured_unref(vals);
++    vcardstructured_unref(ph);
++    vcardstructured_unref(jscomps);
+ 
+-            if (sa) vcardstrarray_free(sa);
+-        }
+-    }
+-    if (jscomps) {
+-        for (unsigned i = 0; i < jscomps->num_fields; i++) {
+-            vcardstrarray *sa = jscomps->field[i];
+-
+-            if (sa) vcardstrarray_free(sa);
+-        }
+-        free(jscomps);
+-    }
+     if (args->derived) {
+         buf_reset(args->derived);
+     }
+#@@ -10780,20 +10777,20 @@ static vcardproperty *_jsonline_to_vcard(struct jmap_parser *parser, json_t *obj
+#       json_object_del(jvcardparams, "x-user");
+# 
+#     } else {
+#-      // Use X-CYRUS-ONLINESERVICE in all other cases.
+#+        // Use X-CYRUS-ONLINESERVICE in all other cases.
+#+        vcardstructuredtype *st = vcardstructured_new(2);
+#+        vcardstrarray *field = vcardstrarray_new(1);
+#+        if (user) vcardstrarray_add(field, user);
+#+        vcardstructured_set_field_at(st, 0, field);
+#+
+#+        field = vcardstrarray_new(1);
+#+        if (uri) vcardstrarray_add(field, uri);
+#+        vcardstructured_set_field_at(st, 1, field);
+#+
+#         prop = vcardproperty_new(VCARD_X_PROPERTY);
+#         vcardproperty_set_x_name(prop, "X-CYRUS-ONLINESERVICE");
+#-        vcardproperty_set_value(prop, vcardvalue_new(VCARD_STRUCTURED_VALUE));
+#-
+#-        vcardstructuredtype *st =
+#-            vcardvalue_get_structured(vcardproperty_get_value(prop));
+#-        st->field[0] = vcardstrarray_new(1);
+#-        if (user)
+#-            vcardstrarray_add(st->field[0], user);
+#-        st->field[1] = vcardstrarray_new(1);
+#-        if (uri)
+#-            vcardstrarray_add(st->field[1], uri);
+#-        st->num_fields = 2;
+#+        vcardproperty_set_value(prop, vcardvalue_new_structured(st));
+#+        vcardstructured_unref(st);
+# 
+#         if (service) {
+#             vcardparameter *param = vcardparameter_new_x(service);
+#@@ -11555,8 +11552,7 @@ static unsigned _vcardprops_to_card(struct jmap_parser *parser, json_t *jprops,
+# 
+#         case JSON_ARRAY:
+#         // a structured value MUST be the only one & MUST NOT have too many comps
+#-        if (json_array_size(jprop) > 4 ||
+#-            json_array_size(jval) > VCARD_MAX_STRUCTURED_FIELDS) goto error;
+#+        if (json_array_size(jprop) > 4 || json_array_size(jval) > 20) goto error;
+# 
+#         default:
+#             break;
+#@@ -11583,7 +11579,7 @@ static unsigned _vcardprops_to_card(struct jmap_parser *parser, json_t *jprops,
+#         r = 1;
+# 
+#         if (json_is_array(jval)) {
+#-            vcardstructuredtype *st = vcardstructured_new();
+#+            vcardstructuredtype *st = vcardstructured_new(0);
+#             json_t *jcomp;
+#             size_t j;
+# 
+#@@ -11600,18 +11596,16 @@ static unsigned _vcardprops_to_card(struct jmap_parser *parser, json_t *jprops,
+#                 }
+# 
+#                 if (!vals) {
+#-                    vcardstructured_free(st);
+#+                    vcardstructured_unref(st);
+#                     goto error;
+#                 }
+# 
+#-                st->field[st->num_fields++] = vals;
+#+                vcardstructured_set_field_at(st,
+#+                        vcardstructured_num_fields(st), vals);
+#             }
+# 
+#             vcardproperty_set_value(prop, vcardvalue_new_structured(st));
+#-
+#-            // don't free strarrays which have been stolen by the vcardvalue
+#-            st->num_fields = 0;
+#-            vcardstructured_free(st);
+#+            vcardstructured_unref(st);
+#         }
+#         else if (val_type) {
+#             vals = jprop_values_to_strarray(jprop, 3, val_type, &buf);
+From 6f4b580768d9a5b52b5fd101349a8afb5c269378 Mon Sep 17 00:00:00 2001
+From: Robert Stepanek <rsto@fastmailteam.com>
+Date: Thu, 16 Apr 2026 08:32:12 +0200
+Subject: [PATCH] jcal.c: do not use libical-internal macro definitions
+
+Libical v4.0 removed a couple of formerly publicy defined macros.
+This patch replaces invocations of these macros with their actual
+implementation.
+---
+ imap/jcal.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/imap/jcal.c b/imap/jcal.c
+index 8be890b370..e066c68493 100644
+--- a/imap/jcal.c
++++ b/imap/jcal.c
+@@ -89,7 +89,10 @@ static json_t *icalreqstattype_as_json_array(struct icalreqstattype stat)
+     json_t *jstat;
+     char code[22];
+ 
+-    icalerror_check_arg_rz((stat.code != ICAL_UNKNOWN_STATUS),"Status");
++    if (stat.code != ICAL_UNKNOWN_STATUS)  {
++        icalerror_set_errno(ICAL_BADARG_ERROR);
++        return NULL;
++    }
+ 
+     if (!stat.desc) stat.desc = icalenum_reqstat_desc(stat.code);
+ 
