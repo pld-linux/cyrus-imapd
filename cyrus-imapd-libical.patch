@@ -1217,3 +1217,47 @@ index 8be890b370..e066c68493 100644
  
      if (!stat.desc) stat.desc = icalenum_reqstat_desc(stat.code);
  
+Subject: [PATCH] libical v4: const icaltime_span in recurrence callbacks
+
+libical v4 declares the icalcomponent_foreach_recurrence callback with
+a const icaltime_span pointer (the icalcomponent stays non-const).
+Backport of the resulting upstream state, cf. cyrus-imapd commits
+8995689 and b53d13e.
+---
+ imap/http_caldav.c  | 2 +-
+ imap/ical_support.c | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/imap/http_caldav.c b/imap/http_caldav.c
+--- a/imap/http_caldav.c
++++ b/imap/http_caldav.c
+@@ -4832,7 +4832,7 @@ static int apply_propfilter(struct prop_filter *propfilter,
+ }
+ 
+ static void in_range(icalcomponent *comp __attribute__((unused)),
+-                     struct icaltime_span *span __attribute__((unused)),
++                     const struct icaltime_span *span __attribute__((unused)),
+                      void *rock)
+ {
+     int *pass = (int *) rock;
+diff --git a/imap/ical_support.c b/imap/ical_support.c
+--- a/imap/ical_support.c
++++ b/imap/ical_support.c
+@@ -1451,7 +1451,7 @@ icalcomponent_get_utc_timespan(icalcomponent *comp,
+ 
+ 
+ /* icalcomponent_foreach_recurrence() callback to find earliest/latest time */
+-static void utc_timespan_cb(icalcomponent *comp, struct icaltime_span *span, void *rock)
++static void utc_timespan_cb(icalcomponent *comp, const struct icaltime_span *span, void *rock)
+ {
+     struct icalperiodtype *period = (struct icalperiodtype *) rock;
+     int is_date = icaltime_is_date(icalcomponent_get_mydtstart(comp));
+@@ -1978,7 +1978,7 @@ static void apply_patch_property(struct path_segment_t *path_seg,
+     }
+ }
+ 
+-static void create_override(icalcomponent *master, struct icaltime_span *span,
++static void create_override(icalcomponent *master, const struct icaltime_span *span,
+                             void *rock)
+ {
+     icalcomponent *new;
