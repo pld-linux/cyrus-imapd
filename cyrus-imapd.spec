@@ -12,9 +12,7 @@
 %bcond_without	perl		# Perl support
 %bcond_without	srs		# Sender Rewriting Scheme support
 %bcond_without	wslay		# WebSockets support
-%bcond_without	lmdb		# LMDB backend support
 %bcond_without	mysql		# MySQL backend support
-%bcond_with	sphinx		# Sphinx search engine support (broken)
 %bcond_without	xapian		# Xapian search engine support
 %bcond_without	cld2		# CLD2 language detection in Xapian indexer
 #
@@ -27,7 +25,7 @@ Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
 Version:	3.12.3
-Release:	3
+Release:	4
 License:	BSD-like
 Group:		Networking/Daemons/POP3
 #Source0Download: https://github.com/cyrusimap/cyrus-imapd/releases
@@ -48,14 +46,14 @@ Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
 Patch1:		%{name}-libical.patch
 Patch2:		%{name}-clamav-0.101.patch
-URL:		http://www.cyrusimap.org/
+URL:		https://www.cyrusimap.org/
 BuildRequires:	autoconf >= 2.63
 BuildRequires:	automake
+BuildRequires:	bison
 %{?with_clamav:BuildRequires:	clamav-devel >= 0.73}
 %{?with_cld2:BuildRequires:	cld2-devel}
 BuildRequires:	cyrus-guesstz-devel
 BuildRequires:	cyrus-sasl-devel >= 2.1.7
-BuildRequires:	db-devel >= 4.1.25
 BuildRequires:	flex
 BuildRequires:	heimdal-devel
 BuildRequires:	jansson-devel >= 2.10
@@ -70,13 +68,10 @@ BuildRequires:	libicu-devel >= 55
 BuildRequires:	libtool >= 2:2.2.6
 BuildRequires:	libuuid-devel
 %{?with_http:BuildRequires:	libxml2-devel >= 1:2.7.3}
-%{?with_lmdb:BuildRequires:	lmdb-devel}
 %{?with_mysql:BuildRequires:	mysql-devel}
-BuildRequires:	net-snmp-devel
 %{?with_http:BuildRequires:	nghttp2-devel >= 1.34.0}
 %{?with_ldap:BuildRequires:	openldap-devel}
 BuildRequires:	openssl-devel >= 0.9.7d
-BuildRequires:	patchutils
 BuildRequires:	pcre2-8-devel
 BuildRequires:	pcre2-posix-devel
 %{?with_doc:BuildRequires:	perl-Pod-POM-View-Restructured}
@@ -88,8 +83,8 @@ BuildRequires:	pkgconfig
 %{?with_perl:BuildRequires:	rpm-perlprov}
 BuildRequires:	rpmbuild(macros) >= 1.527
 %{?with_http:BuildRequires:	shapelib-devel >= 1.4.1}
-%{?with_http:BuildRequires:	sqlite3-devel >= 3}
 %{?with_doc:BuildRequires:	sphinx-pdg >= 2}
+BuildRequires:	sqlite3-devel >= 3
 %{?with_wslay:BuildRequires:	wslay-devel >= 1.1.1}
 %{?with_xapian:BuildRequires:	xapian-core-devel >= 1.4}
 BuildRequires:	zlib-devel
@@ -99,8 +94,9 @@ Requires(postun):	/usr/sbin/userdel
 Requires(pre):	/bin/id
 Requires(pre):	/usr/sbin/useradd
 Requires:	%{name}-libs = %{version}-%{release}
+%{?with_http:Requires:	cyrus-timezones}
 Requires:	rc-scripts >= 0.4.0.18
-# needed by scripts from %{_bindir}
+# needed by scripts from %%{_bindir}
 Requires:	pam >= 0.79.0
 %{?with_perl:Requires:	perl-%{name} = %{version}-%{release}}
 Provides:	imapdaemon
@@ -194,12 +190,12 @@ Requires:	heimdal-devel
 Requires:	libcom_err-devel >= 1.21
 %{?with_http:Requires:	libical-devel >= 4}
 %{?with_http:Requires:	libxml2-devel >= 1:2.7.3}
-%{?with_mysql:Requires:	mysql-devel}
+%{?with_mysql:Requires: mysql-devel}
 Requires:	openssl-devel
 Requires:	pcre2-8-devel
 Requires:	pcre2-posix-devel
-%{?with_pgsql:Requires:	postgresql-devel}
-%{?with_http:Requires:	sqlite3-devel >= 3}
+%{?with_pgsql:Requires: postgresql-devel}
+Requires:	sqlite3-devel >= 3
 
 %description devel
 This package provides the necessary header files files to allow you to
@@ -252,7 +248,6 @@ find docsrc/ -name '*.pyc' -print0 | xargs --null %{__rm}
 %configure \
 	--libexecdir=%{pkglibexecdir} \
 	--enable-autocreate \
-	--enable-backup \
 	--enable-calalarmd \
 	%{__enable_disable http} \
 	--enable-idled \
@@ -261,7 +256,6 @@ find docsrc/ -name '*.pyc' -print0 | xargs --null %{__rm}
 	--enable-nntp \
 	--enable-replication \
 	--disable-silent-rules \
-	%{__enable_disable sphinx} \
 	%{?with_srs:--enable-srs} \
 	--enable-static \
 	%{__enable_disable xapian} \
@@ -272,7 +266,6 @@ find docsrc/ -name '*.pyc' -print0 | xargs --null %{__rm}
 	%{__with_without ldap} \
 	--with-libcap \
 	--without-libwrap \
-	%{__with_without lmdb} \
 	%{__with_without mysql} \
 	%{__with_without perl perl %{__perl}} \
 	%{__with_without pgsql} \
@@ -317,13 +310,17 @@ cp -p %{SOURCE7} $RPM_BUILD_ROOT%{_sysconfdir}/imapd.conf
 cp -p %{SOURCE9} $RPM_BUILD_ROOT/etc/pam.d/imap
 cp -p %{SOURCE10} $RPM_BUILD_ROOT/etc/pam.d/pop
 sed -e 's,/''usr/lib/cyrus,%{pkglibexecdir},' %{SOURCE11} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-imapd
-sed -e 's,/''usr/lib/cyrus,%{pkglibexecdir},' %{SOURCE13} > $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-sync
+cp -p %{SOURCE13} $RPM_BUILD_ROOT/etc/rc.d/init.d/cyrus-sync
 cp -p %{SOURCE12} $RPM_BUILD_ROOT%{_sysconfdir}/cyrus.conf
 
 # We rename some utils, so we need to sort out the manpages
 for i in master reconstruct quota deliver; do
 	mv $RPM_BUILD_ROOT%{_mandir}/man8/{,cyr}$i.8
 done
+
+# distinct name: rc-scripts match daemons by process name, and plain "master"
+# collides with postfix's
+ln -sf ../libexec/cyrus/master $RPM_BUILD_ROOT%{_sbindir}/cyrmaster
 
 %{__rm} $RPM_BUILD_ROOT%{_mandir}/man8/idled.8
 
@@ -357,6 +354,7 @@ chattr +S . user quota user/* quota/* 2>/dev/null ||:
 chattr +S /var/spool/imap /var/spool/imap/* 2>/dev/null ||:
 
 /sbin/chkconfig --add cyrus-imapd
+/sbin/chkconfig --add cyrus-sync
 %service cyrus-imapd restart "cyrus imap daemon"
 %service cyrus-sync restart "cyrus replication service"
 
@@ -405,7 +403,6 @@ fi
 
 %dir %{pkglibexecdir}
 %attr(2755,cyrus,mail) %{pkglibexecdir}/deliver-wrapper
-#%attr(755,root,root) %{pkglibexecdir}/backupd
 %attr(755,root,root) %{pkglibexecdir}/calalarmd
 %attr(755,root,root) %{pkglibexecdir}/fud
 %if %{with http}
@@ -414,16 +411,16 @@ fi
 %attr(755,root,root) %{pkglibexecdir}/idled
 %attr(755,root,root) %{pkglibexecdir}/imapd
 %attr(755,root,root) %{pkglibexecdir}/lmtpd
-%attr(755,root,root) %{pkglibexecdir}/lmtpproxyd
+%{pkglibexecdir}/lmtpproxyd
 %attr(755,root,root) %{pkglibexecdir}/master
 %attr(755,root,root) %{pkglibexecdir}/mupdate
 %attr(755,root,root) %{pkglibexecdir}/nntpd
 %attr(755,root,root) %{pkglibexecdir}/notifyd
 %attr(755,root,root) %{pkglibexecdir}/ptloader
 %attr(755,root,root) %{pkglibexecdir}/pop3d
-%attr(755,root,root) %{pkglibexecdir}/pop3proxyd
+%{pkglibexecdir}/pop3proxyd
 %attr(755,root,root) %{pkglibexecdir}/promstatsd
-%attr(755,root,root) %{pkglibexecdir}/proxyd
+%{pkglibexecdir}/proxyd
 %attr(755,root,root) %{pkglibexecdir}/smmapd
 %attr(755,root,root) %{pkglibexecdir}/sync_server
 %attr(755,root,root) %{pkglibexecdir}/timsieved
@@ -444,6 +441,7 @@ fi
 %attr(755,root,root) %{_sbindir}/cyr_deny
 %attr(755,root,root) %{_sbindir}/cyr_df
 %attr(755,root,root) %{_sbindir}/cyrdump
+%attr(755,root,root) %{_sbindir}/cyrmaster
 %attr(755,root,root) %{_sbindir}/cyr_expire
 %attr(755,root,root) %{_sbindir}/cyr_info
 %attr(755,root,root) %{_sbindir}/cyr_ls
