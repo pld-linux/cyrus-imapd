@@ -24,13 +24,13 @@ Summary:	High-performance mail store with IMAP and POP3
 Summary(pl.UTF-8):	Wysoko wydajny serwer IMAP i POP3
 Summary(pt_BR.UTF-8):	Um servidor de mail de alto desempenho que suporta IMAP e POP3
 Name:		cyrus-imapd
-Version:	3.12.3
-Release:	4
+Version:	3.12.4
+Release:	1
 License:	BSD-like
 Group:		Networking/Daemons/POP3
 #Source0Download: https://github.com/cyrusimap/cyrus-imapd/releases
-Source0:	https://github.com/cyrusimap/cyrus-imapd/releases/download/%{name}-%{version}/%{name}-%{version}.tar.gz
-# Source0-md5:	d2fc077b5cd0cd4254b7a204ee4d095e
+Source0:	https://github.com/cyrusimap/cyrus-imapd/releases/download/%{name}-%{version}/cyrus-imapd-%{version}.tar.gz
+# Source0-md5:	5a95135befbff2cc08a95db7f5746787
 Source1:	cyrus-README
 Source2:	cyrus-procmailrc
 Source3:	cyrus-deliver-wrapper.c
@@ -45,7 +45,6 @@ Source12:	cyrus.conf
 Source13:	cyrus-sync.init
 Patch0:		%{name}-et.patch
 Patch1:		%{name}-libical.patch
-Patch2:		%{name}-clamav-0.101.patch
 URL:		https://www.cyrusimap.org/
 BuildRequires:	autoconf >= 2.63
 BuildRequires:	automake
@@ -233,7 +232,6 @@ Perlowy interfejs do biblioteki cyrus-imapd.
 %setup -q
 %patch -P0 -p1
 %patch -P1 -p1
-%patch -P2 -p1
 
 cp -p %{SOURCE1} %{SOURCE2} %{SOURCE4} %{SOURCE5} .
 
@@ -566,14 +564,14 @@ fi
 
 %files libs
 %defattr(644,root,root,755)
-%{_libdir}/libcyrus.so.0
-%ghost %{_libdir}/libcyrus.so.*.*
-%{_libdir}/libcyrus_min.so.0
-%ghost %{_libdir}/libcyrus_min.so.*.*
-%{_libdir}/libcyrus_imap.so.0
-%ghost %{_libdir}/libcyrus_imap.so.*.*
-%{_libdir}/libcyrus_sieve.so.0
-%ghost %{_libdir}/libcyrus_sieve.so.*.*
+%{_libdir}/libcyrus.so.*.*.*
+%ghost %{_libdir}/libcyrus.so.0
+%{_libdir}/libcyrus_min.so.*.*.*
+%ghost %{_libdir}/libcyrus_min.so.0
+%{_libdir}/libcyrus_imap.so.*.*.*
+%ghost %{_libdir}/libcyrus_imap.so.0
+%{_libdir}/libcyrus_sieve.so.*.*.*
+%ghost %{_libdir}/libcyrus_sieve.so.0
 
 %files devel
 %defattr(644,root,root,755)
