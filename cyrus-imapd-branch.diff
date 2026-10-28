@@ -1,0 +1,4273 @@
+cyrus-imapd-3.12 maintenance branch, cyrus-imapd-3.12.4..f2259b0becf5 (2026-10-13)
+https://github.com/cyrusimap/cyrus-imapd/tree/cyrus-imapd-3.12
+
+diff --git a/Makefile.am b/Makefile.am
+index 265133111..5be8d5a9f 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -748,6 +748,18 @@ check-discrete: cunit/unit
+ 		echo "$$fails/$$tests tests failed" ; \
+ 		exit $$fails
+ 
++# cyd (and so dar) runs "make check-fast" by default, but the parallel cunit
++# runner that makes it fast doesn't exist before 3.13.  Alias it to the plain
++# serial check so that tooling works here: on this branch, "fast" names an
++# interface, not a speed.
++#
++# The empty recipe is load-bearing.  A rule with prerequisites but no recipe
++# still lets make search pattern rules for one, so without the "@:" this would
++# fall through to check-% below and go looking for a suite named "fast".
++# -- claude, 2026-08-20
++check-fast: check
++	@:
++
+ check-%: cunit/unit
+ 	@echo "Running unit tests for $*"
+ 	@vg= ; \
+diff --git a/cunit/charset.testc b/cunit/charset.testc
+index 121f98c4a..8ea6c6fb6 100644
+--- a/cunit/charset.testc
++++ b/cunit/charset.testc
+@@ -413,6 +413,27 @@ static void test_encode_mimeheader(void)
+ #undef TESTCASE
+ }
+ 
++static void test_b64encode_mimebody_length(void)
++{
++    /* Sanity: a small input encodes correctly and reports the right length. */
++    static const char PLAIN[] = "foobar";
++    static const char B64[] = "Zm9vYmFy";
++    char buf[64];
++    size_t outlen = 0;
++    size_t outlines = 0;
++
++    charset_b64encode_mimebody(PLAIN, sizeof(PLAIN)-1, buf, &outlen, &outlines, 0);
++    CU_ASSERT_EQUAL(outlen, sizeof(B64)-1);
++    CU_ASSERT_MEMEQUAL(buf, B64, sizeof(B64)-1);
++
++    /* Check that outlen is sane for lengths greater than 32-bit integers. */
++    outlen = 0;
++    /* 3221225470 input bytes encode to exactly 4294967296 (2^32) output
++     * bytes, which wraps to 0 in a signed 32-bit int. */
++    charset_b64encode_mimebody(NULL, (size_t) 3221225470UL, NULL, &outlen, NULL, 0);
++    CU_ASSERT_EQUAL(outlen, (size_t) 4294967296ULL);
++}
++
+ 
+ static void test_decode_mimeheader(void)
+ {
+@@ -638,6 +659,7 @@ static void test_parse_mimexvalue(void)
+ 
+     s = charset_parse_mimexvalue("foo", NULL);
+     CU_ASSERT_PTR_NULL(s);
++    CU_ASSERT_PTR_NULL(charset_parse_mimexvalue("utf-8'foo", NULL));
+ 
+     s = charset_parse_mimexvalue(SIMPLE, &lang);
+     CU_ASSERT_PTR_NOT_NULL(s);
+@@ -651,6 +673,14 @@ static void test_parse_mimexvalue(void)
+     CU_ASSERT_STRING_EQUAL(s, "\xf0\x9f\x98\x80");
+     free(s);
+ 
++    buf_setcstr(&lang, "wrong!");
++    s = charset_parse_mimexvalue(OCTETS, &lang);
++    CU_ASSERT_PTR_NOT_NULL(s);
++    CU_ASSERT_STRING_EQUAL(s, "\xf0\x9f\x98\x80");
++    CU_ASSERT_EQUAL(0, buf_len(&lang));
++    buf_reset(&lang);
++    free(s);
++
+     s = charset_parse_mimexvalue(LATIN1, &lang);
+     CU_ASSERT_PTR_NOT_NULL(s);
+     CU_ASSERT_STRING_EQUAL(s, "Rätsel");
+@@ -659,6 +689,17 @@ static void test_parse_mimexvalue(void)
+     free(s);
+ 
+     buf_free(&lang);
++
++    /* unknown charset (let's keep it that way) */
++    CU_ASSERT_PTR_NULL(charset_parse_mimexvalue("utf-ebcdic''he comes!", NULL));
++
++    /* error cases in percent encoding */
++    CU_ASSERT_PTR_NULL(charset_parse_mimexvalue("iso-8859-1''%", NULL));
++    CU_ASSERT_PTR_NULL(charset_parse_mimexvalue("iso-8859-1''%f", NULL));
++    CU_ASSERT_PTR_NULL(charset_parse_mimexvalue("iso-8859-1''%g", NULL));
++    CU_ASSERT_PTR_NULL(charset_parse_mimexvalue("iso-8859-1''%eg", NULL));
++    CU_ASSERT_PTR_NULL(charset_parse_mimexvalue("iso-8859-1''%2\xC1", NULL));
++    CU_ASSERT_PTR_NULL(charset_parse_mimexvalue("iso-8859-1''%\xE1" "2", NULL));
+ }
+ 
+ static void test_encode_mimexvalue(void)
+@@ -1547,7 +1588,7 @@ static void test_encode_mimebody(void)
+         size_t inlen = strlen(in); \
+         size_t wantlen = strlen(want); \
+         size_t preflight_outlen = 0xffee; \
+-        int preflight_outlines = 0x1234; \
++        size_t preflight_outlines = 0x1234; \
+         char *preflight_retval = charset_b64encode_mimebody(NULL, inlen, NULL, \
+             &preflight_outlen, &preflight_outlines, wrap); \
+         CU_ASSERT_PTR_NULL(preflight_retval); \
+@@ -1555,7 +1596,7 @@ static void test_encode_mimebody(void)
+         CU_ASSERT_EQUAL(wantlines, preflight_outlines); \
+         char *retval = malloc(preflight_outlen); \
+         size_t encode_outlen = 0x1234; \
+-        int encode_outlines = 0xffee; \
++        size_t encode_outlines = 0xffee; \
+         char *encode_retval = charset_b64encode_mimebody(in, inlen, \
+                 retval, &encode_outlen, &encode_outlines, wrap); \
+         CU_ASSERT_PTR_EQUAL(retval, encode_retval); \
+@@ -1583,6 +1624,20 @@ static void test_encode_mimebody(void)
+              1, 2);
+ 
+ #undef TESTCASE
++
++    /* empty input encodes to nothing, even when wrapping */
++    for (int wrap = 0; wrap <= 1; wrap++) {
++        char guard[4] = "XXXX";
++        size_t outlen = 0x1234;
++
++        charset_b64encode_mimebody(NULL, 0, NULL, &outlen, NULL, wrap);
++        CU_ASSERT_EQUAL(0, outlen);
++
++        outlen = 0x1234;
++        charset_b64encode_mimebody("", 0, guard, &outlen, NULL, wrap);
++        CU_ASSERT_EQUAL(0, outlen);
++        CU_ASSERT_MEMEQUAL(guard, "XXXX", sizeof(guard));
++    }
+ }
+ 
+ static void test_decode_percent(void)
+@@ -1598,6 +1653,32 @@ static void test_decode_percent(void)
+     CU_ASSERT_EQUAL(-1, r);
+     CU_ASSERT_STRING_EQUAL("a!b%2xc$d", buf_cstring(&buf));
+ 
++    /* corner cases for truncated hex encoding
++     * plus test non-ASCII, and case insensitivity */
++    r = charset_decode_percent(&buf, "%21%");
++    CU_ASSERT_EQUAL(-1, r);
++    CU_ASSERT_STRING_EQUAL("!%", buf_cstring(&buf));
++
++    r = charset_decode_percent(&buf, "%2f%2");
++    CU_ASSERT_EQUAL(-1, r);
++    CU_ASSERT_STRING_EQUAL("/%2", buf_cstring(&buf));
++
++    r = charset_decode_percent(&buf, "%2F%g");
++    CU_ASSERT_EQUAL(-1, r);
++    CU_ASSERT_STRING_EQUAL("/%g", buf_cstring(&buf));
++
++    r = charset_decode_percent(&buf, "%7e%2g");
++    CU_ASSERT_EQUAL(-1, r);
++    CU_ASSERT_STRING_EQUAL("~%2g", buf_cstring(&buf));
++
++    r = charset_decode_percent(&buf, "%fF%2" "\xB2");
++    CU_ASSERT_EQUAL(-1, r);
++    CU_ASSERT_STRING_EQUAL("\xFF%2\xB2", buf_cstring(&buf));
++
++    r = charset_decode_percent(&buf, "%Ff%" "\xB2" "2");
++    CU_ASSERT_EQUAL(-1, r);
++    CU_ASSERT_STRING_EQUAL("\xFF%" "\xB2" "2", buf_cstring(&buf));
++
+     buf_free(&buf);
+ }
+ 
+diff --git a/cunit/dlist.testc b/cunit/dlist.testc
+index d9552f139..39100511c 100644
+--- a/cunit/dlist.testc
++++ b/cunit/dlist.testc
+@@ -1,3 +1,5 @@
++#include <sys/stat.h>
++
+ #include "config.h"
+ #include "cunit/unit.h"
+ #include "prot.h"
+@@ -439,6 +441,176 @@ static void test_deepstructure(void)
+     buf_free(&b2);
+ }
+ 
++static void test_parsemap_reject_file_literal(void)
++{
++    struct buf b = BUF_INITIALIZER;
++    struct dlist *dl = NULL;
++    int r;
++
++    /* file literals always are rejected in parsemap */
++    buf_setcstr(&b,
++        "DEFAULTALARMS %(WITH_TIME %(DROP %{default "
++        "0000000000000000000000000000000000000001 5}\r\nHELLO))");
++
++    r = dlist_parsemap(&dl, 1, b.s, b.len);
++
++    CU_ASSERT_EQUAL(r, 0);
++    CU_ASSERT_PTR_NULL(dl);
++
++    dlist_free(&dl);
++    buf_free(&b);
++}
++
++static void test_parse_allow_file_literal(void)
++{
++    struct dlist *dl = NULL;
++    struct protstream *stream;
++    struct buf b = BUF_INITIALIZER;
++    struct stat sbuf;
++    int r;
++    int c;
++
++    /* reservefile() needs a configured partition to stage bytes into */
++    r = system("mkdir -p " DBDIR "/data");
++    CU_ASSERT_EQUAL_FATAL(r, 0);
++    config_read_string(
++        "configdirectory: "DBDIR"/conf\n"
++        "partition-default: " DBDIR "/data\n"
++    );
++
++    /* "TESTFILE %{<partition> <guid> <size>}\r\n<size bytes>" */
++    buf_printf(&b,
++        "TESTFILE %%{default "
++        "0000000000000000000000000000000000000001 5}\r\nHELLO");
++
++    /* with the DLIST_PARSE_ALLOW_FILE_LITERALS flag set, the file literal
++     * parses and the file is created */
++    stream = prot_readmap(buf_base(&b), buf_len(&b));
++    prot_setisclient(stream, 1);
++    c = dlist_parse(&dl, DLIST_PARSE_PARSEKEY | DLIST_PARSE_ALLOW_FILE_LITERALS,
++                    stream);
++    prot_free(stream);
++
++    CU_ASSERT_EQUAL(c, EOF);   /* whole buffer consumed */
++    CU_ASSERT_PTR_NOT_NULL_FATAL(dl);
++    CU_ASSERT_EQUAL(dl->type, DL_FILE);
++    CU_ASSERT_EQUAL(dl->nval, 5);
++    CU_ASSERT_STRING_EQUAL(dl->part, "default");
++    CU_ASSERT_PTR_NOT_NULL_FATAL(dl->sval);
++    CU_ASSERT_EQUAL_FATAL(stat(dl->sval, &sbuf), 0);
++    CU_ASSERT_EQUAL(sbuf.st_size, 5);
++
++    /* dlist_unlink_files() removes the staged file the parser created */
++    dlist_unlink_files(dl);
++    CU_ASSERT_NOT_EQUAL(stat(dl->sval, &sbuf), 0);
++    dlist_free(&dl);
++
++    /* without the flag, the same input is rejected and nothing is staged */
++    dl = NULL;
++    stream = prot_readmap(buf_base(&b), buf_len(&b));
++    prot_setisclient(stream, 1);
++    c = dlist_parse(&dl, DLIST_PARSE_PARSEKEY, stream);
++    prot_free(stream);
++    CU_ASSERT_PTR_NULL(dl);
++
++    dlist_free(&dl);
++    buf_free(&b);
++
++    /* restore the plain config for the remaining tests in this suite */
++    config_read_string(
++        "configdirectory: "DBDIR"/conf\n"
++    );
++}
++
++static void test_copy(void)
++{
++    struct dlist *dl = NULL;
++    struct dlist *copy = NULL;
++    struct buf in = BUF_INITIALIZER;
++    struct buf b1 = BUF_INITIALIZER;
++    struct buf b2 = BUF_INITIALIZER;
++    int r;
++
++    buf_setcstr(&in,
++        "%(toplevel %(sub thing) ANOTHER (value is %(list here) (in it)) "
++        "READ \"all about it\" EMPTYLIST () NUM 123456)");
++
++    r = dlist_parsemap(&dl, 0, in.s, in.len);
++    CU_ASSERT_EQUAL(r, 0);
++    CU_ASSERT_PTR_NOT_NULL_FATAL(dl);
++
++    dlist_printbuf(dl, 0, &b1);
++
++    copy = dlist_copy(dl);
++    CU_ASSERT_PTR_NOT_NULL_FATAL(copy);
++    CU_ASSERT_PTR_NOT_EQUAL(copy, dl);
++
++    /* free the original first to prove the copy is fully independent */
++    dlist_free(&dl);
++
++    dlist_printbuf(copy, 0, &b2);
++    CU_ASSERT_STRING_EQUAL(buf_cstring(&b2), buf_cstring(&b1));
++
++    dlist_free(&copy);
++    buf_free(&in);
++    buf_free(&b1);
++    buf_free(&b2);
++}
++
++static void test_copy_file(void)
++{
++    struct dlist *dl = NULL;
++    struct dlist *copy = NULL;
++    struct protstream *stream;
++    struct buf b = BUF_INITIALIZER;
++    int r;
++    int c;
++
++    /* reservefile() needs a configured partition to stage bytes into */
++    r = system("mkdir -p " DBDIR "/data");
++    CU_ASSERT_EQUAL_FATAL(r, 0);
++    config_read_string(
++        "configdirectory: "DBDIR"/conf\n"
++        "partition-default: " DBDIR "/data\n"
++    );
++
++    buf_printf(&b,
++        "TESTFILE %%{default "
++        "0000000000000000000000000000000000000001 5}\r\nHELLO");
++
++    stream = prot_readmap(buf_base(&b), buf_len(&b));
++    prot_setisclient(stream, 1);
++    c = dlist_parse(&dl, DLIST_PARSE_PARSEKEY | DLIST_PARSE_ALLOW_FILE_LITERALS,
++                    stream);
++    prot_free(stream);
++    CU_ASSERT_EQUAL(c, EOF);
++    CU_ASSERT_PTR_NOT_NULL_FATAL(dl);
++    CU_ASSERT_EQUAL(dl->type, DL_FILE);
++
++    /* dlist_copy() must reproduce the file node by copying its on-disk
++     * reference, not by round-tripping through the parser (which rejects
++     * the %{...} literal and would return NULL) */
++    copy = dlist_copy(dl);
++    CU_ASSERT_PTR_NOT_NULL_FATAL(copy);
++    CU_ASSERT_PTR_NOT_EQUAL(copy, dl);
++    CU_ASSERT_EQUAL(copy->type, DL_FILE);
++    CU_ASSERT_EQUAL(copy->nval, 5);
++    CU_ASSERT_STRING_EQUAL(copy->part, "default");
++    CU_ASSERT_PTR_NOT_NULL_FATAL(copy->sval);
++    CU_ASSERT_STRING_EQUAL(copy->sval, dl->sval);
++
++    /* the copy references the same staged file; unlink it once */
++    dlist_unlink_files(dl);
++    dlist_free(&dl);
++    dlist_free(&copy);
++    buf_free(&b);
++
++    /* restore the plain config for the remaining tests in this suite */
++    config_read_string(
++        "configdirectory: "DBDIR"/conf\n"
++    );
++}
++
+ static void test_printiter(void)
+ {
+     struct dlist *dl = NULL;
+diff --git a/cunit/imapurl.testc b/cunit/imapurl.testc
+index e0d3ae6db..448c39dcd 100644
+--- a/cunit/imapurl.testc
++++ b/cunit/imapurl.testc
+@@ -167,6 +167,60 @@ static void test_fromurl_urlauth(void)
+     free(iurl.freeme);
+ }
+ 
++static void test_fromurl_leading_semicolon(void)
++{
++    /*
++     * A relative URL that begins with ';' has an empty mailbox part, so
++     * 'src' is still at the start of url->freeme when the option scanner
++     * dereferences src[-1].  That used to read (and, if the preceding heap
++     * byte was '/', write) one byte before the allocation.  See CYR-3127.
++     * The value checks just pin the (unchanged) parse result; the point of
++     * the case is to exercise the src[-1] path under ASan/valgrind.
++     */
++    static const char URL[] = ";UID=1";
++    struct imapurl iurl;
++    int r;
++
++    memset(&iurl, 0x45, sizeof(iurl));
++    r = imapurl_fromURL(&iurl, URL);
++    CU_ASSERT_EQUAL(r, 0);
++    CU_ASSERT_PTR_NULL(iurl.mailbox);
++    CU_ASSERT_EQUAL(iurl.uid, 1);
++    free(iurl.freeme);
++}
++
++static void test_fromurl_bare_semicolon(void)
++{
++    /* Also reaches the src[-1] scan; malformed, so it must be rejected. */
++    static const char URL[] = ";";
++    struct imapurl iurl;
++    int r;
++
++    memset(&iurl, 0x45, sizeof(iurl));
++    r = imapurl_fromURL(&iurl, URL);
++    CU_ASSERT_EQUAL(r, -1);
++    free(iurl.freeme);
++}
++
++static void test_fromurl_relative_trim(void)
++{
++    /*
++     * The src[-1] access exists to trim a mailbox's trailing '/' before an
++     * options ';'.  Confirm the guarded form still does that for a normal
++     * relative URL.
++     */
++    static const char URL[] = "/INBOX/;UID=5";
++    struct imapurl iurl;
++    int r;
++
++    memset(&iurl, 0x45, sizeof(iurl));
++    r = imapurl_fromURL(&iurl, URL);
++    CU_ASSERT_EQUAL(r, 0);
++    CU_ASSERT_STRING_EQUAL(iurl.mailbox, "INBOX");
++    CU_ASSERT_EQUAL(iurl.uid, 5);
++    free(iurl.freeme);
++}
++
+ // TODO: {foo is invalid
+ // TODO: imap:// is invalid
+ // TODO: imap://server/ and imap://server
+diff --git a/cunit/message.testc b/cunit/message.testc
+index 3c9870d2d..11a4fb009 100644
+--- a/cunit/message.testc
++++ b/cunit/message.testc
+@@ -701,6 +701,83 @@ static void test_rfc2231_extended_continuations(void)
+     message_free_body(&body);
+ }
+ 
++/*
++ * CYR-3126: message_parse_params() must cap the number of parameters it
++ * accepts so that the O(P^2) RFC 2231 folding in message_fold_params()
++ * cannot be driven by an attacker-controlled parameter count.  These two
++ * cases exercise message_parse_type() directly, which runs the parse +
++ * fold pipeline on a struct param list without building a whole message.
++ */
++
++/*
++ * A legitimate RFC 2231 continuation must still fold correctly: the cap and
++ * the DoS guard must not break normal multi-section folding.
++ */
++static void test_rfc2231_fold_under_cap(void)
++{
++    static const char hdr[] =
++        "application/x-stuff;\r\n"
++        "\tname*0=\"the first part \";\r\n"
++        "\tname*1=\"and the second part\"";
++    char *type = NULL;
++    char *subtype = NULL;
++    struct param *params = NULL;
++
++    message_parse_type(hdr, &type, &subtype, &params);
++
++    CU_ASSERT_STRING_EQUAL(type, "APPLICATION");
++    CU_ASSERT_STRING_EQUAL(subtype, "X-STUFF");
++    CU_ASSERT_PTR_NOT_NULL_FATAL(params);
++    CU_ASSERT_STRING_EQUAL(params->attribute, "NAME");
++    CU_ASSERT_STRING_EQUAL(params->value, "the first part and the second part");
++    CU_ASSERT_PTR_NULL(params->next);
++
++    free(type);
++    free(subtype);
++    param_free(&params);
++}
++
++/*
++ * A header with far more than RFC2231_MAX_PARAMS parameters must parse
++ * without error and yield a bounded list.  We can't assert wall-clock time,
++ * so we assert the parameter count is capped.  Each parameter is an "aN*0"
++ * initial section, which is the worst case for message_fold_params().
++ */
++static void test_rfc2231_param_cap(void)
++{
++    /* Comfortably above RFC2231_MAX_PARAMS (128). -- claude, 2026-06-16 */
++    const int nattempted = 1000;
++    const int cap = 128;
++    struct buf hdr = BUF_INITIALIZER;
++    char *type = NULL;
++    char *subtype = NULL;
++    struct param *params = NULL;
++    struct param *p;
++    int count = 0;
++    int i;
++
++    buf_setcstr(&hdr, "application/x-stuff");
++    for (i = 0; i < nattempted; i++)
++        buf_printf(&hdr, "; a%d*0=x", i);
++
++    message_parse_type(buf_cstring(&hdr), &type, &subtype, &params);
++
++    CU_ASSERT_STRING_EQUAL(type, "APPLICATION");
++    CU_ASSERT_STRING_EQUAL(subtype, "X-STUFF");
++
++    for (p = params; p; p = p->next)
++        count++;
++
++    /* The cap drops everything past the limit, so the list is bounded
++     * well below the number of parameters we tried to smuggle in. */
++    CU_ASSERT(count <= cap);
++
++    free(type);
++    free(subtype);
++    param_free(&params);
++    buf_free(&hdr);
++}
++
+ static void test_references(void)
+ {
+     static const char msg[] =
+diff --git a/cunit/parse.testc b/cunit/parse.testc
+index 82a9a853d..6085fa7a6 100644
+--- a/cunit/parse.testc
++++ b/cunit/parse.testc
+@@ -15,10 +15,13 @@ static void test_parsenum(void)
+     const char NUM1[] = "1somestuff";
+     const char NUMBIG[] = "18446744073709551615ULL"; // non-digits parse OK
+     const char NUMTOOBIG[] = "18446744073709551616";
++    const char BOGUS0[] = "4\xB2";
++    const char BOGUS1[] = "\xB3" "1";
+     bit64 val = CANARY;
+     int r;
++    const char *end;
+ 
+-    r = parsenum(NUM0, NULL, strlen(NUM0), &val);
++    r = parsenum(NUM0, &end, strlen(NUM0), &val);
+     CU_ASSERT_EQUAL(r, 0);
+     CU_ASSERT_EQUAL(val, 0);
+ 
+@@ -26,15 +29,27 @@ static void test_parsenum(void)
+     r = parsenum(NUM1, NULL, strlen(NUM1), &val);
+     CU_ASSERT_EQUAL(r, 0);
+     CU_ASSERT_EQUAL(val, 1);
++    CU_ASSERT_PTR_EQUAL(end, NUM0 + 1);
+ 
+     val = CANARY;
+-    r = parsenum(NUMBIG, NULL, strlen(NUMBIG), &val);
++    r = parsenum(NUMBIG, &end, strlen(NUMBIG), &val);
+     CU_ASSERT_EQUAL(r, 0);
+     CU_ASSERT_EQUAL(val, 18446744073709551615ULL);
++    CU_ASSERT_PTR_EQUAL(end, NUMBIG + 20);
+ 
+     val = CANARY;
+     r = parsenum(NUMTOOBIG, NULL, strlen(NUMTOOBIG), &val);
+     CU_ASSERT_EQUAL(r, -1);
++
++    val = CANARY;
++    r = parsehex(BOGUS0, &end, strlen(BOGUS0), &val);
++    CU_ASSERT_EQUAL(r, 0);
++    CU_ASSERT_EQUAL(val, 4);
++    CU_ASSERT_PTR_EQUAL(end, BOGUS0 + 1);
++
++    val = CANARY;
++    r = parsehex(BOGUS1, &end, strlen(BOGUS1), &val);
++    CU_ASSERT_EQUAL(r, -1);
+ }
+ 
+ static void test_parsehex(void)
+@@ -43,26 +58,55 @@ static void test_parsehex(void)
+     const char NUM1[] = "1somestuff";
+     const char NUMBIG[] = "ffffffffffffffff";
+     const char NUMTOOBIG[] = "10000000000000000";
++    const char NUMLONG[] = "fEdCbA9876543210!";
++    const char BOGUS0[] = "2\xAF";
++    const char BOGUS1[] = "\xA3" "1";
++    const char BOGUS2[] = "0xD"; /* for this, stroull() would return 13 */
+     bit64 val = CANARY;
+     int r;
++    const char *end;
+ 
+     r = parsehex(NUM0, NULL, strlen(NUM0), &val);
+     CU_ASSERT_EQUAL(r, 0);
+     CU_ASSERT_EQUAL(val, 0);
+ 
+     val = CANARY;
+-    r = parsehex(NUM1, NULL, strlen(NUM1), &val);
++    r = parsehex(NUM1, &end, strlen(NUM1), &val);
+     CU_ASSERT_EQUAL(r, 0);
+     CU_ASSERT_EQUAL(val, 1);
++    CU_ASSERT_PTR_EQUAL(end, NUM1 + 1);
+ 
+     val = CANARY;
+-    r = parsehex(NUMBIG, NULL, strlen(NUMBIG), &val);
++    r = parsehex(NUMBIG, &end, strlen(NUMBIG), &val);
+     CU_ASSERT_EQUAL(r, 0);
+     CU_ASSERT_EQUAL(val, 18446744073709551615ULL);
++    CU_ASSERT_PTR_EQUAL(end, NUMBIG + strlen(NUMBIG));
+ 
+     val = CANARY;
+     r = parsehex(NUMTOOBIG, NULL, strlen(NUMTOOBIG), &val);
+     CU_ASSERT_EQUAL(r, -1);
++
++    val = CANARY;
++    r = parsehex(NUMLONG, &end, strlen(NUMLONG), &val);
++    CU_ASSERT_EQUAL(r, 0);
++    CU_ASSERT_EQUAL(val, 18364758544493064720ULL);
++    CU_ASSERT_PTR_EQUAL(end, NUMLONG + strlen(NUMLONG) - 1);
++
++    val = CANARY;
++    r = parsehex(BOGUS0, &end, strlen(BOGUS0), &val);
++    CU_ASSERT_EQUAL(r, 0);
++    CU_ASSERT_EQUAL(val, 2);
++    CU_ASSERT_PTR_EQUAL(end, BOGUS0 + 1);
++
++    val = CANARY;
++    r = parsehex(BOGUS1, &end, strlen(BOGUS1), &val);
++    CU_ASSERT_EQUAL(r, -1);
++
++    val = CANARY;
++    r = parsehex(BOGUS2, &end, strlen(BOGUS2), &val);
++    CU_ASSERT_EQUAL(r, 0);
++    CU_ASSERT_EQUAL(val, 0);
++    CU_ASSERT_PTR_EQUAL(end, BOGUS2 + 1);
+ }
+ 
+ #define wrap_int_parser(func, type, s, outp, valp, inp) do          \
+diff --git a/cunit/sieve.testc b/cunit/sieve.testc
+index baa7cb60c..35e85ed77 100644
+--- a/cunit/sieve.testc
++++ b/cunit/sieve.testc
+@@ -1586,6 +1586,51 @@ static void test_imap4flags_setflag(void)
+     /* Test #2 */
+ }
+ 
++static void test_variable_ref_number_out_of_bounds(void)
++{
++    /* Test that variable references out of bounds get handled. */
++    static const struct {
++        const char *body;
++        const char *expect;
++    } cases[] = {
++        /* negative index: this always is illegal, kept verbatim */
++        { "reject \"a:${-5}:b\";\n", "a:${-5}:b" },
++        /* MAX_MATCH_VARS is 9, so "${9}" compiles, but with no prior match
++         * the array is empty and the index is out of bounds -> expands to
++         * empty */
++        { "reject \"a:${9}:b\";\n", "a::b" },
++    };
++
++    static const char MSG[] =
++    "Date: Mon, 13 Jul 2026 08:51:06 -0500\r\n"
++    "From: foo@example.com\r\n"
++    "To: bar@example.com\r\n"
++    "Subject: test\r\n"
++    "\r\n"
++    "test\n"
++    ;
++
++    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
++        struct buf script = BUF_INITIALIZER;
++        sieve_test_context_t ctx;
++
++        buf_setcstr(&script, "require [\"variables\", \"reject\"];\n");
++        buf_appendcstr(&script, cases[i].body);
++
++        context_setup(&ctx, buf_cstring(&script));
++        CU_ASSERT_EQUAL(ctx.stats.errors, 0);
++
++        run_message(&ctx, MSG);
++        CU_ASSERT_EQUAL(ctx.stats.errors, 0);
++        CU_ASSERT_EQUAL(ctx.stats.rejects, 1);
++        CU_ASSERT_PTR_NOT_NULL(ctx.reject_message);
++        CU_ASSERT_STRING_EQUAL(ctx.reject_message, cases[i].expect);
++
++        context_cleanup(&ctx);
++        buf_free(&script);
++    }
++}
++
+ // TODO: test
+ // if size :over 10K { redirect "me@blah.com"; }
+ // TODO: test
+diff --git a/cunit/unit.h b/cunit/unit.h
+index 4297f965b..6a6f925bd 100644
+--- a/cunit/unit.h
++++ b/cunit/unit.h
+@@ -60,11 +60,7 @@ extern void config_read_string(const char *s);
+  * which makes it rather hard to see why an assertion failed.  So we
+  * replace the macros with improved ones, keeping the same API.
+  */
+-/* XXX Would like to add __attribute__((format(printf, 6, 7)))
+- * XXX to this so the compiler can warn if it's misused, but it looks
+- * XXX like it currently gets very confused by the layers of macros
+- * XXX and produces bogus warnings. :(
+- */
++__attribute__((format(printf, 6, 7)))
+ extern CU_BOOL CU_assertFormatImplementation(CU_BOOL bValue,
+                                              unsigned int uiLine,
+                                              const char strFile[],
+@@ -187,7 +183,8 @@ extern int __cunit_wrap_fixture(const char *name, int (*fn)(void));
+     CU_assertFormatImplementation(!strcmp(_a?_a:"",_e?_e:""), __LINE__, \
+         __FILE__, "", CU_FALSE,                                         \
+         "CU_ASSERT_STRING_EQUAL(%s=\"%s\",%s=\"%s\")",                  \
+-        #actual, _a, #expected, _e);                                    \
++        #actual, _a ? _a : "(null)",                                    \
++        #expected, _e ? _e : "(null)");                                 \
+ } while(0)
+ 
+ #undef CU_ASSERT_STRING_EQUAL_FATAL
+@@ -196,7 +193,8 @@ extern int __cunit_wrap_fixture(const char *name, int (*fn)(void));
+     CU_assertFormatImplementation(!strcmp(_a?_a:"",_e?_e:""), __LINE__, \
+         __FILE__, "", CU_TRUE,                                          \
+         "CU_ASSERT_STRING_EQUAL_FATAL(%s=\"%s\",%s=\"%s\")",            \
+-        #actual, _a, #expected, _e);                                    \
++        #actual, _a ? _a : "(null)",                                    \
++        #expected, _e ? _e : "(null)");                                 \
+ } while(0)
+ 
+ #undef CU_ASSERT_STRING_NOT_EQUAL
+diff --git a/imap/append.c b/imap/append.c
+index 5f425e970..b9412354f 100644
+--- a/imap/append.c
++++ b/imap/append.c
+@@ -445,7 +445,7 @@ static int callout_receive_reply(const char *callout,
+     p = prot_new(fd, /*write*/0);
+ 
+     /* read and parse the reply as a dlist */
+-    c = dlist_parse(results, /*parsekeys*/0, /*isarchive*/0, p);
++    c = dlist_parse(results, DLIST_PARSE_ALLOW_FILE_LITERALS, p);
+     r = (c == EOF ? IMAP_SYS_ERROR : 0);
+ 
+ out:
+diff --git a/imap/caldav_alarm.c b/imap/caldav_alarm.c
+index eb2504fb1..e0d08699a 100644
+--- a/imap/caldav_alarm.c
++++ b/imap/caldav_alarm.c
+@@ -726,8 +726,22 @@ static icalcomponent *vpatch_from_peruserdata(struct dlist *dl)
+     return vpatch;
+ }
+ 
++/* A subscription can outlive the ACL grant that created it -- nothing
++ * revokes it when a share is withdrawn -- so alarm delivery must not rely
++ * on subscription status alone.  Check that userid still holds DAV:read
++ * on the mailbox's *current* ACL. */
++static int sharee_can_read(const char *acl, const char *userid)
++{
++    struct auth_state *authstate = auth_newstate(userid);
++    int rights = cyrus_acl_myrights(authstate, acl);
++    auth_freestate(authstate);
++
++    return (rights & DACL_READ) == DACL_READ;
++}
++
+ struct has_alarms_rock {
+     uint32_t mbox_options;
++    const char *acl;
+     int *has_alarms;
+ };
+ 
+@@ -744,8 +758,10 @@ static int has_peruser_alarms_cb(const char *mailbox,
+ 
+     if (!mboxname_userownsmailbox(userid, mailbox) &&
+         ((hrock->mbox_options & OPT_IMAP_SHAREDSEEN) ||
+-         mboxlist_checksub(mailbox, userid) != 0)) {
+-        /* No per-user-data, or sharee has unsubscribed from this calendar */
++         mboxlist_checksub(mailbox, userid) != 0 ||
++         !sharee_can_read(hrock->acl, userid))) {
++        /* No per-user-data, sharee has unsubscribed from this calendar,
++         * or sharee's access has since been revoked */
+         return 0;
+     }
+ 
+@@ -975,7 +991,8 @@ static int has_alarms(void *data, struct mailbox *mailbox,
+     }
+ 
+     /* Check all per-user-cal-data for VALARMs */
+-    struct has_alarms_rock hrock = { mailbox->i.options, &has_alarms };
++    struct has_alarms_rock hrock =
++        { mailbox->i.options, mailbox_acl(mailbox), &has_alarms };
+ 
+     syslog(LOG_DEBUG, "checking per-user-data");
+     mailbox_get_annotate_state(mailbox, uid, NULL);
+@@ -1241,6 +1258,7 @@ static int alarm_read_cb(sqlite3_stmt *stmt, void *rock)
+ 
+ struct process_alarms_rock {
+     uint32_t mbox_options;
++    const char *acl;
+     icalcomponent *ical;
+     struct lastalarm_data *alarm;
+     time_t runtime;
+@@ -1264,8 +1282,10 @@ static int process_peruser_alarms_cb(const char *mailbox, uint32_t uid,
+     if (!mboxname_userownsmailbox(userid, mailbox) &&
+         ((prock->mbox_options & OPT_IMAP_SHAREDSEEN) ||
+          mboxlist_checksub(mailbox, userid) != 0 ||
++         !sharee_can_read(prock->acl, userid) ||
+          prock->is_secretarymode)) {
+-        /* No per-user-data, or sharee has unsubscribed from this calendar,
++        /* No per-user-data, sharee has unsubscribed from this calendar,
++         * sharee's access has since been revoked,
+          * or calendar is in secretary mode */
+         return 0;
+     }
+@@ -1374,8 +1394,10 @@ static int process_valarms(struct mailbox *mailbox,
+     mbname_free(&mbname);
+ 
+     /* Process VALARMs in per-user-cal-data */
+-    struct process_alarms_rock prock =
+-        { mailbox->i.options, ical, &data, runtime, dryrun, is_secretarymode };
++    struct process_alarms_rock prock = {
++        mailbox->i.options, mailbox_acl(mailbox),
++        ical, &data, runtime, dryrun, is_secretarymode
++    };
+ 
+     syslog(LOG_DEBUG, "processing per-user alarms");
+ 
+diff --git a/imap/caldav_util.c b/imap/caldav_util.c
+index 9b4ff929e..5cea0fb31 100644
+--- a/imap/caldav_util.c
++++ b/imap/caldav_util.c
+@@ -453,12 +453,6 @@ static int validate_propupdates(icalcomponent *ical, icalcomponent *oldical,
+                     break;
+                 }
+ 
+-            case ICAL_SEQUENCE_PROPERTY:
+-                if (!(allow_propupdates & ~propupdate_private))
+-                    return HTTP_FORBIDDEN;
+-                if (num_changes) (*num_changes)++;
+-                break;
+-
+             case ICAL_X_PROPERTY:
+                 if (!strcmpsafe(xname, "X-MOZ-GENERATION")) {
+                     /* Ok to modify these - ignore */
+@@ -530,12 +524,6 @@ static int validate_propupdates(icalcomponent *ical, icalcomponent *oldical,
+                 if (num_changes) (*num_changes)++;
+                 break;
+ 
+-            case ICAL_SEQUENCE_PROPERTY:
+-                if (!(allow_propupdates & ~propupdate_private))
+-                    return HTTP_FORBIDDEN;
+-                if (num_changes) (*num_changes)++;
+-                break;
+-
+             default:
+                 if (!(allow_propupdates & propupdate_shared))
+                     return HTTP_FORBIDDEN;
+diff --git a/imap/cyr_ls.c b/imap/cyr_ls.c
+index fd348f64f..1a39e8b10 100644
+--- a/imap/cyr_ls.c
++++ b/imap/cyr_ls.c
+@@ -177,9 +177,14 @@ static void long_list(struct stat *statp)
+     pwd = getpwuid(statp->st_uid);
+     grp = getgrgid(statp->st_gid);
+ 
+-    if (now - statp->st_ctime > SECONDS_PER_YEAR) datefmt = "%b %d  %Y";
++    if (now - statp->st_ctime > SECONDS_PER_YEAR)
++        datefmt = "%b %d  %Y";
+ 
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++    /* format string chosen above */
+     strftime(datestr, 13, datefmt, localtime(&(statp->st_ctime)));
++#pragma GCC diagnostic pop
+ 
+     /* XXX statp->st_size should use OFF_T_FMT not PRIi64, but our FMT
+      * XXX macros don't allow setting flags
+diff --git a/imap/dlist.c b/imap/dlist.c
+index fbe15046c..9ea04def9 100644
+--- a/imap/dlist.c
++++ b/imap/dlist.c
+@@ -1098,16 +1098,14 @@ EXPORTED int dlist_parsesax(const char *base, size_t len, int parsekey,
+     return 0;
+ }
+ 
+-static char next_nonspace(struct protstream *in, char c)
++static int next_nonspace(struct protstream *in, int c)
+ {
+-    while (Uisspace(c)) c = prot_getc(in);
++    /* Must be int, not char for platforms where char is unsigned (e.g. ARM) */
++    while (c != EOF && Uisspace(c)) c = prot_getc(in);
+     return c;
+ }
+ 
+-/* XXX accumulating a lot of flag arguments here, perhaps we should
+- * XXX consolidate them into a single flags argument with defined bits
+- */
+-EXPORTED int dlist_parse(struct dlist **dlp, int parsekey, int isarchive,
++EXPORTED int dlist_parse(struct dlist **dlp, unsigned flags,
+                           struct protstream *in)
+ {
+     struct dlist *dl = NULL;
+@@ -1116,7 +1114,7 @@ EXPORTED int dlist_parse(struct dlist **dlp, int parsekey, int isarchive,
+     int c;
+ 
+     /* handle the key if wanted */
+-    if (parsekey) {
++    if (flags & DLIST_PARSE_PARSEKEY) {
+         c = getastring(in, NULL, &kbuf);
+         c = next_nonspace(in, c);
+     }
+@@ -1135,7 +1133,7 @@ EXPORTED int dlist_parse(struct dlist **dlp, int parsekey, int isarchive,
+         while (c != ')') {
+             struct dlist *di = NULL;
+             prot_ungetc(c, in);
+-            c = dlist_parse(&di, 0, isarchive, in);
++            c = dlist_parse(&di, flags & ~DLIST_PARSE_PARSEKEY, in);
+             if (di) dlist_stitch(dl, di);
+             c = next_nonspace(in, c);
+             if (c == EOF) goto fail;
+@@ -1151,7 +1149,7 @@ EXPORTED int dlist_parse(struct dlist **dlp, int parsekey, int isarchive,
+             while (c != ')') {
+                 struct dlist *di = NULL;
+                 prot_ungetc(c, in);
+-                c = dlist_parse(&di, 1, isarchive, in);
++                c = dlist_parse(&di, flags | DLIST_PARSE_PARSEKEY, in);
+                 if (di) dlist_stitch(dl, di);
+                 c = next_nonspace(in, c);
+                 if (c == EOF) goto fail;
+@@ -1162,6 +1160,7 @@ EXPORTED int dlist_parse(struct dlist **dlp, int parsekey, int isarchive,
+             static struct buf pbuf, gbuf;
+             unsigned size = 0;
+             const char *fname;
++            if (!(flags & DLIST_PARSE_ALLOW_FILE_LITERALS)) goto fail;
+             c = getastring(in, NULL, &pbuf);
+             if (c != ' ') goto fail;
+             c = getastring(in, NULL, &gbuf);
+@@ -1172,7 +1171,8 @@ EXPORTED int dlist_parse(struct dlist **dlp, int parsekey, int isarchive,
+             if (c == '\r') c = prot_getc(in);
+             if (c != '\n') goto fail;
+             if (!message_guid_decode(&tmp_guid, gbuf.s)) goto fail;
+-            if (reservefile(in, pbuf.s, &tmp_guid, size, isarchive, &fname)) goto fail;
++            if (reservefile(in, pbuf.s, &tmp_guid, size,
++                            flags & DLIST_PARSE_ISARCHIVE, &fname)) goto fail;
+             dl = dlist_setfile(NULL, kbuf.s, pbuf.s, &tmp_guid, size, fname);
+             /* file literal */
+         }
+@@ -1211,7 +1211,7 @@ fail:
+ EXPORTED int dlist_parse_asatomlist(struct dlist **dlp, int parsekey,
+                             struct protstream *in)
+ {
+-    int c = dlist_parse(dlp, parsekey, 0, in);
++    int c = dlist_parse(dlp, parsekey ? DLIST_PARSE_PARSEKEY : 0, in);
+ 
+     /* make a list with one item */
+     if (*dlp && !dlist_isatomlist(*dlp)) {
+@@ -1235,7 +1235,7 @@ EXPORTED int dlist_parsemap(struct dlist **dlp, int parsekey,
+     /* Allow LITERAL+ - this is silly, but required to parse personal CALDATA */
+     prot_setisclient(stream, 1);
+ 
+-    c = dlist_parse(&dl, parsekey, /*isarchive*/ 0, stream);
++    c = dlist_parse(&dl, parsekey ? DLIST_PARSE_PARSEKEY : 0, stream);
+     prot_free(stream);
+ 
+     if (c != EOF) {
+@@ -1721,13 +1721,59 @@ EXPORTED void dlist_rename(struct dlist *dl, const char *name)
+     dl->name = xstrdup(name);
+ }
+ 
+-EXPORTED struct dlist *dlist_copy(const struct dlist *dl)
++static struct dlist *dlist_clone(const struct dlist *dl, struct dlist *parent)
+ {
+     if (!dl) return NULL;
+-    struct buf buf = BUF_INITIALIZER;
+-    struct dlist *new = NULL;
+-    dlist_printbuf(dl, 1, &buf);
+-    dlist_parsemap(&new, 1, buf_base(&buf), buf_len(&buf));
+-    buf_free(&buf);
+-    return new;
++
++    struct dlist *copy = dlist_child(parent, dl->name);
++
++    switch (dl->type) {
++    case DL_NIL:
++        break;
++    case DL_ATOM:
++        dlist_makeatom(copy, dl->sval);
++        break;
++    case DL_FLAG:
++        dlist_makeflag(copy, dl->sval);
++        break;
++    case DL_NUM:
++        dlist_makenum64(copy, dl->nval);
++        break;
++    case DL_DATE:
++        dlist_makedate(copy, dl->nval);
++        break;
++    case DL_HEX:
++        dlist_makehex64(copy, dl->nval);
++        break;
++    case DL_BUF:
++        dlist_makemap(copy, dl->sval, dl->nval);
++        break;
++    case DL_GUID:
++        dlist_makeguid(copy, dl->gval);
++        break;
++    case DL_FILE:
++        /* a file node only references bytes on disk (dl->sval); copy the
++         * reference directly rather than round-tripping through the parser,
++         * which would rewrite the file and reject the %{...} literal */
++        dlist_makefile(copy, dl->part, dl->gval, dl->nval, dl->sval);
++        break;
++    case DL_KVLIST:
++        copy->type = DL_KVLIST;
++        for (const struct dlist *i = dl->head; i; i = i->next)
++            dlist_clone(i, copy);
++        break;
++    case DL_ATOMLIST:
++        copy->type = DL_ATOMLIST;
++        copy->nval = dl->nval; /* preserve print-keys flag (pklist) */
++        for (const struct dlist *i = dl->head; i; i = i->next)
++            dlist_clone(i, copy);
++        break;
++    }
++
++    return copy;
++}
++
++EXPORTED struct dlist *dlist_copy(const struct dlist *dl)
++{
++    return dlist_clone(dl, NULL);
+ }
+diff --git a/imap/dlist.h b/imap/dlist.h
+index b502d918c..0cf9e8a07 100644
+--- a/imap/dlist.h
++++ b/imap/dlist.h
+@@ -219,8 +219,26 @@ void dlist_print(const struct dlist *dl, int printkeys,
+                  struct protstream *out);
+ void dlist_printbuf(const struct dlist *dl, int printkeys,
+                     struct buf *outbuf);
+-int dlist_parse(struct dlist **dlp, int parsekeys, int isarchive,
+-                struct protstream *in);
++
++/* flags for dlist_parse() */
++enum dlist_parse_flags {
++    /**
++     * Parse a leading key/name for the item.
++     */
++    DLIST_PARSE_PARSEKEY = (1 << 0),
++    /**
++     * Reserve file literals in the archive rather than the spool partition.
++     * Only has an effect in combination with DLIST_PARSE_ALLOW_FILE_LITERALS.
++     */
++    DLIST_PARSE_ISARCHIVE = (1 << 1),
++    /**
++     * Allow %{...} file literals. If this is not set, then the parse
++     * fails at the first file literal in the dlist.
++     */
++    DLIST_PARSE_ALLOW_FILE_LITERALS = (1 << 2),
++};
++
++int dlist_parse(struct dlist **dlp, unsigned flags, struct protstream *in);
+ int dlist_parse_asatomlist(struct dlist **dlp, int parsekey,
+                             struct protstream *in);
+ int dlist_parsemap(struct dlist **dlp, int parsekeys,
+diff --git a/imap/http_caldav.c b/imap/http_caldav.c
+index 15642ab06..354a816d6 100644
+--- a/imap/http_caldav.c
++++ b/imap/http_caldav.c
+@@ -1070,7 +1070,8 @@ static int caldav_check_precond(struct transaction_t *txn,
+         }
+         else {
+             int rights = httpd_myrights(httpd_authstate, txn->req_tgt.mbentry);
+-            if (!(rights & DACL_RMRSRC) && (rights & DACL_WRITEOWNRSRC)) {
++            if ((rights & DACL_RMRSRC) != DACL_RMRSRC &&
++                (rights & DACL_WRITEOWNRSRC)) {
+                 /* User may delete events with no organizer or where
+                  * they are organizer. */
+                 if (cdata->organizer) {
+@@ -1555,9 +1556,10 @@ static int caldav_delete_cal(struct transaction_t *txn,
+         if (ical) {
+             icalcomponent *comp = icalcomponent_get_first_real_component(ical);
+             if (comp && icalcomponent_isa(comp) == ICAL_VEVENT_COMPONENT) {
+-                int r2 = jmap_create_caldaveventnotif(txn, httpd_userid,
++                int r2 = jmap_create_caldaveventnotif(httpd_userid,
+                     httpd_authstate, mailbox_name(mailbox),
+-                    cdata->ical_uid, &schedule_addresses, is_draft, ical, NULL);
++                    cdata->ical_uid, &schedule_addresses, is_draft, ical, NULL,
++                    NULL, NULL);
+                 if (r2) {
+                     xsyslog(LOG_ERR, "jmap_create_caldaveventnotif failed",
+                             "error=%s", error_message(r2));
+@@ -2213,8 +2215,12 @@ static int list_calendars(struct transaction_t *txn)
+     buf_printf_markup(body, level, "<title>%s</title>", "Available Calendars");
+     buf_printf_markup(body, level++, "<script type=\"text/javascript\">");
+     buf_appendcstr(body, "//<![CDATA[\n");
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++    /* format string comes from http_cal_abook_admin_js.h */
+     buf_printf(body, http_cal_abook_admin_js,
+                CYRUS_VERSION, http_cal_abook_admin_js_len);
++#pragma GCC diagnostic pop
+     buf_appendcstr(body, "//]]>\n");
+     buf_printf_markup(body, --level, "</script>");
+     buf_printf_markup(body, level++, "<noscript>");
+@@ -4101,8 +4107,7 @@ static int caldav_put(struct transaction_t *txn, void *obj,
+     }
+ 
+     // Rewrite managed attachments in iTIP message
+-    if ((icalcomponent_get_method(ical) != ICAL_METHOD_NONE) ||
+-            spool_getheader(txn->req_hdrs, "Schedule-Sender-Address")) {
++    if (icalcomponent_get_method(ical) != ICAL_METHOD_NONE) {
+         caldav_rewrite_attachments(txn->req_tgt.userid,
+                 caldav_attachments_to_url, oldical, ical, &myoldical, &myical);
+         if (myoldical) {
+@@ -4215,33 +4220,6 @@ static int caldav_put(struct transaction_t *txn, void *obj,
+         goto done;
+     }
+ 
+-    /* Set SENT-BY property */
+-    if ((hdr = spool_getheader(txn->req_hdrs, "Schedule-Sender-Address"))) {
+-        const char *sentby = *hdr;
+-        if (!strncasecmp(sentby, "mailto:", 7)) {
+-            sentby += 7;
+-        }
+-
+-        // XXX could use SENT-BY parameter as defined in RFC5545?
+-        for (comp = icalcomponent_get_first_real_component(ical);
+-             comp;
+-             comp = icalcomponent_get_next_component(ical,
+-                 icalcomponent_isa(comp))) {
+-
+-            // Remove any stale SENT-BY properties
+-            while ((prop = icalcomponent_get_x_property_by_name(comp,
+-                            JMAPICAL_XPROP_SENTBY))) {
+-                icalcomponent_remove_property(comp, prop);
+-                icalproperty_free(prop);
+-            }
+-
+-            prop = icalproperty_new(ICAL_X_PROPERTY);
+-            icalproperty_set_x_name(prop, JMAPICAL_XPROP_SENTBY);
+-            icalproperty_set_value(prop, icalvalue_new_text(sentby));
+-            icalcomponent_add_property(comp, prop);
+-        }
+-    }
+-
+     if (kind == ICAL_VEVENT_COMPONENT) {
+         int use_defaultalerts = icalcomponent_get_usedefaultalerts(ical);
+ 
+@@ -4304,9 +4282,10 @@ static int caldav_put(struct transaction_t *txn, void *obj,
+                 oldical = caldav_record_to_ical(mailbox, cdata,
+                         NULL, NULL);
+             }
+-            int r2 = jmap_create_caldaveventnotif(txn, httpd_userid,
++            int r2 = jmap_create_caldaveventnotif(httpd_userid,
+                     httpd_authstate, mailbox_name(mailbox), uid,
+-                    &schedule_addresses, is_draft, oldical, ical);
++                    &schedule_addresses, is_draft, oldical, ical,
++                    NULL, NULL);
+             if (r2) {
+                 xsyslog(LOG_ERR, "jmap_create_caldaveventnotif failed",
+                         "error=%s", error_message(r2));
+@@ -7718,6 +7697,8 @@ static void combine_vavailability(struct freebusy_filter *fbfilter)
+ 
+     /* Cleanup the vavailability array */
+     free(vavail->vav);
++    vavail->vav = NULL;
++    vavail->len = vavail->alloc = 0;
+ 
+     /* Cleanup the availability array */
+     if (availfilter.freebusy.fb) free(availfilter.freebusy.fb);
+diff --git a/imap/http_caldav_sched.c b/imap/http_caldav_sched.c
+index 389aeaa8e..b09400dbe 100644
+--- a/imap/http_caldav_sched.c
++++ b/imap/http_caldav_sched.c
+@@ -900,7 +900,8 @@ int sched_busytime_query(struct transaction_t *txn,
+     static const char *calendarprefix = NULL;
+     icalcomponent *comp;
+     icalproperty *prop = NULL, *next;
+-    const char *uid = NULL, *organizer = NULL;
++    const char *uid = NULL;
++    char *organizer = NULL;
+     struct caldav_sched_param sparam;
+     struct auth_state *org_authstate = NULL;
+     xmlNodePtr root = NULL;
+@@ -918,7 +919,8 @@ int sched_busytime_query(struct transaction_t *txn,
+     uid = icalcomponent_get_uid(comp);
+ 
+     prop = icalcomponent_get_first_property(comp, ICAL_ORGANIZER_PROPERTY);
+-    organizer = icalproperty_get_decoded_calendaraddress(prop);
++
++    organizer = xstrdupnull(icalproperty_get_decoded_calendaraddress(prop));
+ 
+     /* XXX  Do we need to do more checks here? */
+     if (caladdress_lookup(organizer, &sparam, NULL) ||
+@@ -1117,6 +1119,7 @@ int sched_busytime_query(struct transaction_t *txn,
+     if (!ret) xml_response(HTTP_OK, txn, root->doc);
+ 
+   done:
++    free(organizer);
+     if (org_authstate) auth_freestate(org_authstate);
+     if (calfilter.freebusy.fb) free(calfilter.freebusy.fb);
+     if (root) xmlFreeDoc(root->doc);
+diff --git a/imap/http_carddav.c b/imap/http_carddav.c
+index 90830d0ad..72fe203df 100644
+--- a/imap/http_carddav.c
++++ b/imap/http_carddav.c
+@@ -1219,8 +1219,12 @@ static int list_addressbooks(struct transaction_t *txn)
+     buf_printf_markup(body, level, "<title>%s</title>", "Available Addressbooks");
+     buf_printf_markup(body, level++, "<script type=\"text/javascript\">");
+     buf_appendcstr(body, "//<![CDATA[\n");
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++    /* format string comes from http_cal_abook_admin_js.h */
+     buf_printf(body, http_cal_abook_admin_js,
+                CYRUS_VERSION, http_cal_abook_admin_js_len);
++#pragma GCC diagnostic pop
+     buf_appendcstr(body, "//]]>\n");
+     buf_printf_markup(body, --level, "</script>");
+     buf_printf_markup(body, level++, "<noscript>");
+diff --git a/imap/http_client.c b/imap/http_client.c
+index fe1ac3c80..29aa587db 100644
+--- a/imap/http_client.c
++++ b/imap/http_client.c
+@@ -46,6 +46,9 @@
+ #ifdef HAVE_UNISTD_H
+ #include <unistd.h>
+ #endif
++#include <ctype.h>
++#include <errno.h>
++#include <limits.h>
+ #include <string.h>
+ #include <syslog.h>
+ 
+@@ -85,6 +88,32 @@ EXPORTED int is_mediatype(const char *pat, const char *type)
+             (!alltypes && (tlen == plen) && !strncasecmp(pat, type, tlen)));
+ }
+ 
++// clang-format: off
++static const char is_http_token_char[256] = {
++    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++/*     !     #  $  %  &  '        *  +     -  .     */
++    0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0,
++/*  0  1  2  3  4  5  6  7  8  9                    */
++    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
++/*     A  B  C  D  E  F  G  H  I  J  K  L  M  N  O  */
++    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
++/*  P  Q  R  S  T  U  V  W  X  Y  Z           ^  _  */
++    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1,
++/*  `  a  b  c  d  e  f  g  h  i  j  k  l  m  n  o  */
++    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
++/*  p  q  r  s  t  u  v  w  x  y  z     |     ~     */
++    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0,
++    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
++    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
++};
++// clang-format: on
+ 
+ /*
+  * Parse the framing of a request or response message.
+@@ -195,6 +224,36 @@ EXPORTED int http_parse_framing(int http2, hdrcache_t hdrs,
+     return 0;
+ }
+ 
++EXPORTED bool http_parse_chunk_size(const char *buf, bit64 *chunk)
++{
++    int len = strlen(buf);
++    const char *ext;
++
++    if (parsehex(buf, &ext, len, chunk) == -1) return false;
++    if (*ext == '\r') return true;
++
++    /* What follows should be a syntactically valid chunk-ext
++     *
++     *  chunk-ext      = *( BWS ";" BWS chunk-ext-name
++     *                      [ BWS "=" BWS chunk-ext-val ] )
++     *
++     *  chunk-ext-name = token
++     *  chunk-ext-val  = token / quoted-string
++     *
++     * we're not going to attempt to parse it all, but enough to spot most
++     * attempted shenanigans. */
++
++    /* BWS isn't allowed after the chunk size unless there's a chunk-ext */
++    while (*ext == ' ' || *ext == '\t') ++ext;
++    if (*ext != ';') return false;
++    ++ext;
++
++    /* There must be at least a chunk-ext-name
++     * So there must be at least one token char after any BWS */
++    while (*ext == ' ' || *ext == '\t') ++ext;
++    return is_http_token_char[(uint8_t)*ext] ? true : false;
++}
++
+ 
+ EXPORTED int http_read_headers(struct protstream *pin, int read_sep,
+                                hdrcache_t *hdrs, const char **errstr)
+@@ -288,17 +347,20 @@ EXPORTED int http_read_body(struct protstream *pin, hdrcache_t hdrs,
+ 
+         /* Read chunks until last-chunk (zero chunk-size) */
+         do {
+-            unsigned chunk;
++            /* The max we allow for body->max is BYTESIZE_UNLIMITED (2147483647)
++             * We're never going to accept chunks larger than this, but it makes
++             * sense to parse well formed headers as best possible and return
++             * the more accurate response "413 Content Too Large" instead of
++             * hitting read_failure, which will return "400 Bad Request" */
++            bit64 chunk;
+ 
+             /* Read chunk-size */
+             if (!prot_fgets(buf, PROT_BUFSIZE, pin) ||
+-                sscanf(buf, "%x", &chunk) != 1) {
++                !http_parse_chunk_size(buf, &chunk)) {
+                 *errstr = "Unable to read chunk size";
+                 goto read_failure;
+-
+-                /* XXX  Do we need to parse chunk-ext? */
+             }
+-            else if (chunk > body->max - body->len) {
++            if (chunk > body->max - body->len) {
+                 return HTTP_CONTENT_TOO_LARGE;
+             }
+ 
+@@ -413,7 +475,7 @@ EXPORTED int http_read_body(struct protstream *pin, hdrcache_t hdrs,
+     return 0;
+ 
+   read_failure:
+-    if (strcmpsafe(prot_error(pin), PROT_EOF_STRING)) {
++    if (!strcmpsafe(prot_error(pin), PROT_IDLE_STRING)) {
+         /* client timed out */
+         *errstr = prot_error(pin);
+         syslog(LOG_WARNING, "%s, closing connection", *errstr);
+@@ -530,12 +592,32 @@ EXPORTED int http_parse_auth_params(const char *params,
+         size_t tok_len, val_len;
+         const char *value;
+ 
+-        /* Trim leading and trailing BWS */
+-        while (strchr(", \t", *param)) param++;
++        /* Trim leading BWS */
++        param += strspn(param, ", \t");
++        if (!*param) {
++            /* Before this if block was added, code instead would make an out of
++             * bounds read, and (probably) end up in the "Missing value" logging
++             * below, with param pointing to garbage.
++             * I believe that this code path is only reachable for a header with
++             * a trailing comma, but have not tested it exhaustively to confirm
++             * that. If it is, we could tighten this log message. */
++            syslog(LOG_ERR,
++                   "Expected another parameter in credentials, but reached end of string");
++            return SASL_BADAUTH;
++        }
++        /* Trim trailing BWS */
+         tok_len = strcspn(param, "= \t");
+ 
+         /* Find value */
+         value = strchr(param + tok_len, '=');
++        if (value) {
++            ++value;
++            /* Trim leading BWS */
++            value += strspn(value, " \t");
++            /* token is defined as 1*tchar hence zero length is not allowed */
++            if (!*value) value = NULL;
++        }
++
+         if (!value) {
+             syslog(LOG_ERR,
+                    "Missing value for '%.*s' parameter in credentials",
+@@ -543,8 +625,7 @@ EXPORTED int http_parse_auth_params(const char *params,
+             return SASL_BADAUTH;
+         }
+ 
+-        /* Trim leading and trailing BWS */
+-        while (strchr(" \t", *++value));
++        /* Trim trailing BWS */
+         val_len = strcspn(value, ", \t");
+ 
+         /* Check known parameters */
+diff --git a/imap/http_client.h b/imap/http_client.h
+index 098a652f7..0c2102bd3 100644
+--- a/imap/http_client.h
++++ b/imap/http_client.h
+@@ -121,6 +121,7 @@ enum {
+ extern int is_mediatype(const char *pat, const char *type);
+ extern int http_parse_framing(int http2, hdrcache_t hdrs, struct body_t *body,
+                               const char **errstr);
++extern bool http_parse_chunk_size(const char *buf, bit64 *chunk);
+ extern int http_read_headers(struct protstream *pin, int read_sep,
+                              hdrcache_t *hdrs, const char **errstr);
+ extern int http_read_body(struct protstream *pin, hdrcache_t hdrs,
+diff --git a/imap/http_dav.c b/imap/http_dav.c
+index eed547e4d..3735931a0 100644
+--- a/imap/http_dav.c
++++ b/imap/http_dav.c
+@@ -956,6 +956,9 @@ static int eval_if(const char *hdr, struct meth_params *params,
+ 
+             tag = ++list;
+             list = strchr(tag, '>');
++            /* A tagged-list with no closing '>' is malformed; bail rather
++             * than dereferencing NULL. */
++            if (!list) break;
+             *list++ = '\0';
+ 
+             mailbox = NULL;
+@@ -1062,9 +1065,10 @@ static int eval_if(const char *hdr, struct meth_params *params,
+             lock_token = tgt_lock_token;
+         }
+ 
++        /* With no '(' there is no condition list, don't eval_list it. */
+         list = strchr(list, '(');
+ 
+-        ret |= eval_list(list, mailbox, etag, lock_token, locked);
++        if (list) ret |= eval_list(list, mailbox, etag, lock_token, locked);
+ 
+         if (davdb) params->davdb.close_db(davdb);
+         mailbox_close(&my_mailbox);
+@@ -2616,7 +2620,8 @@ static void add_privs(int rights, unsigned flags,
+ 
+             /* DAV:unbind */
+             if ((rights & DACL_UNBIND) == DACL_UNBIND ||
+-                ((flags & PRIV_NOSUBCOL) && (rights & DACL_RMRSRC))) {
++                ((flags & PRIV_NOSUBCOL) &&
++                 (rights & DACL_RMRSRC) == DACL_RMRSRC)) {
+                 priv = xmlNewChild(parent, NULL, BAD_CAST "privilege", NULL);
+                 xmlNewChild(priv, NULL, BAD_CAST "unbind", NULL);
+ 
+@@ -4626,7 +4631,7 @@ int meth_copy_move(struct transaction_t *txn, void *params)
+     /* Check ACL for current user on source mailbox */
+     rights = httpd_myrights(httpd_authstate, txn->req_tgt.mbentry);
+     if (((rights & DACL_READ) != DACL_READ) ||
+-        (meth_move && !(rights & DACL_RMRSRC))) {
++        (meth_move && (rights & DACL_RMRSRC) != DACL_RMRSRC)) {
+         /* DAV:need-privileges */
+         txn->error.precond = DAV_NEED_PRIVS;
+         txn->error.resource = txn->req_tgt.path;
+@@ -5117,7 +5122,7 @@ static int meth_delete_collection(struct transaction_t *txn,
+ static int meth_delete_resource(struct transaction_t *txn,
+                                 struct meth_params *dparams)
+ {
+-    int ret = HTTP_NO_CONTENT, r = 0, precond, rights, needrights;
++    int ret = HTTP_NO_CONTENT, r = 0, precond, rights, needrights, may_remove;
+     struct mboxevent *mboxevent = NULL;
+     struct mailbox *mailbox = NULL;
+     struct dav_data *ddata;
+@@ -5129,14 +5134,16 @@ static int meth_delete_resource(struct transaction_t *txn,
+     /* Check ACL for current user */
+     rights = httpd_myrights(httpd_authstate, txn->req_tgt.mbentry);
+     needrights = DACL_RMRSRC;
++    may_remove = (rights & DACL_RMRSRC) == DACL_RMRSRC;
+     if (txn->req_tgt.namespace == &namespace_calendar) {
+         /* JMAP introduced the right to remove an event
+          * only if it is organized by the user (or there
+          * is no organizer at all). The CalDAV namespace
+          * needs to to assert this right later. */
+         needrights |= DACL_WRITEOWNRSRC;
++        may_remove = may_remove || (rights & DACL_WRITEOWNRSRC);
+     }
+-    if (!(rights & needrights)) {
++    if (!may_remove) {
+         /* DAV:need-privileges */
+         txn->error.precond = DAV_NEED_PRIVS;
+         txn->error.resource = txn->req_tgt.path;
+diff --git a/imap/http_dav_sharing.c b/imap/http_dav_sharing.c
+index f4e4f55f4..6140750c1 100644
+--- a/imap/http_dav_sharing.c
++++ b/imap/http_dav_sharing.c
+@@ -1842,6 +1842,21 @@ static int set_share_access(const char *mboxname,
+                             httpd_userid, httpd_authstate);
+     }
+ 
++    /* Revoking a DAV share must also clear the sharee's subscription on the
++     * calendar.
++     */
++    if (!r && access == SHARE_NONE) {
++        int unsub_r = mboxlist_changesub(mboxname, userid, httpd_authstate,
++                                         /*add*/0, /*force*/0,
++                                         /*notify*/1, /*silent*/0);
++        if (unsub_r) {
++            syslog(LOG_ERR,
++                   "mboxlist_changesub(%s, %s) failed during share revoke: %s",
++                   mboxname, userid, error_message(unsub_r));
++            r = unsub_r;
++        }
++    }
++
+     return r;
+ }
+ 
+diff --git a/imap/http_h2.c b/imap/http_h2.c
+index 090421ba1..d56922031 100644
+--- a/imap/http_h2.c
++++ b/imap/http_h2.c
+@@ -212,6 +212,14 @@ static int data_chunk_recv_cb(nghttp2_session *session,
+     if (txn->req_body.flags & BODY_DISCARD) return 0;
+ 
+     if (len) {
++        /* nghttp2's flow control does not bound the accumulated request body,
++         * so without this a client can stream unbounded DATA frames and
++         * exhaust memory. */
++        if (txn->req_body.max && len > txn->req_body.max - txn->req_body.len) {
++            error_response(HTTP_CONTENT_TOO_LARGE, txn);
++            return NGHTTP2_ERR_CANCEL;
++        }
++
+         txn->req_body.framing = FRAMING_HTTP2;
+         txn->req_body.len += len;
+         buf_appendmap(&txn->req_body.payload, (const char *) data, len);
+@@ -954,12 +962,14 @@ HIDDEN void http2_input(struct http_connection *conn)
+ 
+             if (r < 0) {
+                 /* Failure */
+-                syslog(LOG_ERR,
+-                       "nghttp2_session_mem_recv: %s", nghttp2_strerror(r));
+                 goaway = 1;
+-                conn->close_str = nghttp2_strerror(r);
+ 
+                 switch (r) {
++                case NGHTTP2_ERR_CALLBACK_FAILURE:
++                    /* We responded with 413 Content Too Large */
++                    r = NGHTTP2_ERR_CANCEL;
++                    err = NGHTTP2_CANCEL;
++                    break;
+                 case NGHTTP2_ERR_BAD_CLIENT_MAGIC:
+                     err = NGHTTP2_PROTOCOL_ERROR;
+                     break;
+@@ -971,6 +981,9 @@ HIDDEN void http2_input(struct http_connection *conn)
+                     break;
+                 }
+ 
++                conn->close_str = nghttp2_strerror(r);
++                syslog(LOG_ERR,
++                       "nghttp2_session_mem_recv: %s", conn->close_str);
+                 break;
+             }
+             else {
+diff --git a/imap/http_ischedule.c b/imap/http_ischedule.c
+index 525347dcf..a2b5ecb2d 100644
+--- a/imap/http_ischedule.c
++++ b/imap/http_ischedule.c
+@@ -397,6 +397,39 @@ static int meth_options_isched(struct transaction_t *txn, void *params)
+ }
+ 
+ 
++static int caladdress_equal(const char *a, const char *b)
++{
++    if (!a || !b) return 0;
++    if (!strncasecmp(a, "mailto:", 7)) a += 7;
++    if (!strncasecmp(b, "mailto:", 7)) b += 7;
++
++    return !strcasecmp(a, b);
++}
++
++
++/* Is the Originator the ORGANIZER of the scheduling message, or for a
++ * REPLY one of its ATTENDEEs? */
++static int originator_matches(const char *originator, icalcomponent *comp,
++                              icalproperty_method meth)
++{
++    icalproperty *prop;
++
++    if (meth == ICAL_METHOD_REPLY) {
++        for (prop = icalcomponent_get_first_invitee(comp); prop;
++             prop = icalcomponent_get_next_invitee(comp)) {
++            if (caladdress_equal(originator,
++                                 icalproperty_get_decoded_calendaraddress(prop)))
++                return 1;
++        }
++        return 0;
++    }
++
++    prop = icalcomponent_get_first_property(comp, ICAL_ORGANIZER_PROPERTY);
++    return caladdress_equal(originator,
++                            icalproperty_get_decoded_calendaraddress(prop));
++}
++
++
+ /* iSchedule Receiver */
+ static int meth_post_isched(struct transaction_t *txn,
+                             void *params __attribute__((unused)))
+@@ -408,7 +441,7 @@ static int meth_post_isched(struct transaction_t *txn,
+     icalcomponent_kind kind = 0;
+     icalproperty_method meth = 0;
+     icalproperty *prop = NULL;
+-    const char *uid = NULL;
++    const char *uid = NULL, *originator = NULL;
+ 
+     /* Fill in iSchedule-Capabilities */
+     isched_capa_hdr(txn, NULL, NULL);
+@@ -444,6 +477,7 @@ static int meth_post_isched(struct transaction_t *txn,
+         txn->error.precond = ISCHED_MULTIPLE_ORIG;
+         return HTTP_BAD_REQUEST;
+     }
++    originator = hdr[0];
+ 
+     /* Check Recipients */
+     if (!(recipients = spool_getheader(txn->req_hdrs, "Recipient"))) {
+@@ -516,6 +550,13 @@ static int meth_post_isched(struct transaction_t *txn,
+         goto done;
+     }
+ 
++    if (!originator_matches(originator, comp, meth)) {
++        txn->error.desc = "Originator is not the ORGANIZER or a replying ATTENDEE";
++        txn->error.precond = ISCHED_ORIG_DENIED;
++        ret = HTTP_FORBIDDEN;
++        goto done;
++    }
++
+     switch (kind) {
+     case ICAL_VFREEBUSY_COMPONENT:
+         if (meth == ICAL_METHOD_REQUEST)
+@@ -568,11 +609,11 @@ static int meth_post_isched(struct transaction_t *txn,
+ 
+                     /* Don't allow scheduling with remote users via iSchedule */
+                     if (sparam.flags & SCHEDTYPE_REMOTE) r = HTTP_FORBIDDEN;
+-                    sched_param_fini(&sparam);
+ 
+                     if (r) sched_data.status = REQSTAT_NOUSER;
+-                    else sched_deliver(httpd_userid, httpd_userid, httpd_userid,
++                    else sched_deliver(sparam.userid, sparam.userid, originator,
+                                        recipient, &sched_data, authstate);
++                    sched_param_fini(&sparam);
+ 
+                     xml_add_schedresponse(root, NULL, BAD_CAST recipient,
+                                           BAD_CAST sched_data.status);
+diff --git a/imap/http_jmap.c b/imap/http_jmap.c
+index 3aed3042c..df66803c4 100644
+--- a/imap/http_jmap.c
++++ b/imap/http_jmap.c
+@@ -106,7 +106,8 @@ static int jmap_eventsource(struct transaction_t *txn);
+ static ws_data_callback jmap_ws;
+ 
+ static struct connect_params ws_params = {
+-    &jmap_parse_path, { JMAP_BASE_URL JMAP_WS_COL, JMAP_WS_PROTOCOL, &jmap_ws }
++    &jmap_parse_path, { JMAP_BASE_URL JMAP_WS_COL, JMAP_WS_PROTOCOL, &jmap_ws,
++                        0 /* max_msgsize: resolved in jmap_init() */ }
+ };
+ 
+ 
+@@ -202,6 +203,11 @@ static void jmap_init(struct buf *serverinfo)
+     if (jmap_push_poll < 0) jmap_push_poll = 0;
+ 
+     if (ws_enabled) {
++        ws_params.ws.max_msgsize =
++            config_getbytesize(IMAPOPT_JMAP_MAX_SIZE_REQUEST, 'K');
++        if (ws_params.ws.max_msgsize <= 0)
++            ws_params.ws.max_msgsize = BYTESIZE_UNLIMITED;
++
+         json_object_set_new(my_jmap_settings.server_capabilities,
+                 JMAP_URN_WEBSOCKET,
+                 json_pack("{s:s s:b}",
+@@ -404,7 +410,8 @@ static int meth_get(struct transaction_t *txn,
+     /* Upgrade to WebSockets over HTTP/1.1 on WS endpoint, if requested */
+     else if ((txn->req_tgt.flags == JMAP_ENDPOINT_WS) &&
+              (txn->flags.upgrade & UPGRADE_WS)) {
+-        return ws_start_channel(txn, JMAP_WS_PROTOCOL, &jmap_ws);
++        return ws_start_channel(txn, JMAP_WS_PROTOCOL, &jmap_ws,
++                                ws_params.ws.max_msgsize);
+     }
+     else if (txn->req_tgt.flags == JMAP_ENDPOINT_EVENTSOURCE) {
+         return jmap_eventsource(txn);
+diff --git a/imap/http_proxy.c b/imap/http_proxy.c
+index f53ed73f5..dcdc4c520 100644
+--- a/imap/http_proxy.c
++++ b/imap/http_proxy.c
+@@ -743,7 +743,7 @@ static int pipe_resp_body(struct protstream *pin, struct transaction_t *txn,
+         break;
+ 
+     case FRAMING_CHUNKED: {
+-        unsigned chunk;
++        bit64 chunk;
+         char *c;
+ 
+         txn->flags.te = TE_CHUNKED;
+@@ -755,7 +755,9 @@ static int pipe_resp_body(struct protstream *pin, struct transaction_t *txn,
+             c = prot_fgets(buf, PROT_BUFSIZE, pin);
+             prot_BLOCK(pin);
+             if (!c) c = prot_fgets(buf, PROT_BUFSIZE, pin);
+-            if (!c || sscanf(buf, "%x", &chunk) != 1) {
++            errno = 0;
++            if (!c ||                 // not EOF
++                !http_parse_chunk_size(buf, &chunk)) {
+                 *errstr = "Unable to read chunk size";
+                 return HTTP_BAD_GATEWAY;
+ 
+diff --git a/imap/http_rss.c b/imap/http_rss.c
+index 01428ee2d..ce2649976 100644
+--- a/imap/http_rss.c
++++ b/imap/http_rss.c
+@@ -794,6 +794,31 @@ static void buf_escapestr(struct buf *buf, const char *str, unsigned max,
+ }
+ 
+ 
++/* HTML-escape a string for inline use inside a buf_printf_markup() line */
++static void buf_escape_inline(struct buf *buf, const char *str)
++{
++    const char *c;
++
++    for (c = str; c && *c; c++) {
++        if (*c == '"') buf_appendcstr(buf, "&quot;");
++        else if (*c == '&') buf_appendcstr(buf, "&amp;");
++        else if (*c == '<') buf_appendcstr(buf, "&lt;");
++        else if (*c == '>') buf_appendcstr(buf, "&gt;");
++        else if ((*c & 0xc0) == 0xc0) {
++            /* leading byte of a multi-byte UTF-8 sequence: copy the
++             * leader and all of its continuation bytes verbatim
++             */
++            unsigned char lead = *c;
++
++            do buf_putc(buf, *c);
++            while (((lead <<= 1) & 0x80) && c++);
++        }
++        else if (!(isspace(*c) || isprint(*c))) buf_putc(buf, 'X');
++        else buf_putc(buf, *c);
++    }
++}
++
++
+ /* List messages as an RSS feed */
+ static int list_messages(struct transaction_t *txn, struct mailbox *mailbox)
+ {
+@@ -1025,13 +1050,25 @@ static int list_messages(struct transaction_t *txn, struct mailbox *mailbox)
+                 free(name);
+             }
+             else {
+-                buf_printf_markup(buf, level, "<name>%s@%s</name>",
+-                                  addr->mailbox, addr->domain);
++                if (config_httpprettytelemetry)
++                    buf_printf(buf, "%*s", level * MARKUP_INDENT, "");
++                buf_appendcstr(buf, "<name>");
++                buf_escape_inline(buf, addr->mailbox);
++                buf_appendcstr(buf, "@");
++                buf_escape_inline(buf, addr->domain);
++                buf_appendcstr(buf, "</name>");
++                if (config_httpprettytelemetry) buf_appendcstr(buf, "\n");
+             }
+ 
+             /* <email> - optional */
+-            buf_printf_markup(buf, level, "<email>%s@%s</email>",
+-                              addr->mailbox, addr->domain);
++            if (config_httpprettytelemetry)
++                buf_printf(buf, "%*s", level * MARKUP_INDENT, "");
++            buf_appendcstr(buf, "<email>");
++            buf_escape_inline(buf, addr->mailbox);
++            buf_appendcstr(buf, "@");
++            buf_escape_inline(buf, addr->domain);
++            buf_appendcstr(buf, "</email>");
++            if (config_httpprettytelemetry) buf_appendcstr(buf, "\n");
+ 
+             buf_printf_markup(buf, --level, "</author>");
+         }
+@@ -1084,9 +1121,20 @@ static void display_address(struct buf *buf, struct address *addr,
+         buf_printf(buf, "%*s", level * MARKUP_INDENT, "");
+ 
+     buf_printf(buf, "%s", sep);
+-    if (addr->name) buf_printf(buf, "\"%s\" ", addr->name);
+-    buf_printf(buf, "<a href=\"mailto:%s@%s\">&lt;%s@%s&gt;</a>",
+-               addr->mailbox, addr->domain, addr->mailbox, addr->domain);
++    if (addr->name) {
++        buf_appendcstr(buf, "\"");
++        buf_escape_inline(buf, addr->name);
++        buf_appendcstr(buf, "\" ");
++    }
++    buf_appendcstr(buf, "<a href=\"mailto:");
++    buf_escape_inline(buf, addr->mailbox);
++    buf_appendcstr(buf, "@");
++    buf_escape_inline(buf, addr->domain);
++    buf_appendcstr(buf, "\">&lt;");
++    buf_escape_inline(buf, addr->mailbox);
++    buf_appendcstr(buf, "@");
++    buf_escape_inline(buf, addr->domain);
++    buf_appendcstr(buf, "&gt;</a>");
+ 
+     if (config_httpprettytelemetry) buf_appendcstr(buf, "\n");
+ }
+@@ -1264,11 +1312,21 @@ static void display_part(struct transaction_t *txn,
+ 
+             buf_printf_markup(buf, level++, "<div align=center>");
+ 
+-            /* Create link */
+-            buf_printf_markup(buf, level++,
+-                              "<a href=\"%s?section=%s\" type=\"%s/%s\">",
+-                              txn->req_tgt.path, cursection,
+-                              body->type, body->subtype);
++            /* Create link.  body->type and body->subtype are already
++             * constrained by message_parse_type() to reject MIME tspecials,
++             * but escape them defensively anyway.
++             * -- claude, 2026-05-21
++             */
++            if (config_httpprettytelemetry)
++                buf_printf(buf, "%*s", level * MARKUP_INDENT, "");
++            buf_printf(buf, "<a href=\"%s?section=%s\" type=\"",
++                       txn->req_tgt.path, cursection);
++            buf_escape_inline(buf, body->type);
++            buf_appendcstr(buf, "/");
++            buf_escape_inline(buf, body->subtype);
++            buf_appendcstr(buf, "\">");
++            if (config_httpprettytelemetry) buf_appendcstr(buf, "\n");
++            level++;
+ 
+             if (config_httpprettytelemetry)
+                 buf_printf(buf, "%*s", level * MARKUP_INDENT, "");
+@@ -1279,11 +1337,19 @@ static void display_part(struct transaction_t *txn,
+                            txn->req_tgt.path, cursection);
+             }
+ 
+-            /* Create text for link or alternative text for image */
+-            if (param) buf_printf(buf, "%s", param->value);
++            /* Create text for link or alternative text for image.
++             * param->value comes from message_parse_params(), which accepts
++             * arbitrary bytes inside a quoted-string parameter value, so it
++             * must be escaped before landing in alt="..." or anchor text.
++             * -- claude, 2026-05-21
++             */
++            if (param) buf_escape_inline(buf, param->value);
+             else {
+-                buf_printf(buf, "[%s/%s %u bytes]",
+-                           body->type, body->subtype, body->content_size);
++                buf_appendcstr(buf, "[");
++                buf_escape_inline(buf, body->type);
++                buf_appendcstr(buf, "/");
++                buf_escape_inline(buf, body->subtype);
++                buf_printf(buf, " %u bytes]", body->content_size);
+             }
+ 
+             if (is_image) buf_printf(buf, "\">");
+diff --git a/imap/http_tzdist.c b/imap/http_tzdist.c
+index 777456c31..a410a46b9 100644
+--- a/imap/http_tzdist.c
++++ b/imap/http_tzdist.c
+@@ -1722,7 +1722,11 @@ static int json_error_response(struct transaction_t *txn, long tz_code,
+     else fmt = "End date-time <= start date-time";
+ 
+     assert(!buf_len(&txn->buf));
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++    /* format string chosen above */
+     buf_printf(&txn->buf, fmt, param_name);
++#pragma GCC diagnostic pop
+ 
+     root = json_pack("{s:s s:s s:i}", "title", buf_cstring(&txn->buf),
+                      "type", error_message(tz_code),
+diff --git a/imap/http_ws.c b/imap/http_ws.c
+index 5d3822dc8..882914198 100644
+--- a/imap/http_ws.c
++++ b/imap/http_ws.c
+@@ -94,6 +94,7 @@ struct ws_context {
+     const char *accept_key;
+     const char *protocol;
+     ws_data_callback *data_cb;
++    int64_t max_msgsize;             /* Max size of a (decompressed) message */
+     struct buf log;
+     int log_tail;
+     unsigned ext;                    /* Bitmask of negotiated extension(s) */
+@@ -336,7 +337,7 @@ static int zlib_decompress(struct transaction_t *txn,
+ 
+     if (!zstrm) {
+         xsyslog(LOG_ERR, "WS: no z_stream", NULL);
+-        return -1;
++        return WSLAY_CODE_INTERNAL_SERVER_ERROR;
+     }
+ 
+     zstrm->next_in = (Bytef *) buf;
+@@ -347,6 +348,16 @@ static int zlib_decompress(struct transaction_t *txn,
+     do {
+         int zr;
+ 
++        /* Guard against a "decompression bomb" -- a small, highly
++         * compressed message that expands to an enormous amount of
++         * memory as we keep growing txn->zbuf to hold the inflated
++         * output */
++        if ((int64_t) txn->zbuf.len >= ctx->max_msgsize) {
++            xsyslog(LOG_ERR, "WS: inflated message too large",
++                    "maxsize=<%lld>", (long long) ctx->max_msgsize);
++            return WSLAY_CODE_MESSAGE_TOO_BIG;
++        }
++
+         buf_ensure(&txn->zbuf, 4096);
+ 
+         zstrm->next_out = (Bytef *) txn->zbuf.s + txn->zbuf.len;
+@@ -357,7 +368,7 @@ static int zlib_decompress(struct transaction_t *txn,
+             /* something went wrong */
+             xsyslog(LOG_ERR, "WS inflate error",
+                     "zr=<%d>, msg=<%s>", zr, zstrm->msg);
+-            return -1;
++            return WSLAY_CODE_PROTOCOL_ERROR;
+         }
+ 
+         txn->zbuf.len = txn->zbuf.alloc - zstrm->avail_out;
+@@ -396,6 +407,7 @@ static void on_frame_recv_start_cb(wslay_event_context_ptr ev __attribute__((unu
+ 
+ #define COMP_FAILED_ERR    "Compressing message failed"
+ #define DECOMP_FAILED_ERR  "Decompressing message failed"
++#define TOO_BIG_ERR        "Inflated message too big"
+ 
+ static int queue_msg(struct transaction_t *txn, struct buf *outbuf,
+                      struct wslay_event_msg *msgarg, uint8_t *rsv,
+@@ -457,17 +469,16 @@ static void on_msg_recv_cb(wslay_event_context_ptr ev,
+             /* Add trailing 4 bytes */
+             buf_appendmap(&inbuf, "\x00\x00\xff\xff", 4);
+ 
+-            r = zlib_decompress(txn, buf_base(&inbuf), buf_len(&inbuf));
+-            if (r) {
++            err_code = zlib_decompress(txn, buf_base(&inbuf), buf_len(&inbuf));
++            if (err_code) {
+                 xsyslog(LOG_ERR, "WS: zlib_decompress() failed", NULL);
++                err_msg = (err_code == WSLAY_CODE_MESSAGE_TOO_BIG) ?
++                    TOO_BIG_ERR : DECOMP_FAILED_ERR;
++                goto err;
+             }
+         }
+         else {
+             xsyslog(LOG_ERR, "WS: unknown PMCE", NULL);
+-            r = -1;
+-        }
+-
+-        if (r) {
+             err_code = WSLAY_CODE_PROTOCOL_ERROR;
+             err_msg = DECOMP_FAILED_ERR;
+             goto err;
+@@ -705,7 +716,8 @@ static void _h1_shutdown(struct http_connection *conn)
+ }
+ 
+ HIDDEN int ws_start_channel(struct transaction_t *txn,
+-                            const char *protocol, ws_data_callback *data_cb)
++                            const char *protocol, ws_data_callback *data_cb,
++                            int64_t max_msgsize)
+ {
+     int r, resp_code;
+     const char **hdr, *accept_key = NULL;
+@@ -825,12 +837,18 @@ HIDDEN int ws_start_channel(struct transaction_t *txn,
+         return HTTP_SERVER_ERROR;
+     }
+ 
++    /* Bound the size of a (possibly fragmented) incoming message, so that
++     * a compressed message can't be used to trigger unbounded memory use
++     * on inflation (see zlib_decompress()) */
++    wslay_event_config_set_max_recv_msg_length(ev, max_msgsize);
++
+     /* Create channel context */
+     ctx = xzmalloc(sizeof(struct ws_context));
+     ctx->event = ev;
+     ctx->accept_key = accept_key;
+     ctx->protocol = protocol;
+     ctx->data_cb = data_cb;
++    ctx->max_msgsize = max_msgsize;
+     txn->ws_ctx = ctx;
+     ptrarray_add(&txn->done_callbacks, &_end_channel);
+ 
+@@ -1022,7 +1040,8 @@ HIDDEN int ws_init(struct http_connection *conn __attribute__((unused)),
+ 
+ HIDDEN int ws_start_channel(struct transaction_t *txn __attribute__((unused)),
+                             const char *protocol __attribute__((unused)),
+-                            ws_data_callback *data_cb __attribute__((unused)))
++                            ws_data_callback *data_cb __attribute__((unused)),
++                            int64_t max_msgsize __attribute__((unused)))
+ {
+     fatal("ws_start() called, but no Wslay", EX_SOFTWARE);
+ }
+diff --git a/imap/http_ws.h b/imap/http_ws.h
+index 8136114ea..405641ed4 100644
+--- a/imap/http_ws.h
++++ b/imap/http_ws.h
+@@ -69,7 +69,8 @@ typedef int ws_data_callback(struct transaction_t *txn, enum wslay_opcode opcode
+                              struct buf *logbuf);
+ 
+ extern int ws_start_channel(struct transaction_t *txn,
+-                            const char *sub_prot, ws_data_callback *data_cb);
++                            const char *sub_prot, ws_data_callback *data_cb,
++                            int64_t max_msgsize);
+ 
+ extern void ws_add_resp_hdrs(struct transaction_t *txn);
+ 
+diff --git a/imap/httpd.c b/imap/httpd.c
+index 80a68a9cd..cd3e0ba21 100644
+--- a/imap/httpd.c
++++ b/imap/httpd.c
+@@ -545,7 +545,8 @@ const struct known_meth_t http_methods[] = {
+ static ws_data_callback ws_echo;
+ 
+ static struct connect_params ws_params = {
+-    NULL, { "/", NULL /* sub-protocol */, &ws_echo }
++    NULL, { "/", NULL /* sub-protocol */, &ws_echo,
++             0 /* max_msgsize: resolved in service_init() */ }
+ };
+ 
+ /* Namespace to fetch static content from filesystem */
+@@ -886,6 +887,10 @@ int service_init(int argc __attribute__((unused)),
+     http2_enabled = http2_init(&http_conn, &serverinfo);
+     ws_enabled = ws_init(&http_conn, &serverinfo);
+ 
++    ws_params.ws.max_msgsize = config_getbytesize(IMAPOPT_MAXMESSAGESIZE, 'B');
++    if (ws_params.ws.max_msgsize <= 0)
++        ws_params.ws.max_msgsize = BYTESIZE_UNLIMITED;
++
+ #ifdef HAVE_ZLIB
+     buf_printf(&serverinfo, " Zlib/%s", ZLIB_VERSION);
+ #endif
+@@ -1495,9 +1500,12 @@ static int client_need_auth(struct transaction_t *txn, int sasl_result)
+             txn->location = buf_cstring(&txn->buf);
+ 
+             /* Create HTML body */
++            xmlChar *escaped =
++                xmlEncodeSpecialChars(NULL,
++                                      (const xmlChar *) buf_cstring(&txn->buf));
+             buf_reset(html);
+-            buf_printf(html, tls_message,
+-                       buf_cstring(&txn->buf), buf_cstring(&txn->buf));
++            buf_printf(html, tls_message, (char *) escaped, (char *) escaped);
++            xmlFree(escaped);
+ 
+             /* Output our HTML response */
+             txn->resp_body.type = "text/html; charset=utf-8";
+@@ -1527,6 +1535,13 @@ static int check_method(struct transaction_t *txn)
+     /* Check for HTTP method override */
+     if (!strcmp(req_line->meth, "POST") &&
+         (hdr = spool_getheader(txn->req_hdrs, "X-HTTP-Method-Override"))) {
++        if (hdr[1]) {
++            /* If the header is repeated, the request makes no sense, and we
++             * suspect shenanigans. */
++            txn->conn->close = 1;
++            txn->conn->close_str = "Duplicate method override header";
++            return HTTP_BAD_REQUEST;
++        }
+         txn->flags.override = 1;
+         req_line->meth = (char *) hdr[0];
+     }
+@@ -1536,7 +1551,11 @@ static int check_method(struct transaction_t *txn)
+              strcmp(http_methods[txn->meth].name, req_line->meth);
+          txn->meth++);
+ 
+-    if (txn->meth == METH_UNKNOWN) return HTTP_NOT_IMPLEMENTED;
++    if (txn->meth == METH_UNKNOWN) {
++        txn->conn->close = 1;
++        txn->conn->close_str = "Unknown method";
++        return HTTP_NOT_IMPLEMENTED;
++    }
+ 
+     return 0;
+ }
+@@ -2627,6 +2646,18 @@ EXPORTED const char *http_statusline(unsigned ver, long code)
+ }
+ 
+ 
++/* Return true if s[0..len) contains a control character other than HTAB.
++ * Such characters are illegal in an HTTP header field name or value
++ * (RFC 9110 5.6.4). */
++static bool has_illegal_hdr_char(const char *s, size_t len)
++{
++    for (size_t i = 0; i < len; i++) {
++        unsigned char c = s[i];
++        if ((c < ' ' && c != '\t') || c == 127) return true;
++    }
++    return false;
++}
++
+ /* Output an HTTP response header.
+  * 'code' specifies the HTTP Status-Code and Reason-Phrase.
+  * 'txn' contains the transaction context
+@@ -2644,6 +2675,20 @@ EXPORTED void simple_hdr(struct transaction_t *txn,
+ 
+     syslog(LOG_DEBUG, "simple_hdr(%s: %s)", name, buf_cstring(&buf));
+ 
++    /* Neither the header name nor value may contain control characters other
++     * than HTAB (RFC 9110 5.6.4); a bare CR or LF would corrupt the response
++     * header block and permit header injection. Server-generated headers never
++     * contain these, so a hit means unsanitised input leaked in -- drop the
++     * whole header rather than emit a broken one. */
++    if (has_illegal_hdr_char(name, strlen(name)) ||
++        has_illegal_hdr_char(buf_base(&buf), buf_len(&buf))) {
++        xsyslog(LOG_NOTICE,
++                "dropping response header with illegal control character",
++                "name=<%s> value=<%s>", name, buf_cstring(&buf));
++        buf_free(&buf);
++        return;
++    }
++
+     txn->conn->add_resp_header(txn, name, &buf);
+ }
+ 
+@@ -2662,13 +2707,23 @@ static void comma_list_body(struct buf *buf,
+     for (i = 0; vals[i]; i++) {
+         if (flags & (1 << i)) {
+             buf_appendcstr(buf, sep);
+-            if (has_args) buf_vprintf(buf, vals[i], args);
+-            else buf_appendcstr(buf, vals[i]);
++            if (has_args) {
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++                buf_vprintf(buf, vals[i], args);
++#pragma GCC diagnostic pop
++            }
++            else {
++                buf_appendcstr(buf, vals[i]);
++            }
+             sep = ", ";
+         }
+         else if (has_args) {
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+             /* discard any unused args */
+             vsnprintf(NULL, 0, vals[i], args);
++#pragma GCC diagnostic pop
+         }
+     }
+ }
+@@ -3347,7 +3402,7 @@ EXPORTED void response_header(long code, struct transaction_t *txn)
+             /* Construct Content-Disposition header */
+             char *encfname = NULL;
+             for (const unsigned char *p = (unsigned char *)resp_body->dispo.fname; p && *p; p++) {
+-                if (*p >= 0x80) {
++                if (*p < ' ' || *p >= 127) {
+                     encfname = charset_encode_mimexvalue(resp_body->dispo.fname, NULL);
+                     break;
+                 }
+@@ -3358,9 +3413,17 @@ EXPORTED void response_header(long code, struct transaction_t *txn)
+                         encfname);
+             }
+             else {
++                /* filename is printable ASCII: emit as a quoted-string,
++                 * backslash-escaping DQUOTE and backslash (RFC 9110, 5.6.4) */
++                struct buf fname = BUF_INITIALIZER;
++                for (const char *p = resp_body->dispo.fname; *p; p++) {
++                    if (*p == '"' || *p == '\\') buf_putc(&fname, '\\');
++                    buf_putc(&fname, *p);
++                }
+                 simple_hdr(txn, "Content-Disposition", "%s; filename=\"%s\"",
+                         resp_body->dispo.attach ? "attachment" : "inline",
+-                        resp_body->dispo.fname);
++                        buf_cstring(&fname));
++                buf_free(&fname);
+             }
+             free(encfname);
+         }
+@@ -3961,12 +4024,17 @@ EXPORTED void error_response(long code, struct transaction_t *txn)
+         buf_printf_markup(html, level, "<h1>%s</h1>", error_message(code)+4);
+         buf_printf_markup(html, level, "<p>%s</p>", txn->error.desc);
+         if (config_serverinfo) {
++            xmlChar *safe_host = xmlEncodeSpecialChars(NULL, (const xmlChar *) host);
++            xmlChar *safe_port = xmlEncodeSpecialChars(NULL, (const xmlChar *) port);
++
+             buf_printf_markup(html, level, "<hr>");
+             buf_printf_markup(html, level,
+                               "<address>%s Server at %s Port %s</address>",
+                               (config_serverinfo == IMAP_ENUM_SERVERINFO_ON) ?
+                               buf_cstring(&serverinfo) : "HTTP",
+-                              host, port);
++                              (char *) safe_host, (char *) safe_port);
++            xmlFree(safe_host);
++            xmlFree(safe_port);
+         }
+         buf_printf_markup(html, --level, "</body>");
+         buf_printf_markup(html, --level, "</html>");
+@@ -4162,7 +4230,7 @@ static int http_auth(const char *creds, struct transaction_t *txn)
+     /* Split credentials into auth scheme and response */
+     slen = strcspn(creds, " ");
+     if ((clientin = strchr(creds + slen, ' '))) {
+-        while (strchr(" ", *++clientin));  /* Trim leading 1*SP */
++        while (*clientin == ' ') clientin++;
+         clientinlen = strlen(clientin);
+     }
+ 
+@@ -4874,7 +4942,8 @@ HIDDEN int meth_connect(struct transaction_t *txn, void *params)
+         return ret;
+     }
+     
+-    ret = ws_start_channel(txn, cparams->ws.subprotocol, cparams->ws.data_cb);
++    ret = ws_start_channel(txn, cparams->ws.subprotocol, cparams->ws.data_cb,
++                           cparams->ws.max_msgsize);
+ 
+     return (ret == HTTP_UPGRADE) ? HTTP_BAD_REQUEST : ret;
+ }
+@@ -4897,7 +4966,8 @@ static int meth_get(struct transaction_t *txn,
+     /* Upgrade to WebSockets over HTTP/1.1 on root, if requested */
+     if (!strcmp(txn->req_uri->path, "/")) {
+         if (txn->flags.upgrade & UPGRADE_WS) {
+-            return ws_start_channel(txn, NULL, &ws_echo);
++            return ws_start_channel(txn, NULL, &ws_echo,
++                                    ws_params.ws.max_msgsize);
+         }
+ 
+         if (ws_enabled) {
+diff --git a/imap/httpd.h b/imap/httpd.h
+index 94051ef26..f99c4c38c 100644
+--- a/imap/httpd.h
++++ b/imap/httpd.h
+@@ -498,6 +498,7 @@ struct connect_params {
+         const char *endpoint;
+         const char *subprotocol;
+         const void *data_cb;
++        int64_t max_msgsize;    /* Max size of a (decompressed) WS message */
+     } ws;
+ };
+ 
+diff --git a/imap/imapd.c b/imap/imapd.c
+index f55ba96ab..881428d60 100644
+--- a/imap/imapd.c
++++ b/imap/imapd.c
+@@ -203,6 +203,7 @@ static int imapd_notify_enabled = 0;
+ static int imapd_login_disabled = 0;
+ static int imapd_compress_allowed = 0;
+ static int imapd_utf8_allowed = 0;
++static int imapd_urlauth_allowed = 0;
+ static int imapd_starttls_allowed = 0;
+ static int imapd_starttls_done = 0; /* have we done a successful starttls? */
+ static int imapd_tls_required = 0; /* is tls required? */
+@@ -479,8 +480,10 @@ static struct capa_struct base_capabilities[] = {
+     { "UNSELECT",              CAPA_POSTAUTH,           { 0 } }, /* RFC 3691 */
+     { "URL-PARTIAL",           CAPA_POSTAUTH,           { 0 } }, /* RFC 5550 */
+ #ifdef HAVE_SSL
+-    { "URLAUTH",               CAPA_POSTAUTH,           { 0 } }, /* RFC 4467 */
+-    { "URLAUTH=BINARY",        CAPA_POSTAUTH,           { 0 } }, /* RFC 5524 */
++    { "URLAUTH",               CAPA_POSTAUTH|CAPA_STATE,         /* RFC 4467 */
++      { .statep = &imapd_urlauth_allowed }                    },
++    { "URLAUTH=BINARY",        CAPA_POSTAUTH|CAPA_STATE,         /* RFC 5524 */
++      { .statep = &imapd_urlauth_allowed }                    },
+ #endif
+     { "UTF8=ACCEPT",           CAPA_POSTAUTH|CAPA_STATE,         /* RFC 6855 */
+       { .statep = &imapd_utf8_allowed }                       },
+@@ -703,7 +706,7 @@ static int imapd_canon_user(sasl_conn_t *conn, void *context,
+         /* If we're only doing the authzid, put back the magic plus
+            in case its used in the challenge/response calculation */
+         n = strlen(imapd_magicplus);
+-        if (*out_ulen + n > out_max) {
++        if (*out_ulen + n >= out_max) {
+             sasl_seterror(conn, 0, "buffer overflow while canonicalizing");
+             r = SASL_BUFOVER;
+         }
+@@ -1041,6 +1044,7 @@ static void imapd_reset(void)
+     imapd_tls_comp = NULL;
+     imapd_starttls_done = 0;
+     imapd_starttls_allowed = tls_starttls_enabled();
++    imapd_urlauth_allowed = config_getswitch(IMAPOPT_ALLOWURLAUTH);
+ #ifdef HAVE_ZLIB
+     imapd_compress_allowed = 1;
+ #endif
+@@ -1072,6 +1076,7 @@ int service_init(int argc, char **argv, char **envp)
+     global_sasl_init(1, 1, mysasl_cb);
+ 
+     imapd_starttls_allowed = tls_starttls_enabled();
++    imapd_urlauth_allowed = config_getswitch(IMAPOPT_ALLOWURLAUTH);
+ #ifdef HAVE_ZLIB
+     imapd_compress_allowed = 1;
+ #endif
+@@ -1942,6 +1947,7 @@ static void cmdloop(void)
+ #ifdef HAVE_SSL
+             else if (!strcmp(cmd.s, "Genurlauth")) {
+                 if (c != ' ') goto missingargs;
++                if (!imapd_urlauth_allowed) goto disabled;
+ 
+                 cmd_genurlauth(tag.s);
+                 prometheus_increment(CYRUS_IMAP_GENURLAUTH_TOTAL);
+@@ -2282,6 +2288,7 @@ static void cmdloop(void)
+                 }
+ 
+                 if (!IS_EOL(c, imapd_in)) goto extraargs;
++                if (!imapd_urlauth_allowed) goto disabled;
+                 cmd_resetkey(tag.s, have_mbox ? arg1.s : 0,
+                              have_mech ? arg2.s : 0);
+                 /* XXX prometheus_increment(CYRUS_IMAP_RESETKEY_TOTAL); */
+@@ -2637,6 +2644,7 @@ static void cmdloop(void)
+ #ifdef HAVE_SSL
+             else if (!strcmp(cmd.s, "Urlfetch")) {
+                 if (c != ' ') goto missingargs;
++                if (!imapd_urlauth_allowed) goto disabled;
+ 
+                 cmd_urlfetch(tag.s);
+                 /* XXX prometheus_increment(CYRUS_IMAP_URLFETCH_TOTAL); */
+@@ -2911,6 +2919,12 @@ static void cmdloop(void)
+                     tag.s, cmd.s);
+         eatline(imapd_in, c);
+         continue;
++
++    disabled:
++        prot_printf(imapd_out, "%s NO %s\r\n", tag.s,
++                    error_message(IMAP_DISABLED));
++        eatline(imapd_in, c);
++        continue;
+     }
+ 
+ done:
+@@ -3327,13 +3341,15 @@ static void cmd_authenticate(char *tag, char *authtype, char *resp)
+         return;
+     }
+ 
+-    prot_setsasl(imapd_in,  imapd_saslconn);
+-    prot_setsasl(imapd_out, imapd_saslconn);
+-
+     snprintf(replybuf, sizeof(replybuf),
+              "Success (%s) SESSIONID=<%s>", ssfmsg, session_id());
+ 
+     authentication_success(tag, saslprops.ssf, replybuf);
++
++    /* Per RFC 9051, Section 6.2.2: a SASL security layer
++       takes effect after the CRLF of the tagged OK response. */
++    prot_setsasl(imapd_in,  imapd_saslconn);
++    prot_setsasl(imapd_out, imapd_saslconn);
+ }
+ 
+ /*
+@@ -3807,8 +3823,11 @@ static void capa_response(int flags)
+             do {
+                 prot_putc(' ', imapd_out);
+                 prot_puts(imapd_out, capa);
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++                /* format string and args chosen carefully */
+                 prot_printf(imapd_out, valfmt, s, i64);
+-
++#pragma GCC diagnostic pop
+             } while ((mask & CAPA_MULTI) && (++n < num) && (s = *(++strp)));
+         }
+     }
+@@ -3930,6 +3949,7 @@ static int catenate_text(const char *tag, FILE *f, size_t maxsize,
+     int c;
+     static struct buf arg;
+     unsigned size = 0;
++    unsigned literal_size;
+     char buf[4096+1];
+     unsigned n;
+     int r;
+@@ -3941,6 +3961,8 @@ static int catenate_text(const char *tag, FILE *f, size_t maxsize,
+                        &size, binary, parseerr);
+     if (r) return r;
+ 
++    literal_size = size;
++
+     /* Catenate message part to stage */
+     while (size) {
+         n = prot_read(imapd_in, buf, size > 4096 ? 4096 : size);
+@@ -3962,7 +3984,7 @@ static int catenate_text(const char *tag, FILE *f, size_t maxsize,
+         if (f) fwrite(buf, n, 1, f);
+     }
+ 
+-    *totalsize += size;
++    *totalsize += literal_size;
+ 
+     return r;
+ }
+@@ -4679,12 +4701,22 @@ static void warn_about_quota(const char *quotaroot)
+             pc_usage = (int)(((double) q.useds[res] * 100.0) /
+                              (double) ((quota_t) q.limits[res] * quota_units[res]));
+ 
+-            if (q.useds[res] > (quota_t) q.limits[res] * quota_units[res])
++            if (q.useds[res] > (quota_t) q.limits[res] * quota_units[res]) {
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++                /* format string from imap_err.et */
+                 buf_printf(&msg, error_message(IMAP_NO_OVERQUOTA),
+                            quota_names[res]);
+-            else if (pc_usage > pc_threshold)
++#pragma GCC diagnostic pop
++            }
++            else if (pc_usage > pc_threshold) {
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++                /* format string from imap_err.et */
+                 buf_printf(&msg, error_message(IMAP_NO_CLOSEQUOTA),
+                            pc_usage, quota_names[res]);
++#pragma GCC diagnostic pop
++            }
+         }
+ 
+         if (msg.len)
+@@ -6616,6 +6648,13 @@ static void cmd_thread(char *tag, int usinguid)
+     if (searchargs->state & GETSEARCH_MODSEQ)
+         condstore_enabled("THREAD MODSEQ");
+ 
++    if (n < 0) {
++        prot_printf(imapd_out,
++                    "%s NO Too many messages and/or references to Thread\r\n",
++                    tag);
++        goto done;
++    }
++
+     snprintf(mytime, sizeof(mytime), "%2.3f",
+              (clock() - start) / (double) CLOCKS_PER_SEC);
+     prot_printf(imapd_out, "%s OK %s (%d msgs in %s secs)\r\n", tag,
+@@ -10591,6 +10630,14 @@ static int apply_mailbox_array(annotate_state_t *state,
+         if (r)
+             break;
+ 
++        if (!imapd_userisadmin
++            && (!mbentry->acl
++                || !(cyrus_acl_myrights(imapd_authstate, mbentry->acl)
++                     & ACL_LOOKUP))) {
++            r = IMAP_MAILBOX_NONEXISTENT;
++            break;
++        }
++
+         mbentry->ext_name = xstrdup(extname);
+ 
+         r = annotate_state_set_mailbox_mbe(state, mbentry);
+@@ -10821,11 +10868,11 @@ static int _metadata_to_annotate(const strarray_t *entries,
+         }
+         strarray_append(newe, entry);
+         if (depth == 1) {
+-            strncat(entry, "/%", MAX_MAILBOX_NAME);
++            strncat(entry, "/%", sizeof(entry) - strlen(entry) - 1);
+             strarray_append(newe, entry);
+         }
+         else if (depth == -1) {
+-            strncat(entry, "/*", MAX_MAILBOX_NAME);
++            strncat(entry, "/*", sizeof(entry) - strlen(entry) - 1);
+             strarray_append(newe, entry);
+         }
+     }
+@@ -13129,6 +13176,8 @@ static void printmetadata(const mbentry_t *mbentry,
+ 
+ done:
+     annotate_state_abort(&astate);
++    strarray_fini(&newa);
++    strarray_fini(&newe);
+ }
+ 
+ /* Print LIST or LSUB untagged response */
+@@ -13201,6 +13250,18 @@ static void list_response(const char *extname, const mbentry_t *mbentry,
+         if (!keep) return;
+     }
+ 
++    /* can we read the status data ? */
++    else if ((listargs->ret & LIST_RET_STATUS) && mbentry) {
++        int myrights = cyrus_acl_myrights(imapd_authstate, mbentry->acl);
++        r = !(myrights & ACL_READ) ? IMAP_PERMISSION_DENIED :
++            imapd_statusdata(mbentry, listargs->statusitems, &sdata);
++        if (r) {
++            /* RFC 5819: the STATUS response MUST NOT be returned and the
++             * LIST response MUST include the \NoSelect attribute. */
++            attributes |= MBOX_ATTRIBUTE_NOSELECT;
++        }
++    }
++
+     if (listargs->cmd == LIST_CMD_LSUB) {
+         /* \Noselect has a special second meaning with (R)LSUB */
+         if ( !(attributes & MBOX_ATTRIBUTE_SUBSCRIBED)
+@@ -13245,16 +13306,6 @@ static void list_response(const char *extname, const mbentry_t *mbentry,
+         if (!buf_len(&specialuse)) return;
+     }
+ 
+-    /* can we read the status data ? */
+-    if ((listargs->ret & LIST_RET_STATUS) && mbentry) {
+-        r = imapd_statusdata(mbentry, listargs->statusitems, &sdata);
+-        if (r) {
+-            /* RFC 5819: the STATUS response MUST NOT be returned and the
+-             * LIST response MUST include the \NoSelect attribute. */
+-            attributes |= MBOX_ATTRIBUTE_NOSELECT;
+-        }
+-    }
+-
+     /* Do we need to add the OLDNAME extended data item? */
+     char *oldname = NULL;
+     if (listargs->denormalized) {
+@@ -13279,19 +13330,19 @@ static void list_response(const char *extname, const mbentry_t *mbentry,
+     buf_free(&specialuse);
+     free(oldname);
+ 
+-    if ((listargs->ret & LIST_RET_STATUS) &&
+-        !(attributes & MBOX_ATTRIBUTE_NOSELECT)) {
++    if (attributes & (MBOX_ATTRIBUTE_NONEXISTENT | MBOX_ATTRIBUTE_NOSELECT))
++        return;
++
++    if (listargs->ret & LIST_RET_STATUS) {
+         /* output the status line now, per RFC 5819 */
+         if (mbentry) print_statusline(extname, listargs->statusitems, &sdata);
+     }
+ 
+-    if ((listargs->ret & LIST_RET_MYRIGHTS) &&
+-        !(attributes & MBOX_ATTRIBUTE_NOSELECT)) {
++    if (listargs->ret & LIST_RET_MYRIGHTS) {
+         if (mbentry) printmyrights(extname, mbentry);
+     }
+ 
+-    if ((listargs->ret & LIST_RET_METADATA) &&
+-        !(attributes & MBOX_ATTRIBUTE_NOSELECT)) {
++    if (listargs->ret & LIST_RET_METADATA) {
+         if (mbentry)
+             printmetadata(mbentry, &listargs->metaitems, &listargs->metaopts);
+     }
+@@ -13557,12 +13608,22 @@ static int subscribed_cb(struct findall_data *data, void *rockp)
+ 
+     if (data->is_exactmatch) {
+         mbentry_t *mbentry = NULL;
++        bool exists = false;
++        int myrights = 0;
++
+         mboxlist_lookup(mbname_intname(data->mbname), &mbentry, NULL);
++        if (mbentry) {
++            exists = true;
++            myrights = cyrus_acl_myrights(imapd_authstate, mbentry->acl);
++            if (imapd_userisadmin) myrights |= ACL_LOOKUP;
++        }
+         perform_output(extname, mbentry, rock);
+         mboxlist_entry_free(&mbentry);
+ 
+         rock->last_attributes |= MBOX_ATTRIBUTE_SUBSCRIBED;
+-        if (mboxlist_lookup(mbname_intname(data->mbname), NULL, NULL))
++        if (!exists ||
++            /* LSUB still needs to surface unLISTable mailboxes */
++            (!(myrights & ACL_LOOKUP) && rock->listargs->cmd != LIST_CMD_LSUB))
+             rock->last_attributes |= MBOX_ATTRIBUTE_NONEXISTENT;
+         if (is_noinferiors(data, rock))
+             rock->last_attributes |= MBOX_ATTRIBUTE_NOINFERIORS;
+diff --git a/imap/index.c b/imap/index.c
+index 12f0249c7..0c032ebd5 100644
+--- a/imap/index.c
++++ b/imap/index.c
+@@ -172,16 +172,16 @@ static void *index_thread_getnext(Thread *thread);
+ static void index_thread_setnext(Thread *thread, Thread *next);
+ static int index_thread_compare(Thread *t1, Thread *t2,
+                                 const struct sortcrit *call_data);
+-static void index_thread_orderedsubj(struct index_state *state,
++static bool index_thread_orderedsubj(struct index_state *state,
+                                      unsigned *msgno_list, unsigned int nmsg,
+                                      int usinguid);
+ static void index_thread_sort(Thread *root, const struct sortcrit *sortcrit);
+ static void index_thread_print(struct index_state *state,
+                                Thread *threads, int usinguid);
+-static void index_thread_references(struct index_state *state,
++static bool index_thread_references(struct index_state *state,
+                                     unsigned *msgno_list, unsigned int nmsg,
+                                     int usinguid);
+-static void index_thread_refs(struct index_state *state,
++static bool index_thread_refs(struct index_state *state,
+                               unsigned *msgno_list, unsigned int nmsg,
+                               int usinguid);
+ 
+@@ -3077,10 +3077,16 @@ EXPORTED int index_thread(struct index_state *state, int algorithm,
+ 
+     if (nmsg) {
+         /* Thread messages using given algorithm */
+-        (*thread_algs[algorithm].threader)(state, msgno_list, nmsg, usinguid);
++        bool ok = (*thread_algs[algorithm].threader)(state, msgno_list,
++                                                     nmsg, usinguid);
+ 
+         free(msgno_list);
+ 
++        if (!ok) {
++            nmsg = -1;
++            goto out;
++        }
++
+         if (highestmodseq)
+             prot_printf(state->out, " (MODSEQ " MODSEQ_FMT ")", highestmodseq);
+     }
+@@ -4411,7 +4417,11 @@ static int index_fetchreply(struct index_state *state, uint32_t msgno,
+     r = index_reload_record(state, msgno, &record);
+     if (r) {
+         prot_printf(state->out, "* OK ");
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++        /* format string comes from imap_err.et */
+         prot_printf(state->out, error_message(IMAP_NO_MSGGONE), msgno);
++#pragma GCC diagnostic pop
+         prot_printf(state->out, "\r\n");
+         return 0;
+     }
+@@ -4430,7 +4440,11 @@ static int index_fetchreply(struct index_state *state, uint32_t msgno,
+         fetchargs->bodysections) {
+         if (mailbox_map_record(mailbox, &record, &buf)) {
+             prot_printf(state->out, "* OK ");
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++            /* format string comes from imap_err.et */
+             prot_printf(state->out, error_message(IMAP_NO_MSGGONE), msgno);
++#pragma GCC diagnostic pop
+             prot_printf(state->out, "\r\n");
+             return 0;
+         }
+@@ -6703,6 +6717,7 @@ static char *_index_extract_subject(char *s, int *is_refwd)
+ }
+ 
+ /* Get message-id, and references/in-reply-to */
++#define REFERENCES_ID_LIMIT 20
+ 
+ void index_get_ids(MsgData *msgdata, char *envtokens[], const char *headers,
+                    unsigned size)
+@@ -6736,8 +6751,18 @@ void index_get_ids(MsgData *msgdata, char *envtokens[], const char *headers,
+         /* find references */
+         refstr = buf.s;
+         massage_header(refstr);
+-        while ((ref = message_iter_msgid(refstr, 0, &refstr)) != NULL)
++        while ((ref = message_iter_msgid(refstr, 0, &refstr)) != NULL) {
++            /* We only load 20 references.
++             * If the number of references exceeds that limit, we load:
++             *   - the root id (first message),
++             *   - the parent id (last message),
++             *   - the ids of the 18 most-recent predecessors of the parent
++             */
++            if (strarray_size(&msgdata->ref) == REFERENCES_ID_LIMIT) {
++                free(strarray_remove(&msgdata->ref, 1));
++            }
+             strarray_appendm(&msgdata->ref, ref);
++        }
+     }
+ 
+     /* if we have no references, try in-reply-to */
+@@ -7170,7 +7195,7 @@ static void index_thread_sort(Thread *root,
+ /*
+  * Thread a list of messages using the ORDEREDSUBJECT algorithm.
+  */
+-static void index_thread_orderedsubj(struct index_state *state,
++static bool index_thread_orderedsubj(struct index_state *state,
+                                      unsigned *msgno_list, unsigned int nmsg,
+                                      int usinguid)
+ {
+@@ -7248,6 +7273,8 @@ static void index_thread_orderedsubj(struct index_state *state,
+ 
+     /* free the msgdata array */
+     index_msgdata_free(msgdata, nmsg);
++
++    return true;
+ }
+ 
+ /*
+@@ -7829,26 +7856,20 @@ static void index_thread_search(struct index_state *state,
+  * Guts of the REFERENCES algorithms.  Behavior is tweaked with loadcrit[],
+  * threadproc(), searchproc() and sortcrit[].
+  */
+-static void _index_thread_ref(struct index_state *state, unsigned *msgno_list,
++static bool _index_thread_ref(struct index_state *state, unsigned *msgno_list,
+                               unsigned int nmsg,
+                               const struct sortcrit loadcrit[],
+                               MsgData **(*threadproc) (struct rootset *, Thread **),
+                               int (*searchproc) (MsgData *),
+                               const struct sortcrit sortcrit[], int usinguid)
+ {
+-    MsgData **msgdata, **thrdata = NULL;
++    MsgData **msgdata = NULL, **thrdata = NULL;
+     unsigned int mi;
+-    int tref, nnode;
++    uint64_t tref, nnode, ref_limit;
+     Thread *newnode;
+     struct hash_table id_table;
+-    struct rootset rootset;
+-
+-    /* Create/load the msgdata array */
+-    msgdata = index_msgdata_load(state, msgno_list, nmsg, loadcrit, 0, NULL);
+-
+-    /* calculate the sum of the number of references for all messages */
+-    for (mi = 0, tref = 0 ; mi < nmsg ; mi++)
+-        tref += msgdata[mi]->ref.count;
++    struct rootset rootset = { 0 };
++    bool ret = true;
+ 
+     /* create an array of Thread to use as nodes of thread tree (including
+      * empty containers)
+@@ -7867,7 +7888,25 @@ static void _index_thread_ref(struct index_state *state, unsigned *msgno_list,
+      * and our parent/child/next pointers will no longer be correct
+      * (been there, done that).
+      */
+-    nnode = (int) (1.5 * nmsg + 1 + tref);
++    /* nmsg is 32 bits wide, so this can't overflow, but the arithmetic must
++     * be done in 64 bits or the sum itself will wrap. -- claude, 2026-08-16 */
++    nnode = (uint64_t) nmsg + nmsg / 2 + 1;
++    ref_limit = UINT64_MAX - nnode;
++
++    /* Create/load the msgdata array */
++    msgdata = index_msgdata_load(state, msgno_list, nmsg, loadcrit, 0, NULL);
++
++    /* calculate the sum of the number of references for all messages */
++    for (mi = 0, tref = 0; mi < nmsg ; mi++) {
++        if ((uint64_t) msgdata[mi]->ref.count > ref_limit - tref) {
++            ret = false;
++            goto done;
++        }
++
++        tref += msgdata[mi]->ref.count;
++    }
++
++    nnode += tref;
+     rootset.root = (Thread *) xmalloc(nnode * sizeof(Thread));
+     memset(rootset.root, 0, nnode * sizeof(Thread));
+ 
+@@ -7906,10 +7945,13 @@ static void _index_thread_ref(struct index_state *state, unsigned *msgno_list,
+ 
+     /* free the thread array */
+     free(rootset.root);
++    index_msgdata_free(thrdata, rootset.nroot);
+ 
++ done:
+     /* free the msgdata array */
+     index_msgdata_free(msgdata, nmsg);
+-    index_msgdata_free(thrdata, rootset.nroot);
++
++    return ret;
+ }
+ 
+ /*
+@@ -7927,7 +7969,7 @@ static MsgData **references_thread_proc(struct rootset *rootset,
+     return NULL;
+ }
+ 
+-static void index_thread_references(struct index_state *state,
++static bool index_thread_references(struct index_state *state,
+                                     unsigned *msgno_list, unsigned int nmsg,
+                                     int usinguid)
+ {
+@@ -7940,8 +7982,8 @@ static void index_thread_references(struct index_state *state,
+                                  {{ SORT_DATE,     0, {{NULL,NULL}} },
+                                   { SORT_SEQUENCE, 0, {{NULL,NULL}} }};
+ 
+-    _index_thread_ref(state, msgno_list, nmsg, loadcrit,
+-                      references_thread_proc, NULL, sortcrit, usinguid);
++    return _index_thread_ref(state, msgno_list, nmsg, loadcrit,
++                             references_thread_proc, NULL, sortcrit, usinguid);
+ }
+ 
+ /* Find most recent internaldate of all messages in thread */
+@@ -8000,7 +8042,7 @@ static MsgData **refs_thread_proc(struct rootset *rootset,
+ /*
+  * Thread a list of messages using the REFS algorithm.
+  */
+-static void index_thread_refs(struct index_state *state,
++static bool index_thread_refs(struct index_state *state,
+                               unsigned *msgno_list, unsigned int nmsg,
+                               int usinguid)
+ {
+@@ -8014,8 +8056,8 @@ static void index_thread_refs(struct index_state *state,
+                                   { SORT_ARRIVAL,  0, {{NULL,NULL}} },
+                                   { SORT_SEQUENCE, 0, {{NULL,NULL}} }};
+ 
+-    _index_thread_ref(state, msgno_list, nmsg, loadcrit,
+-                      refs_thread_proc, NULL, sortcrit, usinguid);
++    return _index_thread_ref(state, msgno_list, nmsg, loadcrit,
++                             refs_thread_proc, NULL, sortcrit, usinguid);
+ }
+ 
+ /*
+diff --git a/imap/index.h b/imap/index.h
+index dc9283ead..4489dafc9 100644
+--- a/imap/index.h
++++ b/imap/index.h
+@@ -48,6 +48,7 @@
+ 
+ #include <config.h>
+ 
++#include <stdbool.h>
+ #include <stdio.h>
+ #include <string.h>
+ #include <sys/types.h>
+@@ -212,7 +213,7 @@ struct rootset {
+ 
+ struct thread_algorithm {
+     const char *alg_name;
+-    void (*threader)(struct index_state *state, unsigned *msgno_list,
++    bool (*threader)(struct index_state *state, unsigned *msgno_list,
+                      unsigned int nmsg, int usinguid);
+ };
+ 
+diff --git a/imap/itip_support.c b/imap/itip_support.c
+index 0a7899c05..da98bce88 100644
+--- a/imap/itip_support.c
++++ b/imap/itip_support.c
+@@ -670,7 +670,7 @@ static int deliver_merge_request(const char *attendee,
+         tzid = icalproperty_get_tzid(prop);
+         if (!tzid) continue;
+ 
+-        tz = hash_lookup(tzid, tz_table);
++        tz = hash_del(tzid, tz_table);
+         if (tz) {
+             /* Remove tz from current object */
+             icalcomponent_remove_component(ical, tz);
+@@ -1076,6 +1076,22 @@ HIDDEN void itip_strip_personal_data(icalcomponent *comp)
+     }
+ }
+ 
++HIDDEN void itip_strip_managedid(icalcomponent *comp)
++{
++    icalproperty *prop;
++
++    /* A MANAGED-ID identifies an attachment only within the scope of the
++     * server that issued it (RFC 8607, Section 4.3), so one arriving from
++     * elsewhere names nothing here and must not be taken as a reference to
++     * a local managed attachment.
++     */
++    for (prop = icalcomponent_get_first_property(comp, ICAL_ATTACH_PROPERTY);
++         prop;
++         prop = icalcomponent_get_next_property(comp, ICAL_ATTACH_PROPERTY)) {
++        icalproperty_remove_parameter_by_kind(prop, ICAL_MANAGEDID_PARAMETER);
++    }
++}
++
+ 
+ /* Deliver scheduling object to local recipient */
+ HIDDEN enum sched_deliver_outcome sched_deliver_local(const char *userid,
+@@ -1106,6 +1122,7 @@ HIDDEN enum sched_deliver_outcome sched_deliver_local(const char *userid,
+     icalproperty *prop;
+     enum sched_deliver_outcome result = SCHED_DELIVER_ERROR;
+     strarray_t recipient_addresses = STRARRAY_INITIALIZER;
++    char *sender_address = NULL, *sender_name = NULL;
+ 
+     /* Start with an empty (clean) transaction */
+     struct transaction_t txn = { .userid = userid };
+@@ -1128,18 +1145,13 @@ HIDDEN enum sched_deliver_outcome sched_deliver_local(const char *userid,
+     txn.req_hdrs = spool_new_hdrcache();
+     if (!txn.req_hdrs) goto done;
+ 
+-    /* Set scheduling headers for JMAP CalendarEventNotification */
+-    char *sched_sender_address = NULL;
++    /* Who any JMAP CalendarEventNotification is attributed to */
+     if (mailfrom && mailfrom->mailbox)
+-        sched_sender_address = address_get_all(mailfrom, 0);
+-    if (!sched_sender_address)
+-        sched_sender_address = xstrdupnull(sender);
+-    if (sched_sender_address)
+-        spool_append_header(xstrdup("Schedule-Sender-Address"),
+-                sched_sender_address, txn.req_hdrs);
++        sender_address = address_get_all(mailfrom, 0);
++    if (!sender_address)
++        sender_address = xstrdupnull(sender);
+     if (mailfrom && mailfrom->name)
+-        spool_append_header(xstrdup("Schedule-Sender-Name"),
+-                xstrdup(mailfrom->name), txn.req_hdrs);
++        sender_name = xstrdup(mailfrom->name);
+ 
+     /* Check ACL of sender on recipient's Scheduling Inbox */
+     mailboxname = caldav_mboxname(sparam->userid, SCHED_INBOX);
+@@ -1183,9 +1195,10 @@ HIDDEN enum sched_deliver_outcome sched_deliver_local(const char *userid,
+     comp = icalcomponent_get_first_real_component(itip);
+     kind = icalcomponent_isa(comp);
+ 
+-    /* Strip VALARMs, TRANSP, COLOR, and CATEGORIES (if color) */
++    /* Strip VALARMs, TRANSP, COLOR, CATEGORIES (if color), and MANAGED-ID */
+     for (; comp; comp = icalcomponent_get_next_component(itip, kind)) {
+         itip_strip_personal_data(comp);
++        itip_strip_managedid(comp);
+     }
+ 
+     /* Search for iCal UID in recipient's calendars */
+@@ -1338,17 +1351,29 @@ HIDDEN enum sched_deliver_outcome sched_deliver_local(const char *userid,
+                 break;
+             }
+ 
+-            /* Don't allow ORGANIZER to be changed */
+-            if (!reject && cdata->organizer) {
+-                prop =
+-                    icalcomponent_get_first_property(comp,
+-                                                     ICAL_ORGANIZER_PROPERTY);
+-                if (prop) {
+-                    const char *organizer = icalproperty_get_decoded_calendaraddress(prop);
+-                    if (organizer) {
+-                        if (strcasecmp(cdata->organizer, organizer)) reject = 1;
++            if (!reject) {
++                if (cdata->organizer) {
++                    /* Don't allow ORGANIZER to be changed */
++                    prop =
++                        icalcomponent_get_first_property(comp,
++                                                         ICAL_ORGANIZER_PROPERTY);
++                    if (prop) {
++                        const char *organizer =
++                            icalproperty_get_decoded_calendaraddress(prop);
++                        if (organizer) {
++                            if (strcasecmp(cdata->organizer, organizer))
++                                reject = 1;
++                        }
+                     }
+                 }
++                else if (method != ICAL_METHOD_PUBLISH ||
++                         icalcomponent_get_first_property(
++                             comp, ICAL_ORGANIZER_PROPERTY)) {
++                    /* With no stored ORGANIZER, no sender can prove the
++                       right to schedule this event; only public data may
++                       update it */
++                    reject = 1;
++                }
+             }
+ 
+             if (reject) {
+@@ -1400,9 +1425,10 @@ HIDDEN enum sched_deliver_outcome sched_deliver_local(const char *userid,
+                 if (!r) {
+                     comp = icalcomponent_get_first_real_component(ical);
+                     if (comp && icalcomponent_isa(comp) == ICAL_VEVENT_COMPONENT) {
+-                        int r2 = jmap_create_caldaveventnotif(&txn, userid, authstate,
++                        int r2 = jmap_create_caldaveventnotif(userid, authstate,
+                                 mailbox_name(mailbox), uid,
+-                                &recipient_addresses, 0, oldical, NULL);
++                                &recipient_addresses, 0, oldical, NULL,
++                                sender_address, sender_name);
+                         if (r2) {
+                             xsyslog(LOG_ERR, "jmap_create_caldaveventnotif failed",
+                                     "error=%s", error_message(r2));
+@@ -1511,9 +1537,10 @@ HIDDEN enum sched_deliver_outcome sched_deliver_local(const char *userid,
+     if (r == HTTP_CREATED || r == HTTP_NO_CONTENT) {
+         comp = icalcomponent_get_first_real_component(ical);
+         if (comp && icalcomponent_isa(comp) == ICAL_VEVENT_COMPONENT) {
+-            int r2 = jmap_create_caldaveventnotif(&txn, userid, authstate,
++            int r2 = jmap_create_caldaveventnotif(userid, authstate,
+                     mailbox_name(mailbox), uid,
+-                    &recipient_addresses, 0, oldical, ical);
++                    &recipient_addresses, 0, oldical, ical,
++                    sender_address, sender_name);
+             if (r2) {
+                 xsyslog(LOG_ERR, "jmap_create_caldaveventnotif failed",
+                         "error=%s", error_message(r2));
+@@ -1557,6 +1584,8 @@ HIDDEN enum sched_deliver_outcome sched_deliver_local(const char *userid,
+     mailbox_close(&mailbox);
+     if (caldavdb) caldav_close(caldavdb);
+     spool_free_hdrcache(txn.req_hdrs);
++    free(sender_address);
++    free(sender_name);
+     buf_free(&txn.buf);
+     free(mailboxname);
+     mbname_free(&mbname);
+diff --git a/imap/itip_support.h b/imap/itip_support.h
+index 3cc359d40..c5056e888 100644
+--- a/imap/itip_support.h
++++ b/imap/itip_support.h
+@@ -170,6 +170,8 @@ extern icalcomponent *master_to_recurrence(icalcomponent *master,
+ 
+ extern void itip_strip_personal_data(icalcomponent *comp);
+ 
++extern void itip_strip_managedid(icalcomponent *comp);
++
+ extern enum sched_deliver_outcome sched_deliver_local(const char *userid,
+                                                       const char *sender,
+                                                       const char *recipient,
+diff --git a/imap/jmap_api.c b/imap/jmap_api.c
+index bff65bd15..67bbaeaba 100644
+--- a/imap/jmap_api.c
++++ b/imap/jmap_api.c
+@@ -720,9 +720,12 @@ HIDDEN int jmap_api(struct transaction_t *txn,
+         const char *accountid = httpd_userid;
+         json_t *err = NULL;
+         json_t *arg = json_object_get(args, "accountId");
+-        if (arg && arg != json_null()) {
++        if (arg && json_is_cyrus_accountid(arg)) {
+             accountid = json_string_value(arg);
+         }
++        else if (JNOTNULL(arg)) {
++            accountid = NULL;
++        }
+         if (!accountid) {
+             err = json_pack("{s:s, s:[s]}",
+                     "type", "invalidArguments", "arguments", "accountId");
+@@ -750,6 +753,15 @@ HIDDEN int jmap_api(struct transaction_t *txn,
+             continue;
+         }
+ 
++        arg = json_object_get(args, "fromAccountId");
++        if (arg && arg != json_null() && !json_is_cyrus_accountid(arg)) {
++            err = json_pack("{s:s, s:[s]}", "type", "invalidArguments",
++                            "arguments", "fromAccountId");
++            json_array_append_new(resp, json_pack("[s,o,s]", "error", err, tag));
++            json_decref(args);
++            continue;
++        }
++
+         /* Pre-process result references */
+         if (process_resultrefs(args, resp, &err)) {
+             if (!err) err = json_pack("{s:s}", "type", "invalidResultReference");
+@@ -2013,7 +2025,7 @@ HIDDEN void jmap_copy_parse(jmap_req_t *req, struct jmap_parser *parser,
+     json_object_foreach(jargs, key, arg) {
+         /* fromAccountId */
+         if (!strcmp(key, "fromAccountId")) {
+-            if (json_is_string(arg)) {
++            if (json_is_cyrus_accountid(arg)) {
+                 copy->from_account_id = json_string_value(arg);
+             }
+             else if (JNOTNULL(arg)) {
+diff --git a/imap/jmap_backup.c b/imap/jmap_backup.c
+index 7b44f1b27..744a156ce 100644
+--- a/imap/jmap_backup.c
++++ b/imap/jmap_backup.c
+@@ -518,6 +518,22 @@ static int restore_collection_cb(const mbentry_t *mbentry, void *rock)
+     return r;
+ }
+ 
++/* Like mailbox_extract_annots(), but shared annotations only. */
++static int extract_shared_annots_cb(const char *mailbox __attribute__((unused)),
++                                    uint32_t uid __attribute__((unused)),
++                                    const char *entry, const char *userid,
++                                    const struct buf *value,
++                                    const struct annotate_metadata *mdata
++                                        __attribute__((unused)),
++                                    void *rock)
++{
++    if (!userid[0]) {
++        setentryatt((struct entryattlist **) rock, entry, "value.shared", value);
++    }
++
++    return 0;
++}
++
+ static int recreate_resource(message_t *msg, struct mailbox *tomailbox,
+                              jmap_req_t *req, int is_update, int log_level)
+ {
+@@ -551,7 +567,10 @@ static int recreate_resource(message_t *msg, struct mailbox *tomailbox,
+     if (!r) {
+         /* get existing flags and annotations */
+         strarray_t *flags = mailbox_extract_flags(mailbox, record, req->accountid);
+-        struct entryattlist *annots = mailbox_extract_annots(mailbox, record);
++        struct entryattlist *annots = NULL;
++        annotatemore_findall_mailbox(mailbox, record->uid, "*", /*modseq*/0,
++                                     extract_shared_annots_cb, &annots,
++                                     /*flags*/0);
+         struct body *body = NULL;
+ 
+         /* mark as undeleted */
+@@ -571,6 +590,13 @@ static int recreate_resource(message_t *msg, struct mailbox *tomailbox,
+         message_free_body(body);
+         free(body);
+ 
++        if (!r) {
++            /* private annotations, under their own userids */
++            r = mailbox_get_annotate_state(tomailbox, as.baseuid, NULL);
++            if (!r) r = annotate_msg_copy(mailbox, record->uid,
++                                          tomailbox, as.baseuid, NULL);
++        }
++
+         if (r) append_abort(&as);
+         else {
+             /* If this resource was previously destroyed
+diff --git a/imap/jmap_blob.c b/imap/jmap_blob.c
+index e4812e9dc..f1a9b71a8 100644
+--- a/imap/jmap_blob.c
++++ b/imap/jmap_blob.c
+@@ -1072,12 +1072,21 @@ static int _upload_arg_to_buf(struct jmap_req *req, struct buf *buf, json_t *arg
+             *errp = json_string("too many catenate items");
+             return IMAP_QUOTA_EXCEEDED;
+         }
++        int64_t maxsize =
++            config_getbytesize(IMAPOPT_JMAP_MAX_SIZE_BLOB_SET, 'K');
+         size_t i;
+         json_t *val;
+         json_array_foreach(arg, i, val) {
+             struct buf subbuf = BUF_INITIALIZER;
+             // NOTE: we'll have to remove catenate later
+             int r = _set_arg_to_buf(req, &subbuf, val, 1, errp);
++            if (!r && maxsize > 0 &&
++                buf_len(&subbuf) > (size_t) maxsize - buf_len(buf)) {
++                /* Each item may name an existing blob, so cap the running
++                 * total rather than only the data supplied in this call. */
++                buf_free(&subbuf);
++                return IMAP_MESSAGE_TOO_LARGE;
++            }
+             buf_appendmap(buf, buf_base(&subbuf), buf_len(&subbuf));
+             buf_free(&subbuf);
+             if (*errp) return r; // exact code doesn't matter, err will be checked
+@@ -1136,6 +1145,8 @@ static int jmap_blob_upload(struct jmap_req *req)
+                 err = json_string("Multiple properties provided");
+             if (r == IMAP_NOTFOUND)
+                 json_object_set_new(jerr, "type", json_string("blobNotFound"));
++            if (r == IMAP_MESSAGE_TOO_LARGE)
++                json_object_set_new(jerr, "type", json_string("tooLarge"));
+             if (err) json_object_set_new(jerr, "description", err);
+             json_object_set_new(set.not_created, key, jerr);
+             buf_destroy(buf);
+diff --git a/imap/jmap_calendar.c b/imap/jmap_calendar.c
+index 2900321dc..0884e9fc6 100644
+--- a/imap/jmap_calendar.c
++++ b/imap/jmap_calendar.c
+@@ -2354,6 +2354,53 @@ static const char *get_param(struct param *params, const char *attrib)
+     return (p ? p->value : NULL);
+ }
+ 
++/* Does the event hide its attendees? */
++static bool icalcomponent_get_hideattendees(icalcomponent *ical)
++{
++    icalcomponent *comp = icalcomponent_get_first_real_component(ical);
++    icalproperty *prop = comp ?
++        icalcomponent_get_x_property_by_name(comp,
++                JMAPICAL_XPROP_HIDEATTENDEES) : NULL;
++
++    return prop &&
++        !strcasecmpsafe(icalproperty_get_value_as_string(prop), "true");
++}
++
++/* Strip the attendees that CalendarEvent/get would have hidden from userid.
++ * The organizer and userid's own attendees are kept, matching the reduced
++ * participants of the JSON representation.
++ */
++static void icalcomponent_strip_attendees(icalcomponent *ical,
++                                          const char *userid,
++                                          const strarray_t *schedule_addresses)
++{
++    icalcomponent *comp = icalcomponent_get_first_real_component(ical);
++    if (!comp) return;
++
++    icalcomponent_kind kind = icalcomponent_isa(comp);
++
++    for ( ; comp; comp = icalcomponent_get_next_component(ical, kind)) {
++        icalproperty *orgprop =
++            icalcomponent_get_first_property(comp, ICAL_ORGANIZER_PROPERTY);
++        const char *organizer = orgprop ?
++            icalproperty_get_decoded_calendaraddress(orgprop) : NULL;
++
++        icalproperty *prop, *nextprop;
++        for (prop = icalcomponent_get_first_invitee(comp); prop; prop = nextprop) {
++            nextprop = icalcomponent_get_next_invitee(comp);
++
++            const char *addr = icalproperty_get_decoded_calendaraddress(prop);
++            if (!addr) continue;
++            if (organizer && !strcasecmp(addr, organizer)) continue;
++            if (!strcasecmp(addr, userid)) continue;
++            if (strarray_contains_case(schedule_addresses, addr)) continue;
++
++            icalcomponent_remove_property(comp, prop);
++            icalproperty_free(prop);
++        }
++    }
++}
++
+ static int jmap_calendarevent_getblob(jmap_req_t *req, jmap_getblob_context_t *ctx)
+ {
+     struct mailbox *mailbox = NULL;
+@@ -2479,6 +2526,17 @@ static int jmap_calendarevent_getblob(jmap_req_t *req, jmap_getblob_context_t *c
+         goto done;
+     }
+ 
++    if (!subpart && !jmap_hasrights_mbentry(req, mbentry, JACL_WRITEALL) &&
++            icalcomponent_get_hideattendees(ical)) {
++        /* A blobId handed out before hideAttendees was set must not keep
++         * working as a way to read the attendees. */
++        strarray_t schedule_addresses = STRARRAY_INITIALIZER;
++        get_schedule_addresses(mbentry->name, req->accountid,
++                               &schedule_addresses);
++        icalcomponent_strip_attendees(ical, req->userid, &schedule_addresses);
++        strarray_fini(&schedule_addresses);
++    }
++
+     if (subpart) {
+         icalcomponent *comp = icalcomponent_get_first_real_component(ical);
+         icalcomponent_kind kind = icalcomponent_isa(comp);
+@@ -5366,8 +5424,13 @@ static int updateevent_apply_patch(jmap_req_t *req,
+ 
+     updateevent_validate_ids(update->old_event, new_event, invalid);
+ 
+-    updateevent_bump_sequence(update->old_event, new_event,
+-            update->serverset, update->schedule_addresses);
++    /* SEQUENCE is the organizer's revision counter.  A caller who may only
++     * RSVP or invite is not revising the event on the organizer's behalf. */
++    if (jmap_hasrights_mbentry(req, update->mbentry, JACL_WRITEALL) ||
++        jmap_hasrights_mbentry(req, update->mbentry, JACL_WRITEOWN)) {
++        updateevent_bump_sequence(update->old_event, new_event,
++                update->serverset, update->schedule_addresses);
++    }
+ 
+     /* Convert to iCalendar */
+     icalcomponent *newical = jmapical_toical(new_event, myoldical,
+@@ -7648,6 +7711,11 @@ static void _calendarevent_copy(jmap_req_t *req,
+     context_begin_cdata(jmapctx, mbentry, cdata);
+     json_t *src_event = jmapical_tojmap(src_ical, NULL, jmapctx);
+     if (src_event) {
++        if (json_boolean_value(json_object_get(src_event, "hideAttendees")) &&
++                !jmap_hasrights_mbentry(req, mbentry, JACL_WRITEALL)) {
++            getcalendarevents_reduce_participants(src_event, req->userid,
++                    &schedule_addresses);
++        }
+         dst_event = jmap_patchobject_apply(src_event, jevent, NULL, 0);
+     }
+     json_decref(src_event);
+diff --git a/imap/jmap_contact.c b/imap/jmap_contact.c
+index 0d09f1580..4b4762914 100644
+--- a/imap/jmap_contact.c
++++ b/imap/jmap_contact.c
+@@ -1980,7 +1980,7 @@ static int getcontacts_cb(void *rock, struct carddav_data *cdata)
+ 
+         if (uniqueid &&
+             jmap_encode_rawdata_blobid('V', uniqueid, record.uid,
+-                                       NULL, NULL, NULL, NULL, &blobid)) {
++                                       NULL, NULL, "G", &record.guid, &blobid)) {
+             jblobid = json_string(buf_cstring(&blobid));
+         }
+         buf_free(&blobid);
+@@ -4266,7 +4266,12 @@ static int _contact_set_create(jmap_req_t *req, unsigned kind, json_t *jcard,
+         goto done;
+     }
+ 
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++    /* format string chosen above */
+     syslog(LOG_NOTICE, logfmt, req->accountid, mboxname, uid, name);
++#pragma GCC diagnostic pop
++
+     r = carddav_store(*mailbox, card, resourcename, 0, flags, &annots,
+                       req->userid, req->authstate, ignorequota, /*oldsize*/ 0);
+     if (r && r != HTTP_CREATED && r != HTTP_NO_CONTENT) {
+@@ -4282,7 +4287,7 @@ static int _contact_set_create(jmap_req_t *req, unsigned kind, json_t *jcard,
+     mailbox_find_index_record(*mailbox, (*mailbox)->i.last_uid, &record);
+ 
+     jmap_encode_rawdata_blobid('V', mailbox_uniqueid(*mailbox), record.uid,
+-                               NULL, NULL, NULL, NULL, &buf);
++                               NULL, NULL, "G", &record.guid, &buf);
+     json_object_set_new(item, "blobId", json_string(buf_cstring(&buf)));
+ 
+     json_object_set_new(item, "size",
+@@ -4520,7 +4525,8 @@ static int _contact_set_update(jmap_req_t *req, unsigned kind,
+                                       this_mailbox->i.last_uid, &record);
+ 
+             jmap_encode_rawdata_blobid('V', mailbox_uniqueid(this_mailbox),
+-                                       record.uid, NULL, NULL, NULL, NULL, &buf);
++                                       record.uid, NULL, NULL, "G",
++                                       &record.guid, &buf);
+             json_object_set_new(*item, "blobId",
+                                 json_string(buf_cstring(&buf)));
+ 
+@@ -7715,7 +7721,7 @@ static int getcards_cb(void *rock, struct carddav_data *cdata)
+ 
+         if (uniqueid &&
+             jmap_encode_rawdata_blobid('V', uniqueid, record.uid,
+-                                       NULL, NULL, NULL, NULL, &blobid)) {
++                                       NULL, NULL, "G", &record.guid, &blobid)) {
+             jblobid = json_string(buf_cstring(&blobid));
+         }
+         buf_free(&blobid);
+@@ -11426,7 +11432,7 @@ static int _card_set_create(jmap_req_t *req,
+ 
+     if (jmap_is_using(req, JMAP_CONTACTS_EXTENSION)) {
+         jmap_encode_rawdata_blobid('V', mailbox_uniqueid(*mailbox), record.uid,
+-                                   NULL, NULL, NULL, NULL, &buf);
++                                   NULL, NULL, "G", &record.guid, &buf);
+         json_object_set_new(item, "cyrusimap.org:blobId",
+                             json_string(buf_cstring(&buf)));
+ 
+@@ -11653,7 +11659,8 @@ static int _card_set_update(jmap_req_t *req, unsigned kind,
+                                       this_mailbox->i.last_uid, &record);
+ 
+             jmap_encode_rawdata_blobid('V', mailbox_uniqueid(this_mailbox),
+-                                       record.uid, NULL, NULL, NULL, NULL, &buf);
++                                       record.uid, NULL, NULL, "G",
++                                       &record.guid, &buf);
+             json_object_set_new(*item, "cyrusimap.org:blobId",
+                                 json_string(buf_cstring(&buf)));
+ 
+@@ -11936,6 +11943,11 @@ static int jmap_contact_getblob(jmap_req_t *req, jmap_getblob_context_t *ctx)
+         goto done;
+     }
+ 
++    if (!strcmpsafe(propname, "G")) {
++        // G subpart encodes the guid of the whole vCard blob
++        xzfree(propname);
++    }
++
+     if (!propname && ctx->accept_mime) {
+         /* Make sure client can handle blob type. */
+         if (strcmp(ctx->accept_mime, "application/octet-stream") &&
+@@ -12021,6 +12033,12 @@ static int jmap_contact_getblob(jmap_req_t *req, jmap_getblob_context_t *ctx)
+         /* Load message containing the resource */
+         struct buf buf = BUF_INITIALIZER;
+ 
++        /* The blobId encodes the guid of the whole vCard resource */
++        if (!message_guid_equal(&guid, &record.guid)) {
++            res = HTTP_NOT_FOUND;
++            goto done;
++        }
++
+         if (mailbox_map_record(mailbox, &record, &buf)) {
+             ctx->errstr = "failed to load vCard";
+             res = HTTP_SERVER_ERROR;
+diff --git a/imap/jmap_mail.c b/imap/jmap_mail.c
+index f514c52a8..54c054a5e 100644
+--- a/imap/jmap_mail.c
++++ b/imap/jmap_mail.c
+@@ -4671,6 +4671,7 @@ static void emailquery_cache_slice(struct emailquery *q,
+             return;
+         }
+     }
++    if (pos > total) pos = total;
+     n = total - pos;
+     if (q->super.have_limit && q->super.limit < n) {
+         n = q->super.limit;
+@@ -8844,8 +8845,26 @@ static int _copy_msgrecords(struct auth_state *authstate,
+     int r;
+     int nolink = !config_getswitch(IMAPOPT_SINGLEINSTANCESTORE);
+ 
++    /* When the source and destination live under different quota roots
++     * -- e.g. a cross-account JMAP Email/copy -- we have to charge the
++     * destination for the bytes we're about to land. */
++    quota_t qdiffs[QUOTA_NUMRESOURCES] = QUOTA_DIFFS_DONTCARE_INITIALIZER;
++    quota_t *qptr = NULL;
++    if (strcmpsafe(mailbox_quotaroot(src), mailbox_quotaroot(dst)) != 0) {
++        qdiffs[QUOTA_STORAGE] = 0;
++        qdiffs[QUOTA_MESSAGE] = ptrarray_size(msgrecs);
++        int i;
++        for (i = 0; i < ptrarray_size(msgrecs); i++) {
++            msgrecord_t *mr = ptrarray_nth(msgrecs, i);
++            uint32_t size = 0;
++            msgrecord_get_size(mr, &size);
++            qdiffs[QUOTA_STORAGE] += size;
++        }
++        qptr = qdiffs;
++    }
++
+     r = append_setup_mbox(&as, dst, user_id, authstate,
+-                 aclcheck, NULL, namespace, 0, EVENT_MESSAGE_COPY);
++                 aclcheck, qptr, namespace, 0, EVENT_MESSAGE_COPY);
+     if (r) goto done;
+ 
+     r = append_copy(src, &as, msgrecs, nolink,
+diff --git a/imap/jmap_mail_submission.c b/imap/jmap_mail_submission.c
+index f425a3ee1..78182549f 100644
+--- a/imap/jmap_mail_submission.c
++++ b/imap/jmap_mail_submission.c
+@@ -374,6 +374,8 @@ static int store_submission(jmap_req_t *req, struct mailbox *mailbox,
+     int r;
+     time_t now = time(0);
+     time_t internaldate = holduntil;
++    quota_t qdiffs[QUOTA_NUMRESOURCES] = QUOTA_DIFFS_DONTCARE_INITIALIZER;
++    quota_t *qptr = NULL;
+ 
+     if (!holduntil) {
+         /* Already sent */
+@@ -437,11 +439,23 @@ static int store_submission(jmap_req_t *req, struct mailbox *mailbox,
+         r = IMAP_IOERROR;
+         goto done;
+     }
++
++    /* A futurerelease submission stages a real copy of the message into
++     * the submission collection; charge the user's quota for it.  The
++     * non-futurerelease cases either insta-expunge the record or stage
++     * only the small JMAP_SUBMISSION_HDR header, so we keep the
++     * historical behavior of skipping the quota check there. */
++    if (holduntil) {
++        qdiffs[QUOTA_STORAGE] = ftell(f);
++        qdiffs[QUOTA_MESSAGE] = 1;
++        qptr = qdiffs;
++    }
++
+     fclose(f);
+ 
+     /* Prepare to append the message to the mailbox */
+     r = append_setup_mbox(&as, mailbox, httpd_userid, httpd_authstate,
+-                          0, /*quota*/NULL, 0, 0, /*event*/0);
++                          0, qptr, 0, 0, /*event*/0);
+     if (r) {
+         syslog(LOG_ERR, "append_setup(%s) failed: %s",
+                mailbox_name(mailbox), error_message(r));
+diff --git a/imap/jmap_mailbox.c b/imap/jmap_mailbox.c
+index 0a714a9cd..d7cf19ed8 100644
+--- a/imap/jmap_mailbox.c
++++ b/imap/jmap_mailbox.c
+@@ -2537,6 +2537,18 @@ static void _mbox_update(jmap_req_t *req, struct mboxset_args *args,
+         if (result->skipped) goto done;
+     }
+ 
++    /* isSeenShared flips a mailbox-wide option, not a per-user annotation like
++     * most of the other properties handled below.  Don't let a sharee with only
++     * JACL_READITEMS turn shared seen state on (or off!) for the owner's
++     * mailbox.  We check before doing any of the work below, so that a rejected
++     * update doesn't leave the other properties half-applied.
++     */
++    if (args->is_seenshared >= 0 &&
++            !jmap_hasrights_mbentry(req, mbentry, JACL_ADMIN_MAILBOX)) {
++        result->err = json_pack("{s:s}", "type", "forbidden");
++        goto done;
++    }
++
+     /* Now parent_id always has a proper mailbox id */
+     parent_id = args->is_toplevel ? mbinbox->uniqueid : parent_id;
+ 
+diff --git a/imap/jmap_notif.c b/imap/jmap_notif.c
+index a76717298..79d132e03 100644
+--- a/imap/jmap_notif.c
++++ b/imap/jmap_notif.c
+@@ -379,15 +379,19 @@ HIDDEN int jmap_create_caleventnotif(struct mailbox *notifmbox,
+     return r;
+ }
+ 
+-HIDDEN int jmap_create_caldaveventnotif(struct transaction_t *txn,
+-                                        const char *userid,
++/* Record a CalendarEventNotification for a change to the event eid in
++ * calmboxname.  The change is attributed to userid unless sender_address is
++ * given, in which case it came from that address (and display name). */
++HIDDEN int jmap_create_caldaveventnotif(const char *userid,
+                                         const struct auth_state *authstate,
+                                         const char *calmboxname,
+                                         const char *ical_uid,
+                                         const strarray_t *schedule_addresses,
+                                         int is_draft,
+                                         icalcomponent *oldical,
+-                                        icalcomponent *newical)
++                                        icalcomponent *newical,
++                                        const char *sender_address,
++                                        const char *sender_name)
+ {
+     mbname_t *mbname = mbname_from_intname(calmboxname);
+     const char *accountid = mbname_userid(mbname);
+@@ -446,17 +450,17 @@ HIDDEN int jmap_create_caldaveventnotif(struct transaction_t *txn,
+     struct buf byname = BUF_INITIALIZER;
+     const char *byemail = NULL;
+     const char *byprincipal = NULL;
+-    const char **hdr;
+     char *from = NULL;
+ 
+-    if ((hdr = spool_getheader(txn->req_hdrs, "Schedule-Sender-Address"))) {
+-        byemail = *hdr;
++    if (sender_address) {
++        /* Delivered by the scheduling engine on behalf of an iTIP sender */
++        byemail = sender_address;
+         if (!strncasecmp(byemail, "mailto:", 7)) {
+             byemail += 7;
+         }
+         from = strconcat("<", byemail, ">", NULL);
+-        if ((hdr = spool_getheader(txn->req_hdrs, "Schedule-Sender-name"))) {
+-            char *val = charset_decode_mimeheader(*hdr, CHARSET_KEEPCASE);
++        if (sender_name) {
++            char *val = charset_decode_mimeheader(sender_name, CHARSET_KEEPCASE);
+             if (val) buf_initmcstr(&byname, val);
+         }
+     }
+diff --git a/imap/jmap_notif.h b/imap/jmap_notif.h
+index 3ecb11ff4..8cd7f4150 100644
+--- a/imap/jmap_notif.h
++++ b/imap/jmap_notif.h
+@@ -66,17 +66,16 @@ extern int jmap_create_caleventnotif(struct mailbox *notifmbox,
+                                      json_t *jevent,
+                                      json_t *jpatch);
+ 
+-typedef struct transaction_t txn_t; // defined in httpd.h
+-
+-extern int jmap_create_caldaveventnotif(struct transaction_t *txn,
+-                                        const char *userid,
++extern int jmap_create_caldaveventnotif(const char *userid,
+                                         const struct auth_state *authstate,
+                                         const char *calmboxname,
+                                         const char *ical_uid,
+                                         const strarray_t *schedule_addresses,
+                                         int is_draft,
+                                         icalcomponent *oldical,
+-                                        icalcomponent *newical);
++                                        icalcomponent *newical,
++                                        const char *sender_address,
++                                        const char *sender_name);
+ 
+ extern int calendar_has_sharees(const mbentry_t *mbentry);
+ 
+diff --git a/imap/jmap_sieve.c b/imap/jmap_sieve.c
+index 09a5d8dfb..80d483b40 100644
+--- a/imap/jmap_sieve.c
++++ b/imap/jmap_sieve.c
+@@ -1976,6 +1976,7 @@ static int jmap_sieve_test(struct jmap_req *req)
+ 
+         else if (!strcmp(key, "emailBlobIds")) {
+             emailids = arg;
++            jmap_parse_strings(arg, &parser, "emailBlobIds");
+         }
+ 
+         else if (!strcmp(key, "envelope")) {
+@@ -2072,7 +2073,7 @@ static int jmap_sieve_test(struct jmap_req *req)
+         if (err) goto done;
+ 
+         /* Generate temporary bytecode file */
+-        static char template[] = "/tmp/sieve-test-bytecode-XXXXXX";
++        char template[] = "/tmp/sieve-test-bytecode-XXXXXX";
+         sieve_script_t *s = NULL;
+         bytecode_info_t *bc = NULL;
+         char *errors = NULL;
+@@ -2092,6 +2093,9 @@ static int jmap_sieve_test(struct jmap_req *req)
+                             "description", "unable to generate bytecode");
+         }
+         else if ((fd = mkstemp(template)) < 0) {
++            xsyslog(LOG_WARNING,
++                    "failed to create template", "template=<%s>", template);
++
+             err = json_pack("{s:s s:s}", "type", "serverFail",
+                             "description", "unable to open temporary file");
+         }
+diff --git a/imap/jmap_util.c b/imap/jmap_util.c
+index 9515bdf5f..d0556eb06 100644
+--- a/imap/jmap_util.c
++++ b/imap/jmap_util.c
+@@ -439,6 +439,7 @@ EXPORTED int jmap_email_keyword_is_valid(const char *keyword)
+             case '*':
+             case '"':
+             case '\\':
++            case '/':
+                 return 0;
+             default:
+                 ;
+diff --git a/imap/json_support.c b/imap/json_support.c
+index 48197d2b0..869ff129e 100644
+--- a/imap/json_support.c
++++ b/imap/json_support.c
+@@ -49,23 +49,34 @@
+ 
+ #include "json_support.h"
+ 
+-static int parse_date(json_t *json, unsigned utc)
++enum tz_type {
++    TZ_NONE,
++    TZ_UTC,
++    TZ_ANY,
++};
++
++static bool validate_datetime(json_t *json, unsigned tz_type)
+ {
+     const char *s = NULL;
+     struct tm date;
+ 
+-    if (!json_is_string(json)) return 0;
++    if (!json_is_string(json)) return false;
+ 
+     /* parse full-date and partial-time up to time-secfrac */
+     s = strptime(json_string_value(json), "%Y-%m-%dT%H:%M:%S", &date);
+-    if (!s) return 0;
++    if (!s) return false;
+ 
+     /* parse time-secfrac */
+     if (*s == '.') {
+         while (Uisdigit(*(++s)));
+     }
+ 
+-    if (utc) {
++    if (tz_type == TZ_NONE) {
++        /* MUST NOT have time-offset */
++        return (*s == '\0');
++    }
++
++    if (tz_type == TZ_UTC) {
+         /* time-offset MUST be "Z" */
+         return (!strcmp(s, "Z"));
+     }
+@@ -77,14 +88,40 @@ static int parse_date(json_t *json, unsigned utc)
+     return (s && *s == '\0');
+ }
+ 
+-int json_is_date(json_t *json)
++bool json_is_date(json_t *json)
++{
++    return validate_datetime(json, TZ_ANY);
++}
++
++bool json_is_utcdate(json_t *json)
+ {
+-    return parse_date(json, 0);
++    return validate_datetime(json, TZ_UTC);
+ }
+ 
+-int json_is_utcdate(json_t *json)
++bool json_is_localdate(json_t *json)
+ {
+-    return parse_date(json, 1);
++    return validate_datetime(json, TZ_NONE);
++}
++
++/* Base64 URL chars */
++#define JMAPID_CHARS "ABCDEFGHIJKLMNOPQRSTUVWXYZ"        \
++                     "abcdefghijklmnopqrstuvwxyz"        \
++                     "0123456789-_"
++
++/* Cyrus (currently) allows '.' and '@' to support email addresses */
++#define CYRUS_ACCOUNTID_CHARS JMAPID_CHARS ".@"
++
++bool json_is_cyrus_accountid(json_t *json)
++{
++    const char *s = NULL;
++    size_t len = 0;
++
++    if (!json_is_string(json)) return false;
++
++    s = json_string_value(json);
++    len = strlen(s);
++
++    return (len > 0 && len < 256 && len == strspn(s, CYRUS_ACCOUNTID_CHARS));
+ }
+ 
+ int json_array_find(json_t *array, const char *needle)
+diff --git a/imap/json_support.h b/imap/json_support.h
+index 4419b6669..ee74515bf 100644
+--- a/imap/json_support.h
++++ b/imap/json_support.h
+@@ -47,6 +47,7 @@
+ 
+ #include <config.h>
+ #include <jansson.h>
++#include <stdbool.h>
+ 
+ #include "util.h"
+ 
+@@ -57,8 +58,10 @@
+ /* ... none at present! */
+ 
+ /* utility functions not present in any libjansson */
+-EXPORTED int json_is_date(json_t *json);
+-EXPORTED int json_is_utcdate(json_t *json);
++EXPORTED bool json_is_date(json_t *json);
++EXPORTED bool json_is_utcdate(json_t *json);
++EXPORTED bool json_is_localdate(json_t *json);
++EXPORTED bool json_is_cyrus_accountid(json_t *json);
+ 
+ EXPORTED int json_array_find(json_t *array, const char *needle);
+ 
+diff --git a/imap/lmtp_sieve.c b/imap/lmtp_sieve.c
+index 99fe2de88..1255b20ff 100644
+--- a/imap/lmtp_sieve.c
++++ b/imap/lmtp_sieve.c
+@@ -1549,9 +1549,10 @@ static int sieve_processcal(void *ac, void *ic, void *sc, void *mc,
+         goto done;
+     }
+ 
+-    /* Strip VALARMs, TRANSP, COLOR, and CATEGORIES (if color) */
++    /* Strip VALARMs, TRANSP, COLOR, CATEGORIES (if color), and MANAGED-ID */
+     for (; comp; comp = icalcomponent_get_next_component(itip, kind)) {
+         itip_strip_personal_data(comp);
++        itip_strip_managedid(comp);
+     }
+ 
+     cyrus_icalrestriction_check(itip);
+diff --git a/imap/lmtpengine.c b/imap/lmtpengine.c
+index 6a122e29d..9b30b238c 100644
+--- a/imap/lmtpengine.c
++++ b/imap/lmtpengine.c
+@@ -171,8 +171,12 @@ static void send_lmtp_error(struct protstream *pout, int r, strarray_t *resp)
+ 
+     case IMAP_PERMISSION_DENIED:
+         if (LMTP_LONG_ERROR_MSGS) {
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++            /* format string comes from lmtp_err.et */
+             prot_printf(pout, error_message(LMTP_NOT_AUTHORIZED_LONG),
+                         config_getstring(IMAPOPT_POSTMASTER));
++#pragma GCC diagnostic pop
+         }
+         code = LMTP_NOT_AUTHORIZED;
+         break;
+@@ -227,7 +231,11 @@ static void send_lmtp_error(struct protstream *pout, int r, strarray_t *resp)
+         break;
+     }
+ 
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++    /* format string comes from lmtp_err.et */
+     prot_printf(pout, error_message(code), text, session_id());
++#pragma GCC diagnostic pop
+     prot_puts(pout, "\r\n");
+ }
+ 
+@@ -386,9 +394,9 @@ static char *parseautheq(char **strp)
+             for (lup=0;lup<2;lup++)
+             {
+                 if ((*s>='0') && (*s<='9'))
+-                    (*str) = (*str) & (*s - '0');
++                    (*str) = (*str) | (*s - '0');
+                 else if ((*s>='A') && (*s<='F'))
+-                    (*str) = (*str) & (*s - 'A' + 10);
++                    (*str) = (*str) | (*s - 'A' + 10);
+                 else {
+                     free(ret);
+                     *strp = s;
+diff --git a/imap/message.c b/imap/message.c
+index 44575ed63..273413c8e 100644
+--- a/imap/message.c
++++ b/imap/message.c
+@@ -1435,6 +1435,10 @@ static void message_parse_bodydisposition(const char *hdr, struct body *body)
+  * next ';' or end of line, which should mark the next
+  * parameter.
+  */
++
++/* Without a cap, an attacker controls param count we handle, and our handling
++ * is O(N^2) -- rjbs, 2026-06-17 */
++#define RFC2231_MAX_PARAMS 128
+ static void message_parse_params(const char *hdr, struct param **paramp)
+ {
+     struct param *param;
+@@ -1443,6 +1447,7 @@ static void message_parse_params(const char *hdr, struct param **paramp)
+     const char *value;
+     int valuelen;
+     char *p;
++    int nparams = 0;
+ 
+     for (;;) {
+         /* Skip over leading whitespace */
+@@ -1528,6 +1533,10 @@ skip:
+             continue;
+         }
+ 
++        /* Stop accepting parameters once we hit the cap (DoS guard) */
++        if (nparams++ >= RFC2231_MAX_PARAMS)
++            return;
++
+         /* Save attribute/value pair */
+         *paramp = param = (struct param *)xzmalloc(sizeof(struct param));
+         param->attribute = message_ucase(xstrndup(attribute, attributelen));
+@@ -1994,8 +2003,8 @@ static void message_parse_content(struct msg *msg, struct body *body,
+     }
+ 
+     if (encode) {
+-        size_t b64_size;
+-        int b64_lines, delta;
++        size_t b64_size, b64_lines;
++        int delta;
+ 
+         /* Determine encoded size */
+         charset_b64encode_mimebody(NULL, body->content_size, NULL,
+diff --git a/imap/notify.c b/imap/notify.c
+index 8cebd08a0..92975ef13 100644
+--- a/imap/notify.c
++++ b/imap/notify.c
+@@ -137,7 +137,7 @@ static void notify_dlist(const char *sockpath, const char *method,
+     prot_printf(out, "\r\n");
+     prot_flush(out);
+ 
+-    c = dlist_parse(&res, 1, 0, in);
++    c = dlist_parse(&res, DLIST_PARSE_PARSEKEY | DLIST_PARSE_ALLOW_FILE_LITERALS, in);
+     if (c == '\r') c = prot_getc(in);
+     /* XXX - do something with the response?  Like have NOTIFY answer */
+     if (c == '\n' && res && res->name) {
+diff --git a/imap/pop3d.c b/imap/pop3d.c
+index e95f5ef2e..6c57ba086 100644
+--- a/imap/pop3d.c
++++ b/imap/pop3d.c
+@@ -261,7 +261,7 @@ static int popd_canon_user(sasl_conn_t *conn, void *context,
+         /* If we're only doing the authzid, put back the subfolder
+            in case its used in the challenge/response calculation */
+         n = strlen(popd_subfolder);
+-        if (*out_ulen + n > out_max) {
++        if (*out_ulen + n >= out_max) {
+             sasl_seterror(conn, 0, "buffer overflow while canonicalizing");
+             r = SASL_BUFOVER;
+         }
+diff --git a/imap/promstatsd.c b/imap/promstatsd.c
+index 0fbb3bf9b..dde1f6083 100644
+--- a/imap/promstatsd.c
++++ b/imap/promstatsd.c
+@@ -764,8 +764,17 @@ int main(int argc, char **argv)
+         int ret;
+         const char *debugger = config_getstring(IMAPOPT_DEBUG_COMMAND);
+         if (debugger) {
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++            /* This is exactly the kind of usage that -Wformat is designed to
++             * complain about (using user-supplied string as format argument),
++             * but in this case the "user" is the server administrator, and
++             * they're about to attach a debugger, so worrying about leaking
++             * contents of memory here is a little silly! :)
++             */
+             snprintf(debugbuf, sizeof(debugbuf), debugger,
+                      argv[0], getpid(), "promstatsd");
++#pragma GCC diagnostic pop
+             syslog(LOG_DEBUG, "running external debugger: %s", debugbuf);
+             ret = system(debugbuf); /* run debugger */
+             syslog(LOG_DEBUG, "debugger returned exit status: %d", ret);
+diff --git a/imap/search_expr.c b/imap/search_expr.c
+index 007044f15..297538b13 100644
+--- a/imap/search_expr.c
++++ b/imap/search_expr.c
+@@ -881,7 +881,7 @@ static void sort_children(search_expr_t *e)
+ {
+     search_expr_t *child;
+     hashu64_table maxcostcache = HASHU64_TABLE_INITIALIZER;
+-    construct_hashu64_table(&maxcostcache, 512, 0);
++    construct_hashu64_table(&maxcostcache, 509, 0);
+     hashu64_table *costcache = &maxcostcache;
+ 
+     if (sizeof(uint64_t) < sizeof(search_expr_t*)) {
+diff --git a/imap/smmapd.c b/imap/smmapd.c
+index 03458e241..e2adacf54 100644
+--- a/imap/smmapd.c
++++ b/imap/smmapd.c
+@@ -406,6 +406,13 @@ static int begin_handling(void)
+             errstring = "missing length";
+             r = IMAP_PROTOCOL_ERROR;
+         }
++        if (!r && (len < 0 || len > MAXREQUEST)) {
++            /* len comes from the wire and is only bounded by INT32_MAX in
++             * getint32(); reject anything larger than our buffer before
++             * prot_read() can overflow */
++            errstring = "request too large";
++            r = IMAP_PROTOCOL_ERROR;
++        }
+         if (!r && prot_read(map_in, request, len) != len) {
+             errstring = "request size doesn't match length";
+             r = IMAP_PROTOCOL_ERROR;
+diff --git a/imap/sync_support.c b/imap/sync_support.c
+index 36dc18652..cd8c2148d 100644
+--- a/imap/sync_support.c
++++ b/imap/sync_support.c
+@@ -1929,7 +1929,9 @@ struct dlist *sync_parseline(struct protstream *in, int isarchive)
+     struct dlist *dl = NULL;
+     int c;
+ 
+-    c = dlist_parse(&dl, 1, isarchive, in);
++    c = dlist_parse(&dl, DLIST_PARSE_PARSEKEY |
++                         (isarchive ? DLIST_PARSE_ISARCHIVE : 0) |
++                         DLIST_PARSE_ALLOW_FILE_LITERALS, in);
+ 
+     /* end line - or fail */
+     if (c == '\r') c = prot_getc(in);
+diff --git a/imap/xcal.c b/imap/xcal.c
+index 47ff10ae6..812c396fc 100644
+--- a/imap/xcal.c
++++ b/imap/xcal.c
+@@ -121,8 +121,12 @@ const char *icaltime_as_iso_string(const struct icaltimetype tt)
+     else if (icaltime_is_utc(tt)) fmt = "%04d-%02d-%02dT%02d:%02d:%02dZ";
+     else fmt = "%04d-%02d-%02dT%02d:%02d:%02d";
+ 
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++    /* format string decided above */
+     snprintf(str, sizeof(str), fmt, tt.year, tt.month, tt.day,
+              tt.hour, tt.minute, tt.second);
++#pragma GCC diagnostic pop
+ 
+     return str;
+ }
+@@ -150,7 +154,11 @@ const char *icalvalue_utcoffset_as_iso_string(const icalvalue* value)
+     if (s > 0) fmt = "%c%02d:%02d:%02d";
+     else fmt = "%c%02d:%02d";
+ 
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++    /* format string decided above */
+     snprintf(str, sizeof(str), fmt, sign, abs(h), abs(m), abs(s));
++#pragma GCC diagnostic pop
+ 
+     return str;
+ }
+diff --git a/imtest/imtest.c b/imtest/imtest.c
+index a2d4d9553..fae2ae97f 100644
+--- a/imtest/imtest.c
++++ b/imtest/imtest.c
+@@ -1558,7 +1558,11 @@ static void print_command(const char *cmd, const char *arg)
+     static struct buf buf = BUF_INITIALIZER;
+ 
+     buf_reset(&buf);
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++    /* Format string comes from struct protocol_t protocols[] */
+     buf_printf(&buf, cmd, arg);
++#pragma GCC diagnostic pop
+     buf_replace_all(&buf, "\r\n", "\r\nC: ");
+ 
+     printf("C: %s", buf_cstring(&buf));
+@@ -1588,7 +1592,11 @@ static struct buf *ask_capability(struct protocol_t *prot,
+         print_command(prot->capa_cmd.cmd, servername);
+         printf("\r\n");
+ 
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++        /* Format string comes from struct protocol_t protocols[] */
+         prot_printf(pout, prot->capa_cmd.cmd, servername);
++#pragma GCC diagnostic pop
+         prot_puts(pout, "\r\n");
+         prot_flush(pout);
+     }
+@@ -3233,7 +3241,11 @@ int main(int argc, char **argv)
+             print_command(protocol->tls_cmd.cmd, servername);
+             printf("\r\n");
+ 
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++            /* Format string comes from struct protocol_t protocols[] */
+             prot_printf(pout, protocol->tls_cmd.cmd, servername);
++#pragma GCC diagnostic pop
+             prot_puts(pout, "\r\n");
+             prot_flush(pout);
+ 
+diff --git a/lib/charset.c b/lib/charset.c
+index 7aba58f9a..772a0cea7 100644
+--- a/lib/charset.c
++++ b/lib/charset.c
+@@ -3802,12 +3802,12 @@ static const char base_64[] =
+ 
+ EXPORTED char *charset_b64encode_mimebody(const char *msg_base, size_t len,
+                                           char *retval, size_t *outlen,
+-                                          int *outlines, int wrap)
++                                          size_t *outlines, int wrap)
+ {
+     const unsigned char *s;
+     unsigned char s0, s1, s2;
+     char *d;
+-    int b64_len, b64_lines, cnt;
++    size_t b64_len, b64_lines, cnt;
+ 
+     b64_len = ((len + 2) / 3) * 4;
+     if (wrap) {
+@@ -3858,8 +3858,8 @@ EXPORTED char *charset_b64encode_mimebody(const char *msg_base, size_t len,
+         }
+     }
+ 
+-    if (wrap) {
+-        /* add final CRLF */
++    if (wrap && b64_len) {
++        /* add final CRLF; empty input has no line to end */
+         *d++ = '\r';
+         *d++ = '\n';
+     }
+diff --git a/lib/charset.h b/lib/charset.h
+index 5fba6fd2d..8b993db27 100644
+--- a/lib/charset.h
++++ b/lib/charset.h
+@@ -141,7 +141,7 @@ extern const char *charset_decode_mimebody(const char *msg_base, size_t len,
+                                            size_t *outlen);
+ extern char *charset_b64encode_mimebody(const char *msg_base, size_t len,
+                                         char *retval, size_t *outlen,
+-                                        int *outlines, int wrap);
++                                        size_t *outlines, int wrap);
+ extern char *charset_qpencode_mimebody(const char *msg_base, size_t len,
+                                        int force_quote, size_t *outlen);
+ extern char *charset_to_utf8cstr(const char *msg_base, size_t len, charset_t charset, int encoding);
+diff --git a/lib/imapoptions b/lib/imapoptions
+index 969e63f87..6de49d8fd 100644
+--- a/lib/imapoptions
++++ b/lib/imapoptions
+@@ -200,6 +200,9 @@ are listed with ``<none>''.
+    STARTTLS command.  POP3 uses the STLS command.  HTTP uses the
+    Upgrade header field. */
+ 
++{ "allowurlauth", 0, SWITCH, "UNRELEASED" }
++/* If enabled, allows the use of the URLAUTH extension commands in IMAP. */
++
+ { "allowusermoves", 0, SWITCH, "2.3.17" }
+ /* Allow moving user accounts (with associated meta-data) via RENAME
+    or XFER.
+diff --git a/lib/imapurl.c b/lib/imapurl.c
+index 452d1b2bf..857cc2f21 100644
+--- a/lib/imapurl.c
++++ b/lib/imapurl.c
+@@ -370,7 +370,10 @@ EXPORTED int imapurl_fromURL(struct imapurl *url, const char *s)
+             unsigned long ul;
+             char *endp;
+ 
+-            if (src[-1] == '/') src[-1] = '\0'; /* trim mailbox at /; */
++            /* Only trim a trailing '/' that's actually part of the mailbox;
++             * when the URL begins with ';' src sits at the buffer start and
++             * src[-1] would read before the allocation. */
++            if (src > mbox && src[-1] == '/') src[-1] = '\0'; /* trim mailbox at /; */
+             *src++ = '\0'; /* break url at ; */
+             if (step == 0 && !strncasecmp(src, "uidvalidity=", 12)) {
+                 src += 12; /* skip uidvalidity= */
+diff --git a/lib/prot.c b/lib/prot.c
+index c00218994..985536f26 100644
+--- a/lib/prot.c
++++ b/lib/prot.c
+@@ -745,7 +745,7 @@ EXPORTED int prot_fill(struct protstream *s)
+                 /* ignore EINTR if we've timed out */
+                 (r == -1 && errno == EINTR && !signals_poll() && now >= read_timeout)) {
+                 if (!s->dontblock) {
+-                    s->error = xstrdup("idle for too long");
++                    s->error = xstrdup(PROT_IDLE_STRING);
+                     return EOF;
+                 } else {
+                     errno = EAGAIN;
+diff --git a/lib/prot.h b/lib/prot.h
+index 94b22fad8..7b2d0e626 100644
+--- a/lib/prot.h
++++ b/lib/prot.h
+@@ -159,6 +159,7 @@ struct prot_waitevent {
+ int prot_flush_internal(struct protstream *s, int force);
+ 
+ #define PROT_EOF_STRING "end of file reached"
++#define PROT_IDLE_STRING "idle for too long"
+ #define PROTGROUP_SIZE_DEFAULT 32
+ struct protgroup; /* Opaque protgroup structure */
+ 
+diff --git a/lib/times.c b/lib/times.c
+index 1f2c6d53e..1740e9468 100644
+--- a/lib/times.c
++++ b/lib/times.c
+@@ -537,7 +537,6 @@ static int breakdown_time_to_iso8601(const struct timeval *t, struct tm *tm,
+ {
+     int gmtnegative = 0;
+     size_t rlen;
+-    const char *datefmt = withsep ? "%Y-%m-%dT%H:%M:%S" : "%Y%m%dT%H%M%S";
+ 
+     /*assert(date > 0); - it turns out these can happen, annoyingly enough */
+     /*assert(tm->tm_year >= 69);*/
+@@ -548,7 +547,9 @@ static int breakdown_time_to_iso8601(const struct timeval *t, struct tm *tm,
+     }
+     gmtoff /= 60;
+ 
+-    rlen = strftime(buf, len, datefmt, tm);
++    rlen = strftime(buf, len,
++                    withsep ? "%Y-%m-%dT%H:%M:%S" : "%Y%m%dT%H%M%S",
++                    tm);
+     if (rlen > 0) {
+         switch(tv_precision) {
+         case timeval_ms:
+diff --git a/lib/util.c b/lib/util.c
+index 54f0472e8..86195a853 100644
+--- a/lib/util.c
++++ b/lib/util.c
+@@ -86,7 +86,7 @@
+ 
+ #define BEAUTYBUFSIZE 4096
+ 
+-static const unsigned char unxdigit[128] = {
++static const unsigned char unxdigit[256] = {
+     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+@@ -102,6 +102,22 @@ static const unsigned char unxdigit[128] = {
+     0xff, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0xff,
+     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
++    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+ };
+ 
+@@ -1037,11 +1053,11 @@ EXPORTED int parsehex(const char *p, const char **ptr, int maxlen, bit64 *res)
+      * then we will overflow
+      */
+     for (n = 0; !maxlen || n < maxlen; n++) {
++        cval = unxdigit[(uint8_t)p[n]];
++        if (cval == 0xff) break;
+         if (result >= 1152921504606846976ULL) {
+             return -1;
+         }
+-        cval = unxdigit[(int)p[n]];
+-        if (cval == 0xff) break;
+         result = result * 16 + cval;
+     }
+ 
+@@ -1821,7 +1837,7 @@ EXPORTED int buf_bin_to_lchex(struct buf *hex, const void *bin, size_t binlen)
+ EXPORTED int hex_to_bin(const char *hex, size_t hexlen, void *bin)
+ {
+     unsigned char *v = bin, msn, lsn;
+-    const char *p = hex;
++    const uint8_t *p = (const uint8_t *) hex;
+     size_t i;
+ 
+     if (hex == NULL)
+@@ -1833,10 +1849,10 @@ EXPORTED int hex_to_bin(const char *hex, size_t hexlen, void *bin)
+     hexlen /= 2;
+ 
+     for (i = 0 ; i < hexlen ; i++) {
+-        msn = unxdigit[(*p++) & 0x7f];
++        msn = unxdigit[(*p++)];
+         if (msn == 0xff)
+             return -1;
+-        lsn = unxdigit[(*p++) & 0x7f];
++        lsn = unxdigit[(*p++)];
+         if (lsn == 0xff)
+             return -1;
+         *v++ = (msn << 4) | lsn;
+diff --git a/master/service.c b/master/service.c
+index 758ce7fd8..50a251569 100644
+--- a/master/service.c
++++ b/master/service.c
+@@ -405,7 +405,6 @@ int main(int argc, char **argv, char **envp)
+         if (debugger) {
+ #pragma GCC diagnostic push
+ #pragma GCC diagnostic ignored "-Wformat-nonliteral"
+-#pragma GCC diagnostic ignored "-Wformat-security"
+             /* This is exactly the kind of usage that -Wformat is designed to
+              * complain about (using user-supplied string as format argument),
+              * but in this case the "user" is the server administrator, and
+diff --git a/sieve/grammar.c b/sieve/grammar.c
+index 09d17b747..9ef4037dc 100644
+--- a/sieve/grammar.c
++++ b/sieve/grammar.c
+@@ -10,6 +10,7 @@
+ #endif
+ 
+ #include "grammar.h"
++#include "imparse.h"
+ #include "xmalloc.h"
+ 
+ 
+@@ -30,16 +31,6 @@ HIDDEN int is_identifier(char *s)
+     return 1;
+ }
+ 
+-static int is_number(char *s)
+-{
+-    char *tail;
+-
+-    if (s && *s && (strtol(s, &tail, 10) || !*tail) && !*tail) {
+-        return 1;
+-    }
+-    return 0;
+-}
+-
+ /* TODO: implement parse_string() with a proper yacc/bison lexer/parser */
+ HIDDEN char *parse_string(const char *s, variable_list_t *vars)
+ {
+@@ -87,8 +78,8 @@ HIDDEN char *parse_string(const char *s, variable_list_t *vars)
+         }
+         /* create a null-terminated string for comparison */
+         *variable_ref_end = '\0';
+-        /* check if the string is a number */
+-        is_match_var = is_number(test_str);
++        /* check if the string is a number (RFC 5229 num-variable = 1*DIGIT) */
++        is_match_var = imparse_isnumber(test_str);
+         /* if we've found a valid variable, add its value to stringparts */
+         if (is_identifier(test_str) || is_match_var) {
+             /* capture the match_var variable number */
+@@ -98,7 +89,7 @@ HIDDEN char *parse_string(const char *s, variable_list_t *vars)
+             /* attempt to find the variable */
+             if (is_match_var) {
+                 variable = varlist_select(vars, VL_MATCH_VARS);
+-                if (match_var >= variable->var->count) {
++                if (match_var < 0 || match_var >= variable->var->count) {
+                     variable = NULL;
+                 }
+             } else {
+diff --git a/sieve/script.c b/sieve/script.c
+index 7f2b0349f..bf5ce37bd 100644
+--- a/sieve/script.c
++++ b/sieve/script.c
+@@ -366,7 +366,7 @@ static int build_notify_message(sieve_interp_t *i,
+                                 struct buf *out)
+ {
+     const char *c;
+-    size_t n;
++    unsigned long n;
+ 
+     if (msg == NULL) return SIEVE_OK;
+ 
+@@ -394,8 +394,20 @@ static int build_notify_message(sieve_interp_t *i,
+             c += 5;
+             n = 0;
+             if (*c++ == '[') {
+-                while (*c != ']') n = n * 10 + (*c++ - '0');
+-                c += 2; /* skip ]$ */
++                char *endptr;
++
++                errno = 0;
++                n = strtoul(c, &endptr, 10);
++                if (!isdigit(*c)                            // no SP or '-'
++                    || !n                                   // non-zero
++                    || (n == ULONG_MAX && errno == ERANGE)  // no overflow
++                    || strncmp(endptr, "]$", 2)) {          // invalid closing
++                    /* output "$text[..." as plaintext */
++                    buf_appendmap(out, c - 6, 6 + endptr - c);
++                    c = endptr;
++                    continue;
++                }
++                c = endptr + 2; /* skip ]$ */
+             }
+ 
+             i->getbody(message_context, content_types, &parts);
+diff --git a/sieve/sieve.y b/sieve/sieve.y
+index 6fb9578a6..9e97db8ae 100644
+--- a/sieve/sieve.y
++++ b/sieve/sieve.y
+@@ -53,6 +53,7 @@
+ 
+ #include <stdlib.h>
+ #include <assert.h>
++#include <errno.h>
+ #include <string.h>
+ #include "xmalloc.h"
+ #include "sieve/bytecode.h"
+@@ -437,13 +438,14 @@ control:  IF thenelse            { $$ = $2; }
+         ;
+ 
+ 
+-thenelse: test block elsif       { 
++thenelse: test block             {
+                                      if ($1->ignore_err) {
+-                                         /* end of block - decrement counter */
++                                         /* end of then-block - decrement counter */
+                                          sscript->ignore_err--;
+                                      }
+-
+-                                     $$ = new_if($1, $2, $3);
++                                 }
++          elsif                  {
++                                     $$ = new_if($1, $2, $4);
+                                  }
+         ;
+ 
+@@ -2062,7 +2064,11 @@ void sieveerror_c(sieve_script_t *sscript, int code, ...)
+     va_list args;
+ 
+     va_start(args, code);
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++    /* format string comes from sieve_err.et */
+     vsieveerror_f(sscript, error_message(code), args);
++#pragma GCC diagnostic pop
+     va_end(args);
+ }
+ 
+@@ -2420,10 +2426,6 @@ static int check_reqs(sieve_script_t *sscript, strarray_t *sa)
+     strarray_free(sa);
+ 
+     if (ret == 0) yyerror(sscript, buf_cstring(&sscript->sieveerr));
+-    else if (supported(SIEVE_CAPA_IHAVE)) {
+-        /* mark all allowed extensions as supported */
+-        sscript->support |= (SIEVE_CAPA_ALL & ~SIEVE_CAPA_IHAVE_INCOMPAT);
+-    }
+ 
+     encoded_char = supported(SIEVE_CAPA_ENCODED_CHAR);
+ 
+@@ -2864,7 +2866,33 @@ static commandlist_t *build_notify(sieve_script_t *sscript,
+     c->u.n.method = method;
+ 
+     if (c->u.n.priority == -1) c->u.n.priority = B_NORMAL;
+-    if (!c->u.n.message) c->u.n.message = xstrdup("$from$: $subject$");
++    if (c->u.n.message) {
++        const char *cp = c->u.n.message;
++
++        /* Validate $text[n]$ syntax */
++        if (!strncasecmp(cp, "$text", 5) && (cp[5] == '[' || cp[5] == '$')) {
++            if (!supported(SIEVE_CAPA_BODY)) {
++                sieveerror_c(sscript, SIEVE_MISSING_REQUIRE, "body");
++            }
++
++            if (cp[5] == '[') {
++                unsigned long n;
++                char *endptr;
++
++                cp += 6;
++                errno = 0;
++                if (!isdigit(*cp)                           // no SP or '-'
++                    || !(n = strtoul(cp, &endptr, 10))      // non-zero
++                    || (n == ULONG_MAX && errno == ERANGE)  // no overflow
++                    || strncmp(endptr, "]$", 2)) {          // invalid closing
++                    sieveerror_c(sscript, SIEVE_INVALID_VALUE, ":message");
++                }
++            }
++        }
++    }
++    else {
++        c->u.n.message = xstrdup("$from$: $subject$");
++    }
+ 
+     c->nargs = bc_precompile(c->args, "ssSis",
+                              c->u.n.method,
+@@ -2975,7 +3003,7 @@ static test_t *build_anyof(sieve_script_t *sscript, testlist_t *tl)
+         t->u.tl = tl;
+ 
+         /* find first test that did/didn't set ignore_err */
+-        for ( ; tl && !fail && !maybe; tl = tl->next) {
++        for ( ; tl && !(fail && maybe); tl = tl->next) {
+             if (tl->t->ignore_err) {
+                 if (!fail) fail = tl->t;
+             }
+@@ -3259,30 +3287,47 @@ static test_t *build_date(sieve_script_t *sscript,
+ 
+ static test_t *build_ihave(sieve_script_t *sscript, strarray_t *sa)
+ {
++    unsigned long long capas = 0;
+     test_t *t;
+     int i;
+ 
+-    t = new_test(BC_IHAVE, sscript);
+-    t->u.sl = sa;
++    /* we're going to replace successful IHAVE with TRUE */
++    t = new_test(BC_TRUE, sscript);
+ 
+     /* check if we support all listed extensions */
+     for (i = 0; i < strarray_size(sa); i++) {
+-        unsigned long long capa = lookup_capability(strarray_nth(sa, i));
++        const char *name = strarray_nth(sa, i);
++        unsigned long long capa = lookup_capability(name);
+ 
+-        if (!capa) {
++        if (!extension_isactive(&sscript->interp, name)) {
+             /* need to start ignoring errors immediately in case this ihave
+                is part of a testlist with an unknown test later in the list */
+             if (!t->ignore_err) t->ignore_err = ++sscript->ignore_err;
++            break;
+         }
+         else if (capa & SIEVE_CAPA_IHAVE_INCOMPAT) {
+             /* incompatible extension used in ihave - parse error */
+             sscript->ignore_err = 0;
+-            sieveerror_c(sscript, SIEVE_IHAVE_INCOMPAT, strarray_nth(sa, i));
++            sieveerror_c(sscript, SIEVE_IHAVE_INCOMPAT, name);
+             break;
+         }
++
++
++        capas |= capa;
+     }
+ 
+-    t->nargs = bc_precompile(t->args, "S", t->u.sl);
++    if (i < strarray_size(sa)) {
++        /* replace unsuccessful IHAVE with FALSE */
++        t->type = BC_FALSE;
++    }
++    else {
++        /* successful "ihave" test - per RFC 5463, the listed extensions
++           are now available for the remainder of the script, just as if
++           they had been specified in the "require" clause */
++        sscript->support |= capas;
++    }
++
++    strarray_free(sa);
+ 
+     return t;
+ }
